@@ -24,9 +24,14 @@ the legacy `quarkus-websockets`) and a **Python** implementation on
 **FastAPI/Starlette plus the native `websockets` library** — not a
 framework-bundled WebSocket shim — with a chapter-level note on when to reach
 for the native library versus a framework's built-in support. Quarkus builds
-on UBI 10; Python is managed by **Poetry**, matching this site's own
-convention rather than copying `uv` from the gRPC/REST siblings without
-re-justifying it for this stack.
+on UBI 10; Python is managed by **`uv`** (uv-managed `pyproject.toml`,
+`uv sync` / `uv run`, `uv.lock`), the long-standing house standard across the
+REST/gRPC sibling API sites and the `lgtm-python` scaffold.
+
+**Amended (r03 kickoff, 2026-10-18):** this originally specified Poetry. That
+was an anomaly; the house standard is `uv`, and this site follows it. The r02
+Ch0 toolchain/version-matrix/prereqs references to Poetry are corrected to `uv`
+alongside this amendment.
 
 ## DRQ-003 — AsyncAPI 3 contract spine, CI gate deferred
 
@@ -139,3 +144,8 @@ notes==slides, 0 ban-tier), no docx.
 Each deck **targets ~50 slides** in the main body; anything beyond that goes into
 **appendices** rather than inflating the core narrative, so the main track stays
 deliverable in a session while depth stays available on reference.
+
+**Decks are the LAST deliverable.** All chapters (Parts 0–8, Ch0–28 + the CRC
+appendix) and all runnable examples/demos ship first; the three decks are built
+only once the book and its code are complete. Decks are mined from finished
+chapters, so writing them earlier would mean reworking them as chapters land.
