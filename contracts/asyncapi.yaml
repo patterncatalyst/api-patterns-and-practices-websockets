@@ -1,0 +1,217 @@
+asyncapi: 3.0.0
+
+info:
+  title: Handling Events WebSocket Feed
+  version: 0.1.0
+  description: >
+    The live handling-event feed for the shipping/cargo domain shared with the
+    REST and gRPC sibling sites (Booking, Cargo, Location/UN-LOCODE, Route,
+    Leg, Operation, Money-as-decimal-string). A client opens a WebSocket
+    connection scoped to one booking and receives a server-to-client push
+    every time a handling event (container received, loaded, unloaded,
+    cleared through customs, claimed, held, or delivered) is recorded for
+    that booking's cargo — replacing polling the REST booking service for a
+    status that has not changed.
+
+    This file is the single source of truth: both the Quarkus WebSockets Next
+    stack and the Python FastAPI/Starlette + `websockets` stack generate and
+    validate against it. See `contracts/README.md` for the validation command
+    and authoring conventions.
+  license:
+    name: MIT
+  tags:
+    - name: handling-events
+      description: The live handling-event push feed for a single booking.
+
+servers:
+  local:
+    host: localhost:8080
+    protocol: ws
+    description: >
+      Local development server. The WebSocket upgrade request carries a
+      bearer token as a query parameter (`token`) until the site's auth
+      chapter lands a header-based alternative; the server advertises the
+      `handling-events.v1` subprotocol.
+    bindings:
+      ws:
+        method: GET
+        query:
+          type: object
+          properties:
+            token:
+              type: string
+              description: >
+                Placeholder auth token passed as a query parameter. Treated
+                as opaque by this contract; the auth chapter specifies the
+                token format and validation.
+          required:
+            - token
+        headers:
+          type: object
+          properties:
+            Sec-WebSocket-Protocol:
+              type: string
+              const: handling-events.v1
+              description: Subprotocol advertised by both server and client.
+        bindingVersion: 0.1.0
+
+channels:
+  handlingEvents:
+    address: /ws/v1/bookings/{bookingId}/handling-events
+    title: Handling events for a booking
+    description: >
+      One WebSocket connection per booking. The server pushes a
+      `HandlingEvent` message each time a new handling event is recorded for
+      the booking identified by `bookingId`; the server never expects a
+      client-to-server message on this channel.
+    servers:
+      - $ref: '#/servers/local'
+    parameters:
+      bookingId:
+        description: >
+          The booking whose handling events this connection watches. Matches
+          the `Booking.id` identifier shape shared with the REST and gRPC
+          sites: a `bkg_` prefix followed by a 26-character ULID
+          (`^bkg_[0-9A-Za-z]{26}$`).
+        examples:
+          - bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A
+    messages:
+      handlingEvent:
+        $ref: '#/components/messages/HandlingEvent'
+    bindings:
+      ws:
+        method: GET
+        bindingVersion: 0.1.0
+
+operations:
+  receiveHandlingEvent:
+    action: receive
+    channel:
+      $ref: '#/channels/handlingEvents'
+    title: Receive a handling event
+    summary: >
+      The client receives a HandlingEvent push whenever one is recorded for
+      the watched booking.
+    description: >
+      Server-to-client push only; this channel defines no client-to-server
+      operation. One `HandlingEvent` message is sent per recorded event, in
+      the order the server registers them.
+    tags:
+      - name: handling-events
+    messages:
+      - $ref: '#/channels/handlingEvents/messages/handlingEvent'
+
+components:
+  messages:
+    HandlingEvent:
+      name: HandlingEvent
+      title: Handling event
+      summary: A single handling event recorded against a booking's cargo.
+      contentType: application/json
+      tags:
+        - name: handling-events
+      payload:
+        $ref: '#/components/schemas/HandlingEvent'
+
+  schemas:
+    HandlingEvent:
+      type: object
+      description: >
+        A single handling event recorded against a booking's cargo —
+        continuous with the REST and gRPC sites' shipping/cargo glossary.
+      properties:
+        eventId:
+          type: string
+          description: >
+            Unique identifier for this event (`evt_` prefix, ULID-shaped),
+            mirroring the `bkg_`/`crg_` id-prefix convention used across the
+            series.
+          pattern: '^evt_[0-9A-Za-z]{26}$'
+          examples:
+            - evt_01HZY3M1V8X4D7Q6B2N9C0T5E8
+        bookingId:
+          type: string
+          description: The booking this event belongs to. Matches the channel's `bookingId` parameter.
+          pattern: '^bkg_[0-9A-Za-z]{26}$'
+          examples:
+            - bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A
+        cargoId:
+          type: string
+          description: The piece of cargo this event was recorded against.
+          pattern: '^crg_[0-9A-Za-z]{26}$'
+          examples:
+            - crg_01HZY3N4F6K1W9P3R7T0Y2Q8M5
+        eventType:
+          $ref: '#/components/schemas/HandlingEventType'
+        location:
+          $ref: '#/components/schemas/Location'
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the handling event physically happened.
+        registeredAt:
+          type: string
+          format: date-time
+          description: >
+            When the handling event was recorded by the system. Greater than
+            or equal to `occurredAt`; the two differ whenever registration is
+            delayed (e.g. a paper manifest keyed in after the fact).
+        voyageNumber:
+          type: string
+          description: >
+            Optional carrier voyage number in effect when the event was
+            recorded (e.g. a LOAD or UNLOAD event). Absent for events that
+            are not tied to a specific voyage (e.g. CUSTOMS, CLAIM).
+          examples:
+            - MSC-0417W
+        amount:
+          $ref: '#/components/schemas/Money'
+      required:
+        - eventId
+        - bookingId
+        - cargoId
+        - eventType
+        - location
+        - occurredAt
+        - registeredAt
+
+    HandlingEventType:
+      type: string
+      description: >
+        The kind of handling event. `HANDLING_EVENT_TYPE_UNSPECIFIED` is the
+        zero value and is never sent by the server; it exists so the enum has
+        a safe default for deserialization, matching the
+        `*_UNSPECIFIED`-zero-value convention used across the series' gRPC
+        enums.
+      enum:
+        - HANDLING_EVENT_TYPE_UNSPECIFIED
+        - RECEIVE
+        - LOAD
+        - UNLOAD
+        - CUSTOMS
+        - CLAIM
+        - HOLD
+        - DELIVERED
+
+    Location:
+      type: string
+      description: >
+        A port or terminal identified by UN/LOCODE (e.g. `USNYC`, `NLRTM`,
+        `SGSIN`) — the same identifier shape as the REST and gRPC sites'
+        `Location` type.
+      pattern: '^[A-Z]{2}[A-Z2-9]{3}$'
+      examples:
+        - USNYC
+        - NLRTM
+        - SGSIN
+
+    Money:
+      type: string
+      description: >
+        A decimal amount, serialized as a string to avoid binary float drift
+        — the WebSocket analog of the REST and gRPC sites'
+        Money-as-decimal-string convention. Carries no currency code; this
+        feed reports amounts in the booking's quoted currency.
+      pattern: '^\d+\.\d{2}$'
+      examples:
+        - '125.00'

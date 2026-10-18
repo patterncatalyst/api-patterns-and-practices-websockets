@@ -58,6 +58,35 @@ project.
 29 chapter/appendix files total (Ch0–Ch28 plus the appendix), clean and
 gap-free, no scope cap.
 
+## r02 scope (in progress)
+
+Author full house-depth prose for **Parts 0–2** (Ch0–Ch7), author the **AsyncAPI
+3 contract**, and add the **hub entry**. Examples remain deferred to r03.
+
+- **Contract-first spine.** `contracts/asyncapi.yaml` (single file, AsyncAPI
+  3.0.0) + `contracts/README.md` are written before the contract-bound chapters.
+  The `handling-events` channel carries the DRQ-004 shipping/cargo handling
+  events; one reused `HandlingEvent` message; Money-as-decimal-string;
+  UN/LOCODE locations; enums with `*_UNSPECIFIED` zero value.
+- **Chapters.** Ch0 Setup and the lab, Ch1 The real-time problem, Ch2 Choosing
+  the right tool, Ch3 How WebSockets work, Ch4 The shared domain, Ch5 AsyncAPI:
+  giving a socket a contract, Ch6 Message design, Ch7 Versioning and evolution.
+  Each: lead paragraph → 4+ `## ` sections → ~2 paired SVG+Excalidraw diagrams
+  → `## On the wire` box → `## Where this goes next` → closing **Decision**
+  callout. Depth calibrated against the gRPC sibling site.
+- **Ch5 anchor = validatable contract only** (DRQ-011): Ch5 references the real
+  `contracts/asyncapi.yaml` and shows it validating; no runnable service yet.
+- **CI.** Add a **validate-only** AsyncAPI CI step now (DRQ-012); the full
+  regen/drift gate stays deferred until examples land.
+- **Ch0** writes prose that references the lab scripts as forthcoming
+  (DRQ-013); the scripts themselves land with the examples iteration.
+- **Hub entry** in `patterncatalyst/workshops-tutorials-list`
+  `_data/sites.yml`, after the graphql block, under `group: "API Design"`.
+
+Build sequence: contract → Ch0–Ch3 (parallel) → Ch4–Ch7 (contract-bound) →
+hub → CI step → `bundle exec jekyll build` + voice scan. Checkpoint commit per
+chapter.
+
 ## Deferred to later iterations (r02+)
 
 - Chapter prose for all 29 chapters, to the house depth standard (paired
@@ -70,7 +99,9 @@ gap-free, no scope cap.
   drift (the WebSockets analog of the gRPC site's `buf breaking` gate).
 - The hub entry: `patterncatalyst/workshops-tutorials-list` `_data/sites.yml`
   gets this site added once there is real content to point at.
-- The companion deck(s) for this site.
+- The companion decks for this site: a 101 concept deck plus a 201 per language
+  (201 Quarkus, 201 Python), each targeting ~50 slides with overflow in
+  appendices (DRQ-017).
 - `_example_pages/index.md` and `bibliography.md` filled in with real content
   (currently nav stubs only).
 

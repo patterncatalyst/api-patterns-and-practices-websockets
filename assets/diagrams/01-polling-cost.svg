@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 340" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="780" height="300" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">1 booking, watched for 10 minutes, one status change at minute 7</text>
+<rect x="60" y="70" width="90" height="44" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="105.0" y="90.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">poll</text>
+<text x="105.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">2s interval</text>
+<rect x="170" y="70" width="90" height="44" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="215.0" y="90.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">poll</text>
+<text x="215.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">unchanged</text>
+<rect x="280" y="70" width="90" height="44" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="325.0" y="90.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">poll</text>
+<text x="325.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">unchanged</text>
+<rect x="390" y="70" width="90" height="44" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="435.0" y="90.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">poll</text>
+<text x="435.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">unchanged</text>
+<rect x="500" y="70" width="90" height="44" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="545.0" y="90.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">…296 more</text>
+<text x="545.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">unchanged</text>
+<rect x="630" y="70" width="150" height="44" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="705.0" y="90.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">1 poll</text>
+<text x="705.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">catches the change</text>
+<rect x="60" y="150" width="720" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="420.0" y="183.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">300 requests sent to watch one booking for 10 minutes</text>
+<text x="420.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">299 return a body identical to the one before it — 0 new information, full request/response cost</text>
+<rect x="60" y="250" width="340" height="60" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="230.0" y="278.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">1,000 clients, same interval</text>
+<text x="230.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">300,000 requests/10 min for 1,000 events total</text>
+<rect x="420" y="250" width="360" height="60" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="600.0" y="278.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Push equivalent</text>
+<text x="600.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">1,000 open sockets, 1,000 messages sent total</text>
+<path d="M150,92 L170,92" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M260,92 L280,92" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M370,92 L390,92" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M480,92 L500,92" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M590,92 L630,92" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+</svg>

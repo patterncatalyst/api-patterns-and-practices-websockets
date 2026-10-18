@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 360" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="30" y="40" width="340" height="60" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="200.0" y="68.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">This contract&#x27;s choice</text>
+<text x="200.0" y="85.0" font-size="11.5" fill="#555555" text-anchor="middle">one message, eventType discriminates</text>
+<rect x="30" y="140" width="150" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="105.0" y="170.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">RECEIVE</text>
+<rect x="220" y="140" width="150" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="295.0" y="170.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">LOAD / UNLOAD</text>
+<rect x="30" y="220" width="150" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="105.0" y="250.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CUSTOMS / CLAIM</text>
+<rect x="220" y="220" width="150" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="295.0" y="250.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">HOLD / DELIVERED</text>
+<rect x="450" y="40" width="340" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="620.0" y="68.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Rejected alternative</text>
+<text x="620.0" y="85.0" font-size="11.5" fill="#555555" text-anchor="middle">one AsyncAPI message per event kind</text>
+<rect x="450" y="140" width="150" height="50" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="525.0" y="170.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">ReceivedEvent</text>
+<rect x="640" y="140" width="150" height="50" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="715.0" y="170.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">LoadedEvent</text>
+<rect x="450" y="220" width="150" height="50" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="525.0" y="250.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CustomsEvent</text>
+<rect x="640" y="220" width="150" height="50" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="715.0" y="250.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">...4 more schemas</text>
+<path d="M105,100 L105,140" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="111.0" y="114.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">eventType =</text>
+<text x="111.0" y="114.0" font-size="11" fill="#555" text-anchor="middle">eventType =</text>
+<path d="M295,100 L295,140" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M105,100 L105,220" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M295,100 L295,220" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M525,100 L525,140" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M715,100 L715,140" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M525,100 L525,220" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M715,100 L715,220" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="410" y="300" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Same seven event kinds either way — the difference is where the branching lives</text>
+<text x="410" y="320" font-size="11" fill="#555555" text-anchor="middle">One schema: adding RECONSIGNED is one new enum value. Seven schemas: it&#x27;s a new channel message, in both stacks.</text>
+</svg>
