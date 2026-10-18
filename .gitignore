@@ -1,0 +1,42 @@
+# Jekyll
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.sass-cache/
+vendor/
+.bundle/
+
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+dist/
+*.egg-info/
+
+# Java / Quarkus
+target/
+*.class
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local-only notes and secrets
+*.local.md
+*.local
+configs/*.local.json
+.deck-src/
+presentation/_shared/node_modules/
+presentation/**/__pycache__/
+**/.venv/
+presentation/**/qa/
+
+# gRPC / protobuf generated code
+**/generated/
+*_pb2.py
+*_pb2_grpc.py
+*_pb2.pyi
+buf.lock.bak
