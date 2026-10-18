@@ -14,7 +14,7 @@ The lab itself — the running `compose.yaml`, the `check-prereqs.sh` and teardo
 
 This site pins to the current stable release of each tool as of this writing, not an older LTS floor, for the same reason the REST and gRPC sibling sites do: a reader installing the toolchain today should land close to what every example targets, not several minor versions behind it. Quarkus builds on **JDK 25** (the current LTS line, patch **25.0.4**) and targets **Quarkus 3.40**, the current stable minor on the 3.x track — Quarkus 4.0 is in beta as of this writing and isn't adopted here until it ships stable. **WebSockets Next** is the extension that matters for this site specifically: it's the current-generation Quarkus WebSocket API, built on Vert.x and Mutiny from the ground up for structured concurrency and per-connection state, and it ships inside the same Quarkus release train rather than as a separately versioned artifact. The legacy `quarkus-websockets` extension still exists and still works, but every Quarkus example in this site uses WebSockets Next exclusively; Chapter 8 is where that extension gets a full treatment and the legacy API gets its one explicit mention, as the thing this site doesn't teach.
 
-The Python side pins to **Python 3.15**, the current stable release of the language, managed by **Poetry 2.5** rather than `pip` and a hand-rolled virtualenv, or `uv` the way the gRPC sibling does it — Poetry is this site's own convention, chosen for its `pyproject.toml`-first workflow and lockfile semantics rather than copied from a sibling site without re-justifying it for this stack (DRQ-002). Every Python example builds on **FastAPI** for HTTP routing and app lifecycle, paired with the native **`websockets`** library for the socket itself rather than a framework-bundled WebSocket shim: FastAPI's own `WebSocket` type is a thin wrapper over Starlette's ASGI-level primitive, fine for a single-process toy, but the native library exposes the connection state machine, ping/pong control frames, and close-code handling directly — the exact knobs Part 4's liveness and reconnect chapters need. Chapter 9 covers that choice, and when reaching for the framework's built-in support is the right call instead, in full.
+The Python side pins to **Python 3.15**, the current stable release of the language, managed by **`uv`** rather than `pip` and a hand-rolled virtualenv: uv installs the interpreter, resolves and locks dependencies in a `pyproject.toml`-first workflow, and runs the project, all from one fast tool. This is the house standard across the REST and gRPC sibling sites and the shared Python scaffold (DRQ-002). Every Python example builds on **FastAPI** for HTTP routing and app lifecycle, paired with the native **`websockets`** library for the socket itself rather than a framework-bundled WebSocket shim: FastAPI's own `WebSocket` type is a thin wrapper over Starlette's ASGI-level primitive, fine for a single-process toy, but the native library exposes the connection state machine, ping/pong control frames, and close-code handling directly — the exact knobs Part 4's liveness and reconnect chapters need. Chapter 9 covers that choice, and when reaching for the framework's built-in support is the right call instead, in full.
 
 Contract-first work needs one more tool before either service exists: the **AsyncAPI CLI**, which validates `contracts/asyncapi.yaml` against the AsyncAPI 3.0 meta-schema the same way `buf lint` validates a `.proto` file on the gRPC site. Chapter 5 is where that contract gets written and validated for the first time; this chapter's lab only needs the CLI installed and on `PATH` so `check-prereqs.sh` can confirm it. Two load and functional testing tools round out the list without being needed for this chapter's own checks: **k6** drives the sustained-connection load tests Part 5 builds against, and **Newman** runs any REST-side assertions this site needs at the seam back to the REST booking service (DRQ-006). Installing both now means Part 5 is never the first time you reach for either.
 
@@ -28,11 +28,11 @@ quarkus create app shipping:handling-events-ws \
   --extension=quarkus-websockets-next,quarkus-opentelemetry
 ```
 ```bash
-# Python — pyenv manages the interpreter, Poetry manages the project
-pyenv install 3.15.0 && pyenv local 3.15.0
-pipx install poetry==2.5.1
-poetry new handling-events-ws && cd handling-events-ws
-poetry add fastapi websockets uvicorn[standard] opentelemetry-distro
+# Python — uv manages both the interpreter and the project
+uv python install 3.15.0
+uv init handling-events-ws && cd handling-events-ws
+uv python pin 3.15.0
+uv add fastapi websockets "uvicorn[standard]" opentelemetry-distro
 ```
 
 A container engine with the **Compose plugin** — Docker Engine or Docker Desktop providing `docker compose` as a CLI subcommand, not the legacy standalone `docker-compose` binary — is the one tool every chapter assumes without exception. The plugin itself has moved past the `2.x` line it's still colloquially called "v2" after (it's at `5.6` as of this writing); the name stuck because it replaced the Python-based v1 tool, and the version number runs on its own track, kept clear of the Compose *file* format's own v2/v3 schema numbering — a different thing entirely. The last toolchain piece is the observability stack itself: `grafana/otel-lgtm`, an all-in-one image bundling Loki (logs), Grafana (dashboards), Tempo (traces), and Mimir (metrics) behind a single OpenTelemetry Collector — the same image the gRPC and REST sites use, so a reader working through more than one site in this series reuses one mental model of where a trace ends up.
@@ -66,7 +66,7 @@ Each check follows the same three-step shape: locate the binary, parse its repor
 | Quarkus | 3.40.0 | current stable minor; 4.0 is beta as of this writing |
 | Quarkus WebSockets Next | ships with Quarkus 3.40.0 | no separate version — part of the core extension set |
 | Python | 3.15.0 | current stable language release |
-| Poetry | 2.5.1 | current stable; added official Python 3.15 support in 2.5.0 |
+| uv | 0.13.1 | current stable; installs the interpreter, resolves/locks deps, runs the project |
 | FastAPI | 0.143.2 | current stable; routing and app lifecycle only, not the socket itself |
 | websockets (library) | 17.1 | current stable; the native library both stacks' Python side builds on |
 | AsyncAPI CLI | 6.2.1 | validates `contracts/asyncapi.yaml` from Chapter 5 onward |
@@ -99,7 +99,7 @@ $ ./scripts/check-prereqs.sh
 checking java................. 25.0.4 (>= 25.0.0)        OK
 checking quarkus............... 3.40.0 (>= 3.33.0)        OK
 checking python................ 3.15.0 (>= 3.14.0)        OK
-checking poetry................ 2.5.1 (>= 2.4.0)          OK
+checking uv.................... 0.13.1 (>= 0.12.0)        OK
 checking asyncapi.............. 6.2.1 (>= 5.0.0)          OK
 checking docker................ 29.1.2                    OK
 checking docker compose........ 5.6.0 (>= 2.20.0)         OK
@@ -111,9 +111,9 @@ all checks passed — run: docker compose up --build
 A missing or under-pinned tool fails exactly one line and stops the script there rather than listing every subsequent check as a cascading failure:
 
 ```text
-checking poetry................ not found
-missing dependency: poetry >= 2.4.0
-  install: pipx install poetry==2.5.1
+checking uv.................... not found
+missing dependency: uv >= 0.12.0
+  install: curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 | Check | Pinned minimum | What it gates |
@@ -121,7 +121,7 @@ missing dependency: poetry >= 2.4.0
 | `java` | 25.0.0 | Quarkus build and dev mode |
 | `quarkus` | 3.33.0 | WebSockets Next extension availability |
 | `python` | 3.14.0 | native `websockets` library's minimum interpreter |
-| `poetry` | 2.4.0 | lockfile format this site's `pyproject.toml` files use |
+| `uv` | 0.12.0 | the `pyproject.toml` + `uv.lock` workflow this site's Python uses |
 | `asyncapi` | 5.0.0 | AsyncAPI 3.0 validation support |
 | `docker compose` | 2.20.0 | `profiles` and `depends_on` health conditions |
 
@@ -131,4 +131,4 @@ The minimums in this table are looser than the exact pins in the Version Matrix 
 
 Chapter 1 steps back from the lab to the problem this site's first part spends its time justifying: why polling a REST endpoint stops working once "almost real-time" isn't good enough, and what a persistent connection buys over it instead. Chapter 3 gives WebSockets itself a full treatment — the HTTP Upgrade handshake, frame anatomy, control versus data frames, and the close-code vocabulary every later error-handling chapter refers back to. Chapter 5 is where `contracts/asyncapi.yaml` is written and validated for the first time, which is also the first chapter this site's CI gate enforces. Everything this chapter fixed — the toolchain pins, the Compose shape, the three-tier runtime progression, `check-prereqs.sh` as the thing every chapter runs first — stays constant from here forward; only what's behind each upgrade handshake gets more real.
 
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>This site pins JDK 25 / Quarkus 3.40, Python 3.15 / Poetry 2.5, and the Compose plugin as the toolchain every example builds against, surveyed to current stable rather than an older LTS floor, with the lab running entirely through Docker Compose and LGTM gated behind an opt-in profile; <code>check-prereqs.sh</code> and the Compose lab itself ship with the examples iteration, but the pins, the Compose shape, and the three-tier runtime progression they target are fixed as of this chapter.</p></div>
+<div class="callout callout--safe"><p class="callout__title">Decision</p><p>This site pins JDK 25 / Quarkus 3.40, Python 3.15 / uv 0.13, and the Compose plugin as the toolchain every example builds against, surveyed to current stable rather than an older LTS floor, with the lab running entirely through Docker Compose and LGTM gated behind an opt-in profile; <code>check-prereqs.sh</code> and the Compose lab itself ship with the examples iteration, but the pins, the Compose shape, and the three-tier runtime progression they target are fixed as of this chapter.</p></div>
