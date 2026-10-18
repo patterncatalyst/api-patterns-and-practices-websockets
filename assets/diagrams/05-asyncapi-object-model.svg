@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 440" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="280" y="15" width="260" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="410.0" y="45.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">servers.local</text>
+<text x="410.0" y="62.5" font-size="11.5" fill="#555555" text-anchor="middle">host: localhost:8080  protocol: ws</text>
+<rect x="260" y="110" width="300" height="75" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="410.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">channels.handlingEvents</text>
+<text x="410.0" y="162.5" font-size="11.5" fill="#555555" text-anchor="middle">address: /ws/v1/bookings/{bookingId}/handling-events</text>
+<rect x="260" y="215" width="300" height="70" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="410.0" y="248.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">operations.receiveHandlingEvent</text>
+<text x="410.0" y="265.0" font-size="11.5" fill="#555555" text-anchor="middle">action: receive</text>
+<rect x="110" y="325" width="230" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="225.0" y="358.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">components.messages.HandlingEvent</text>
+<text x="225.0" y="375.0" font-size="11.5" fill="#555555" text-anchor="middle">payload: $ref schemas.HandlingEvent</text>
+<rect x="370" y="325" width="230" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="485.0" y="350.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">components.schemas.HandlingEvent</text>
+<text x="485.0" y="367.5" font-size="11.5" fill="#555555" text-anchor="middle">eventId, bookingId, cargoId,</text>
+<text x="485.0" y="382.5" font-size="11.5" fill="#555555" text-anchor="middle">eventType, location, occurredAt...</text>
+<rect x="630" y="325" width="170" height="70" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="715.0" y="350.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">referenced schemas</text>
+<text x="715.0" y="367.5" font-size="11.5" fill="#555555" text-anchor="middle">HandlingEventType</text>
+<text x="715.0" y="382.5" font-size="11.5" fill="#555555" text-anchor="middle">Location · Money</text>
+<path d="M410,80 L410,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="416.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">channel binds to a server</text>
+<text x="416.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">channel binds to a server</text>
+<path d="M410,185 L410,215" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="416.0" y="194.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">operation binds to a channel</text>
+<text x="416.0" y="194.0" font-size="11" fill="#555" text-anchor="middle">operation binds to a channel</text>
+<path d="M350,285 L225,325" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="293.5" y="299.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">operation.messages $ref</text>
+<text x="293.5" y="299.0" font-size="11" fill="#555" text-anchor="middle">operation.messages $ref</text>
+<path d="M340,360 L370,360" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="361.0" y="354.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">message.payload $ref</text>
+<text x="361.0" y="354.0" font-size="11" fill="#b8650a" text-anchor="middle">message.payload $ref</text>
+<path d="M600,360 L630,360" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="621.0" y="354.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">property $ref</text>
+<text x="621.0" y="354.0" font-size="11" fill="#555" text-anchor="middle">property $ref</text>
+<text x="410" y="420" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Four top-level sections, never nested: servers, channels, operations, components — AsyncAPI 3&#x27;s object model.</text>
+</svg>

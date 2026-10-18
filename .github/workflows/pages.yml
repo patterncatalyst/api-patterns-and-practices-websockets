@@ -27,6 +27,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Validate the AsyncAPI 3 contract on every push/PR (DRQ-012). This is the
+  # validate-only gate; the full regenerate-both-stacks drift gate lands once the
+  # examples generate from the contract (deferred, DRQ-003).
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Validate AsyncAPI contract
+        run: npx -y @asyncapi/cli@6.2.1 validate contracts/asyncapi.yaml
+
   build:
     runs-on: ubuntu-latest
     steps:

@@ -85,3 +85,57 @@ per-style sites are reference-only for pacing and depth, never a hard cap.
 The OpenShift Local (CRC) chapter is `_docs/99-appendix-a-openshift-crc.md` —
 an `appendix: true` page outside the main sequence — while the numbered
 chapters run **0–28 with no gaps**. User-confirmed at r01 bootstrap.
+
+## DRQ-011 — Ch5 end-to-end anchor is a validatable contract, not a running service (r02)
+
+r02 ships prose + the AsyncAPI 3 contract; `examples/` stays deferred to r03.
+The Ch5 "runs end-to-end" anchor is satisfied by a contract that **validates**
+against AsyncAPI 3 and that both stacks will generate from — not by a running
+Quarkus/Python service this iteration. User-confirmed at r02 planning.
+
+## DRQ-012 — Validate-only AsyncAPI CI now; full drift gate still deferred (r02)
+
+A lightweight CI step runs `asyncapi validate` (pinned CLI) on
+`contracts/asyncapi.yaml` from r02 onward, catching a broken contract. The full
+regenerate-both-stacks-and-fail-on-drift gate (the analog of the gRPC site's
+`buf breaking`) remains deferred until the examples generate from the contract.
+
+## DRQ-013 — Ch0 lab scripts referenced as forthcoming, not authored in r02
+
+Ch0 prose describes the toolchain pins, the Docker Compose lab, `check-prereqs.sh`,
+the version matrix, and teardown, and points at the scripts landing with the
+examples iteration. The scripts themselves are not authored in r02.
+
+## DRQ-014 — Single-file AsyncAPI contract
+
+The contract is one `contracts/asyncapi.yaml` (plus `contracts/README.md`), the
+common AsyncAPI layout — not split across channels/operations/components files.
+Revisit only if the contract grows enough to warrant `$ref` splitting.
+
+## DRQ-015 — ~2 paired diagrams per chapter
+
+Each r02 chapter ships roughly two paired SVG+`.excalidraw` figures, matching
+the gRPC sibling's pacing; the hard floor is one per chapter.
+
+## DRQ-016 — Chapter length: prose-word target, 2k floor / 2.5k soft target
+
+Chapter depth is measured in **prose words, excluding code blocks and diagrams**.
+**2,000 words is a hard floor** (never ship below). **2,500 words is a target,
+not a ceiling** — exceeding it is fine when the extra words carry value, not
+padding; longer chapters should carry more explanatory diagrams. Do not trim a
+chapter just to reach 2,500. This replaces the earlier byte-size heuristic
+borrowed from the sibling sites.
+
+## DRQ-017 — Companion decks: one 101 plus a 201 per language
+
+The site ships **three** companion decks (deferred past r02, same posture as the
+gRPC/REST siblings): a **101** concept-level deck (transport-agnostic real-time
+and WebSockets fundamentals, the decision framework, the contract story), and
+**two 201** decks — **one per language** (201 Quarkus WebSockets Next, 201 Python
+native `websockets`) — each a hands-on build against the shared AsyncAPI
+contract. Built with `lgtm-presentation` (pptxgenjs, site figures reused as PNGs,
+notes==slides, 0 ban-tier), no docx.
+
+Each deck **targets ~50 slides** in the main body; anything beyond that goes into
+**appendices** rather than inflating the core narrative, so the main track stays
+deliverable in a session while depth stays available on reference.

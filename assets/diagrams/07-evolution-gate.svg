@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 420" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="65" width="165" height="110" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="102.5" y="110.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Field</text>
+<text x="102.5" y="127.5" font-size="11.5" fill="#555555" text-anchor="middle">add an optional field</text>
+<text x="102.5" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">(carrierRemarks)</text>
+<rect x="225" y="65" width="165" height="110" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="307.5" y="110.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Enum</text>
+<text x="307.5" y="127.5" font-size="11.5" fill="#555555" text-anchor="middle">add a new member</text>
+<text x="307.5" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">(REROUTED)</text>
+<rect x="430" y="65" width="165" height="110" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="512.5" y="110.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Shape</text>
+<text x="512.5" y="127.5" font-size="11.5" fill="#555555" text-anchor="middle">new channel path version</text>
+<text x="512.5" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">(/ws/v2/...)</text>
+<rect x="635" y="65" width="165" height="110" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="717.5" y="110.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Requirement</text>
+<text x="717.5" y="127.5" font-size="11.5" fill="#555555" text-anchor="middle">add a 2nd subprotocol</text>
+<text x="717.5" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">old one still served</text>
+<rect x="20" y="255" width="165" height="120" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="102.5" y="305.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Field</text>
+<text x="102.5" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">remove a field a client</text>
+<text x="102.5" y="337.5" font-size="11.5" fill="#555555" text-anchor="middle">already reads (amount)</text>
+<rect x="225" y="255" width="165" height="120" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="307.5" y="305.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Enum</text>
+<text x="307.5" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">repurpose a member&#x27;s</text>
+<text x="307.5" y="337.5" font-size="11.5" fill="#555555" text-anchor="middle">meaning in place (CUSTOMS)</text>
+<rect x="430" y="255" width="165" height="120" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="512.5" y="305.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Shape</text>
+<text x="512.5" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">change a field&#x27;s type or</text>
+<text x="512.5" y="337.5" font-size="11.5" fill="#555555" text-anchor="middle">unit in place (Money)</text>
+<rect x="635" y="255" width="165" height="120" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="717.5" y="305.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Requirement</text>
+<text x="717.5" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">make an optional field</text>
+<text x="717.5" y="337.5" font-size="11.5" fill="#555555" text-anchor="middle">required</text>
+<path d="M102.5,175 L102.5,255" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M307.5,175 L307.5,255" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M512.5,175 L512.5,255" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M717.5,175 L717.5,255" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="410" y="30" font-size="13" fill="#1d1d1d" text-anchor="middle" font-weight="700">Classifying a change to the handling-event contract</text>
+<text x="20" y="55" font-size="12" fill="#b8650a" text-anchor="start" font-weight="700">SAFE — an old client&#x27;s deserializer never has to look at the new part</text>
+<text x="20" y="245" font-size="12" fill="#555555" text-anchor="start" font-weight="700">BREAKING — an old client misreads bytes it already expected to understand</text>
+<text x="410" y="400" font-size="11" fill="#555555" text-anchor="middle">Each dashed line pairs the same kind of change: safe addition above, breaking mutation of the same thing below.</text>
+</svg>

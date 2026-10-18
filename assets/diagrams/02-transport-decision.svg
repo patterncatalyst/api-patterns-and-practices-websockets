@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="350" y="16" width="200" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="450.0" y="40.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Need live updates</text>
+<text x="450.0" y="57.0" font-size="11.5" fill="#555555" text-anchor="middle">at all?</text>
+<rect x="20" y="118" width="230" height="56" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="135.0" y="144.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Plain request/response</text>
+<text x="135.0" y="161.0" font-size="11.5" fill="#555555" text-anchor="middle">ask again when you need to</text>
+<rect x="345" y="118" width="230" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="460.0" y="142.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Who needs to send —</text>
+<text x="460.0" y="159.0" font-size="11.5" fill="#555555" text-anchor="middle">one side or both?</text>
+<rect x="640" y="208" width="210" height="58" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="745.0" y="235.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">WebSocket</text>
+<text x="745.0" y="252.0" font-size="11.5" fill="#555555" text-anchor="middle">full duplex, one connection</text>
+<rect x="225" y="208" width="250" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="350.0" y="232.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Receiver is a browser</text>
+<text x="350.0" y="249.0" font-size="11.5" fill="#555555" text-anchor="middle">tab you control?</text>
+<rect x="50" y="300" width="240" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="170.0" y="324.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Network path keeps a</text>
+<text x="170.0" y="341.0" font-size="11.5" fill="#555555" text-anchor="middle">streaming response open?</text>
+<rect x="415" y="300" width="260" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="545.0" y="324.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Receiver exposes a</text>
+<text x="545.0" y="341.0" font-size="11.5" fill="#555555" text-anchor="middle">reachable endpoint?</text>
+<rect x="10" y="392" width="170" height="58" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="95.0" y="419.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">SSE</text>
+<text x="95.0" y="436.0" font-size="11.5" fill="#555555" text-anchor="middle">server to client, native</text>
+<rect x="195" y="392" width="210" height="58" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="300.0" y="419.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Long-polling</text>
+<text x="300.0" y="436.0" font-size="11.5" fill="#555555" text-anchor="middle">held request, repeat</text>
+<rect x="415" y="392" width="190" height="58" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="510.0" y="419.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Webhook</text>
+<text x="510.0" y="436.0" font-size="11.5" fill="#555555" text-anchor="middle">sender calls you</text>
+<rect x="620" y="392" width="240" height="58" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="740.0" y="419.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">gRPC server-streaming</text>
+<text x="740.0" y="436.0" font-size="11.5" fill="#555555" text-anchor="middle">typed, flow-controlled</text>
+<path d="M420,68 L135,118" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="283.5" y="87.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">No, nothing to push</text>
+<text x="283.5" y="87.0" font-size="11" fill="#555" text-anchor="middle">No, nothing to push</text>
+<path d="M460,68 L460,118" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="466.0" y="87.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Yes</text>
+<text x="466.0" y="87.0" font-size="11" fill="#555" text-anchor="middle">Yes</text>
+<path d="M560,170 L740,208" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="656.0" y="183.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Both push, sub-second</text>
+<text x="656.0" y="183.0" font-size="11" fill="#b8650a" text-anchor="middle">Both push, sub-second</text>
+<path d="M420,170 L350,208" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="391.0" y="183.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Server only</text>
+<text x="391.0" y="183.0" font-size="11" fill="#555" text-anchor="middle">Server only</text>
+<path d="M320,260 L170,300" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="251.0" y="274.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Browser you control</text>
+<text x="251.0" y="274.0" font-size="11" fill="#555" text-anchor="middle">Browser you control</text>
+<path d="M400,260 L545,300" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="478.5" y="274.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Another service</text>
+<text x="478.5" y="274.0" font-size="11" fill="#555" text-anchor="middle">Another service</text>
+<path d="M130,352 L95,392" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="118.5" y="366.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Yes, survives proxies</text>
+<text x="118.5" y="366.0" font-size="11" fill="#b8650a" text-anchor="middle">Yes, survives proxies</text>
+<path d="M200,352 L300,392" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="256.0" y="366.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">No, gets stripped</text>
+<text x="256.0" y="366.0" font-size="11" fill="#555" text-anchor="middle">No, gets stripped</text>
+<path d="M480,352 L510,392" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="501.0" y="366.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Yes, call it</text>
+<text x="501.0" y="366.0" font-size="11" fill="#b8650a" text-anchor="middle">Yes, call it</text>
+<path d="M600,352 L740,392" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="676.0" y="366.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">No, control both ends</text>
+<text x="676.0" y="366.0" font-size="11" fill="#b8650a" text-anchor="middle">No, control both ends</text>
+</svg>
