@@ -1,0 +1,92 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Project: API Patterns and Practices: WebSockets
+# Site identity, GitHub link target, and baseurl. Build configuration below
+# generally doesn't need changes.
+# ────────────────────────────────────────────────────────────────────────────
+
+# Site identity
+title: "API Patterns and Practices: WebSockets"
+description: "Designing WebSocket APIs well, with runnable examples in Quarkus WebSockets Next and Python FastAPI/websockets against one AsyncAPI 3 contract, fanned out through a live handling-event feed."
+brand_emoji: "🔌"   # Single emoji that appears next to the title in the header
+
+# GitHub identity for header link and example sourcing
+github_username: "patterncatalyst"
+github_repo: "api-patterns-and-practices-websockets"
+
+# baseurl
+# - On user/org Pages site (USERNAME.github.io): set to ""
+# - On project Pages site (USERNAME.github.io/PROJECT): set to "/PROJECT"
+# - For local dev override at runtime: bundle exec jekyll serve --baseurl ""
+baseurl: "/api-patterns-and-practices-websockets"
+
+# url is set at deploy time; leave blank for GitHub Pages auto-detection
+url: ""
+
+license: "MIT"
+
+# ────────────────────────────────────────────────────────────────────────────
+# Build configuration — generally don't change these.
+# ────────────────────────────────────────────────────────────────────────────
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+permalink: pretty
+
+# Collections — _docs and _plans are not Jekyll defaults; this enables them.
+collections:
+  docs:
+    output: true
+    permalink: /docs/:name/
+  plans:
+    output: true
+    permalink: /plans/:name/
+  example_pages:
+    output: true
+    permalink: /examples/:name/
+  parts:
+    output: true
+    permalink: /parts/:name/
+
+# Default front-matter — saves typing `layout: tutorial` on every doc.
+defaults:
+  - scope:
+      path: ""
+      type: docs
+    values:
+      layout: tutorial
+      sectionid: docs
+  - scope:
+      path: ""
+      type: plans
+    values:
+      layout: plan
+  - scope:
+      path: ""
+      type: example_pages
+    values:
+      layout: tutorial
+      sectionid: examples
+  - scope:
+      path: ""
+      type: parts
+    values:
+      layout: part_index
+      sectionid: docs
+
+# Files that Jekyll should not process or include in the built site.
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - node_modules/
+  - examples/   # ← important: trailing slash; runnable code lives here, not site content
+  - contracts/  # ← single source of truth (proto + buf); validated in CI, not rendered
+  - scripts/
+  - presentation/  # ← .pptx deck builders + sources; repo artifacts, not site content
+  - README.md
+  - LICENSE
+  - PRD.md
+  - CONTRIBUTING.md

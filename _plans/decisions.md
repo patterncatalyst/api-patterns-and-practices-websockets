@@ -1,0 +1,87 @@
+---
+title: "Decisions Log"
+layout: plan
+render_with_liquid: false
+---
+
+# Decisions Log — API Patterns and Practices: WebSockets
+
+A running log of design-relevant decisions (DRQ = Decision Request/Question),
+seeded at r01 bootstrap. Later iterations append; nothing here is renumbered
+or deleted.
+
+## DRQ-001 — Repo, license, and bootstrap posture
+
+Public GitHub repo, MIT license, remote-first: create the GitHub repo first,
+then branch, then work — off-device durability from the first commit. Matches
+the other three sites in the series.
+
+## DRQ-002 — Two stacks: Quarkus WebSockets Next and Python
+
+Every hands-on chapter ships both a **Quarkus** implementation on
+**WebSockets Next** (the current-generation Quarkus WebSocket extension, not
+the legacy `quarkus-websockets`) and a **Python** implementation on
+**FastAPI/Starlette plus the native `websockets` library** — not a
+framework-bundled WebSocket shim — with a chapter-level note on when to reach
+for the native library versus a framework's built-in support. Quarkus builds
+on UBI 10; Python is managed by **Poetry**, matching this site's own
+convention rather than copying `uv` from the gRPC/REST siblings without
+re-justifying it for this stack.
+
+## DRQ-003 — AsyncAPI 3 contract spine, CI gate deferred
+
+The **AsyncAPI 3** specification is this site's contract language — the
+WebSockets analog of the REST site's OpenAPI and the gRPC site's Protobuf —
+authored before any chapter example and used to generate both stacks. A CI
+contract-drift gate (the analog of the gRPC site's `buf breaking`) is planned
+but **deferred past r01**: it ships once the contract itself exists.
+
+## DRQ-004 — Shared domain: the live handling-event feed
+
+The socket pushes the shipping/cargo domain's **handling events** — container
+moves, customs holds, delivery confirmations — to a client watching a
+booking. Continuous with the REST and gRPC sibling sites' shipping/cargo
+domain and glossary (Booking, Cargo, Location/UN-LOCODE, Route, Leg,
+Operation, Money-as-decimal-string); WebSockets is the layer that replaces
+polling the REST booking service for a status that hasn't changed.
+
+## DRQ-005 — Fan-out on both Kafka and Redis, contrasted
+
+Scale-out fan-out (Ch18) is taught on **both** Kafka and Redis (pub/sub or
+streams), deliberately contrasted rather than picking one — the chapter's
+point is the trade-off between them (durability and replay vs. simplicity
+and latency), not a single recommended answer.
+
+## DRQ-006 — Load and functional test tooling
+
+**k6** is the load-testing tool for WebSocket connections (Artillery and
+Gatling noted as alternatives, not adopted). **Newman** covers any REST-side
+assertions this site needs (e.g., the seam back to the REST booking service).
+
+## DRQ-007 — Runtime tiers
+
+Three tiers, same progression as every other site in the series: **Docker
+Compose** first, then **minikube** (docker driver, containerd runtime — the
+podman path is not supported), then a **separate**, non-numbered **OpenShift
+Local (CRC) appendix**. CRC is never folded into the minikube chapter.
+
+## DRQ-008 — Diagram convention
+
+Every diagram ships as a paired SVG + `.excalidraw` source via
+`scripts/generate_diagram.py`. Emphasis/ink boxes are **light fill, dark
+text** (`#f1f5f9` fill, `#64748b` border) — never a dark-filled box — matching
+the house diagram standard. The gRPC site's copy of this script used a dark
+`ink` fill; this site's copy corrects it at r01 rather than carrying the bug
+forward.
+
+## DRQ-009 — The outline is not a scope cap
+
+29 chapters/appendix is the **current** locked outline, not an upper limit.
+Later iterations may add chapters if the material warrants it; the sibling
+per-style sites are reference-only for pacing and depth, never a hard cap.
+
+## DRQ-010 — CRC as a non-numbered appendix; clean, contiguous numbering
+
+The OpenShift Local (CRC) chapter is `_docs/99-appendix-a-openshift-crc.md` —
+an `appendix: true` page outside the main sequence — while the numbered
+chapters run **0–28 with no gaps**. User-confirmed at r01 bootstrap.

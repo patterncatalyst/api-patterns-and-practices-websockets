@@ -1,0 +1,84 @@
+---
+layout: default
+title: Home
+---
+
+<section class="hero">
+  <div class="container">
+    <span class="hero__eyebrow">WebSockets · AsyncAPI 3 · Quarkus WebSockets Next · Python · Kafka · Redis</span>
+    <h1 class="hero__title">{{ site.title }}</h1>
+    <p class="hero__lead">{{ site.description }}</p>
+    <div class="hero__cta">
+      <a class="btn btn--primary"
+         href="{{ '/docs/00-outline/' | relative_url }}">Start reading →</a>
+      <a class="btn btn--secondary"
+         href="https://github.com/{{ site.github_username }}/{{ site.github_repo }}"
+         rel="noopener">View on GitHub ↗</a>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="container">
+    <div class="stats">
+      <div class="stat"><span class="stat__value">📐</span><span class="stat__label">One AsyncAPI 3 contract as the single source of truth for every message</span></div>
+      <div class="stat"><span class="stat__value">🔌</span><span class="stat__label">Every example in both Quarkus WebSockets Next and Python</span></div>
+      <div class="stat"><span class="stat__value">📡</span><span class="stat__label">The same handling event fanned out over both Kafka and Redis</span></div>
+      <div class="stat"><span class="stat__value">📊</span><span class="stat__label">Traced end to end through the Grafana LGTM stack</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-heading">What this site is</h2>
+    <p class="section-sub">
+      A chapter-based, hands-on path to designing WebSocket APIs well, built around a
+      single <a href="https://www.asyncapi.com/">AsyncAPI 3</a> contract for a shipping
+      and cargo domain. The socket here pushes a live <strong>handling-event feed</strong> —
+      the stream of container moves, customs holds, and delivery confirmations a shipment
+      generates as it moves — to any client watching a booking, instead of making that
+      client poll the sibling
+      <a href="https://github.com/patterncatalyst/api-patterns-and-practices-rest">REST</a>
+      booking service for a status that hasn't changed. Every hands-on chapter ships the
+      same example in <strong>both</strong> Quarkus WebSockets Next and Python
+      (FastAPI/Starlette plus the native <code>websockets</code> library), generated
+      against that one contract. You work through message design and versioning,
+      backpressure and flow control, heartbeats and reconnect — both stateless and
+      Kafka-backed — security, fan-out contrasted on Kafka and on Redis, binary Protobuf
+      framing, testing and debugging a protocol you can't just `curl`, and the anti-patterns
+      that show up once a socket is in production. It assumes you can read Java and Python;
+      it is not a tutorial in either language. The code tabs are built to admit Go and C++
+      later. All container images are UBI-based, and the stack runs on Docker Compose,
+      minikube, and OpenShift Local.
+    </p>
+
+    {%- comment -%}
+      Two-level navigation: the homepage shows one card per Part. Each Part
+      card links to its own page (the _parts collection) which lists that
+      part's chapters. New chapters appear under their part automatically;
+      new parts appear here just by adding a file to _parts/.
+    {%- endcomment -%}
+    <div class="cards">
+      {% assign parts_sorted = site.parts | sort: "order" %}
+      {% for part in parts_sorted %}
+      {% assign part_docs = site.docs | where: "part", part.part_name %}
+      <a class="card" href="{{ part.url | relative_url }}">
+        <div class="card__eyebrow">Part {{ part.order }}</div>
+        <h3 class="card__title">{{ part.title }}</h3>
+        {% if part.blurb %}
+        <p class="card__desc">{{ part.blurb }}</p>
+        {% endif %}
+        <div class="card__meta">
+          {% if part_docs.size > 0 %}
+            <span>{{ part_docs.size }} chapter{% if part_docs.size != 1 %}s{% endif %}</span>
+          {% else %}
+            <span>Coming soon</span>
+          {% endif %}
+          <span>Explore →</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
