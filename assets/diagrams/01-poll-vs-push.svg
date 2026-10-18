@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 460" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="30" width="360" height="400" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="50" font-size="12" font-weight="700" fill="#1d1d1d">Pull: client polls the booking service</text>
+<rect x="440" y="30" width="360" height="400" rx="12" fill="#fff3e0" stroke="#ddd"/>
+<text x="452" y="50" font-size="12" font-weight="700" fill="#1d1d1d">Push: client holds a socket open</text>
+<rect x="60" y="70" width="140" height="50" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="130.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Client</text>
+<text x="130.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">watching BKG-4471</text>
+<rect x="240" y="70" width="140" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="310.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Booking service</text>
+<text x="310.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">REST, resource BKG-4471</text>
+<rect x="60" y="150" width="320" height="36" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="220.0" y="173.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">GET /bookings/4471 → 200, status unchanged</text>
+<rect x="60" y="196" width="320" height="36" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="220.0" y="219.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">GET /bookings/4471 → 200, status unchanged</text>
+<rect x="60" y="242" width="320" height="36" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="220.0" y="265.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">GET /bookings/4471 → 200, status unchanged</text>
+<rect x="60" y="288" width="320" height="36" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="220.0" y="311.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">GET /bookings/4471 → 200, CUSTOMS_HOLD</text>
+<rect x="60" y="350" width="320" height="50" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="220.0" y="373.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">One real change</text>
+<text x="220.0" y="390.0" font-size="11.5" fill="#555555" text-anchor="middle">found 0-30s after it happened</text>
+<rect x="480" y="70" width="140" height="50" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="550.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Client</text>
+<text x="550.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">watching BKG-4471</text>
+<rect x="660" y="70" width="140" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="730.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Handling-event feed</text>
+<text x="730.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">one open socket</text>
+<rect x="480" y="150" width="320" height="36" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="640.0" y="173.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">connection open, no traffic</text>
+<rect x="480" y="196" width="320" height="50" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="640.0" y="219.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">pushed: GATE_IN, USNYC</text>
+<text x="640.0" y="236.0" font-size="11.5" fill="#555555" text-anchor="middle">the instant the event is recorded</text>
+<rect x="480" y="258" width="320" height="50" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="640.0" y="281.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">pushed: CUSTOMS_HOLD, USNYC</text>
+<text x="640.0" y="298.0" font-size="11.5" fill="#555555" text-anchor="middle">the instant the event is recorded</text>
+<rect x="480" y="320" width="320" height="50" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="640.0" y="343.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Every change seen</text>
+<text x="640.0" y="360.0" font-size="11.5" fill="#555555" text-anchor="middle">within one network hop, no gap</text>
+<path d="M200,95 L240,95" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M640,95 L600,95" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="626.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade once</text>
+<text x="626.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">upgrade once</text>
+</svg>
