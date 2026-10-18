@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="40" y="20" width="330" height="50" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="205.0" y="50.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Client</text>
+<rect x="490" y="20" width="330" height="50" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="655.0" y="43.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Server</text>
+<text x="655.0" y="60.0" font-size="11.5" fill="#555555" text-anchor="middle">GET /handling-events</text>
+<rect x="40" y="110" width="330" height="130" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="205.0" y="143.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">GET /handling-events HTTP/1.1</text>
+<text x="205.0" y="160.0" font-size="11.5" fill="#555555" text-anchor="middle">Host: fleet.example.com</text>
+<text x="205.0" y="175.0" font-size="11.5" fill="#555555" text-anchor="middle">Upgrade: websocket</text>
+<text x="205.0" y="190.0" font-size="11.5" fill="#555555" text-anchor="middle">Connection: Upgrade</text>
+<text x="205.0" y="205.0" font-size="11.5" fill="#555555" text-anchor="middle">Sec-WebSocket-Key: dGhlIHNhbXBsZQ==</text>
+<text x="205.0" y="220.0" font-size="11.5" fill="#555555" text-anchor="middle">Sec-WebSocket-Version: 13</text>
+<rect x="490" y="110" width="330" height="130" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="655.0" y="158.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">on receipt:</text>
+<text x="655.0" y="175.0" font-size="11.5" fill="#555555" text-anchor="middle">key + GUID, SHA-1, base64</text>
+<text x="655.0" y="190.0" font-size="11.5" fill="#555555" text-anchor="middle">= Sec-WebSocket-Accept</text>
+<text x="655.0" y="205.0" font-size="11.5" fill="#555555" text-anchor="middle">(RFC 6455 §1.3 fixed GUID)</text>
+<rect x="490" y="280" width="330" height="110" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="655.0" y="318.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">HTTP/1.1 101 Switching Protocols</text>
+<text x="655.0" y="335.0" font-size="11.5" fill="#555555" text-anchor="middle">Upgrade: websocket</text>
+<text x="655.0" y="350.0" font-size="11.5" fill="#555555" text-anchor="middle">Connection: Upgrade</text>
+<text x="655.0" y="365.0" font-size="11.5" fill="#555555" text-anchor="middle">Sec-WebSocket-Accept: s3pPLMBiTx...</text>
+<rect x="40" y="420" width="330" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="205.0" y="448.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">same TCP connection,</text>
+<text x="205.0" y="465.0" font-size="11.5" fill="#555555" text-anchor="middle">now framed as WebSocket</text>
+<rect x="490" y="420" width="330" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="655.0" y="448.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">same TCP connection,</text>
+<text x="655.0" y="465.0" font-size="11.5" fill="#555555" text-anchor="middle">now framed as WebSocket</text>
+<path d="M370,160 L490,160" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="436.0" y="154.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">one HTTP/1.1 request, Upgrade header</text>
+<text x="436.0" y="154.0" font-size="11" fill="#555" text-anchor="middle">one HTTP/1.1 request, Upgrade header</text>
+<path d="M490,320 L370,320" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="430.0" y="334.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">101 + matching Accept</text>
+<text x="430.0" y="334.0" font-size="11" fill="#b8650a" text-anchor="middle">101 + matching Accept</text>
+<path d="M370,450 L490,450" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="436.0" y="444.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">frames flow both ways, no new handshake</text>
+<text x="436.0" y="444.0" font-size="11" fill="#555" text-anchor="middle">frames flow both ways, no new handshake</text>
+<text x="430" y="485" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">One connection, one handshake: after the 101, client and server frame bytes directly over the same TCP socket.</text>
+</svg>
