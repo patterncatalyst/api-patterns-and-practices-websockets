@@ -3,6 +3,7 @@ title: "The Real-Time Problem"
 order: 1
 part: "Foundations"
 description: "What 'push' means, why request/response falls short for a client watching something change, and the real cost of polling for an answer."
+duration: "17 min read"
 ---
 
 A client watching booking `BKG-4471` move through customs does not need an answer right now — it needs to know the instant the answer changes, and request/response has no way to express that distinction. Every HTTP call is a question the server answers once and forgets; if the client wants to know about a change it has to ask again, and again, most of those questions landing on an answer identical to the one before. This chapter sets up the cost of that pattern against the shipping/cargo domain this site shares with its REST and gRPC siblings, and the next chapter turns the cost into a decision about which push mechanism fits.

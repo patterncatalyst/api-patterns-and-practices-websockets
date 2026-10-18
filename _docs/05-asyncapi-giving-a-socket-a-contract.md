@@ -3,6 +3,7 @@ title: "AsyncAPI: Giving a Socket a Contract"
 order: 5
 part: "Contract-first for Sockets"
 description: "AsyncAPI 3 as the single source of truth for a WebSocket channel's messages, generated into both stacks."
+duration: "21 min read"
 ---
 
 Chapter 3 decoded a frame byte by byte. Chapter 4 named the shipping domain this site pushes over that frame. Neither chapter wrote down, in a form a machine can check, what a client is allowed to expect from the socket: which address to open, what message shows up on it, and what shape that message takes. `contracts/asyncapi.yaml` is that document. It is the WebSockets analog of the REST site's OpenAPI file and the gRPC site's `.proto` package — one artifact, reviewed before either stack writes a handler, that both the Quarkus and Python examples generate from and validate against. This chapter reads that file section by section and runs the one command that proves it is well-formed.

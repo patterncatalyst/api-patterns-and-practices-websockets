@@ -3,6 +3,7 @@ title: "Setup and the Lab"
 order: 0
 part: "Prerequisites"
 description: "Toolchain pins, the Docker Compose lab with opt-in LGTM tracing, and the shipping/cargo domain this site's sockets share with the REST booking service."
+duration: "17 min read"
 ---
 
 Every hands-on chapter from here forward hands you a live socket in two languages, pushing the same shipping/cargo handling events over the same AsyncAPI contract. This chapter pins the toolchain each example builds against, lays out the Docker Compose lab that boots both stacks side by side with observability one flag away, and describes the two scripts — `check-prereqs.sh` and the teardown — that make the lab's state predictable before a single line of handler code exists. Nothing here touches message shapes or connection lifecycle; that starts in Part 1. This chapter makes sure the toolchain and the lab shape are settled facts before the real protocol work begins, so neither is ever the thing you're debugging once a chapter asks you to reason about a reconnect or a backpressure policy instead.
@@ -68,7 +69,7 @@ Each check follows the same three-step shape: locate the binary, parse its repor
 | Poetry | 2.5.1 | current stable; added official Python 3.15 support in 2.5.0 |
 | FastAPI | 0.143.2 | current stable; routing and app lifecycle only, not the socket itself |
 | websockets (library) | 17.1 | current stable; the native library both stacks' Python side builds on |
-| AsyncAPI CLI | 6.1.0 | validates `contracts/asyncapi.yaml` from Chapter 5 onward |
+| AsyncAPI CLI | 6.2.1 | validates `contracts/asyncapi.yaml` from Chapter 5 onward |
 | Docker Compose (plugin) | 5.6.0 | the `docker compose` subcommand, not the legacy `docker-compose` v1 binary |
 | k6 | 2.3.0 | load-testing tool for Part 5; installed now, used later |
 | Newman | 6.2.3 | REST-side assertions at the booking-service seam |
@@ -99,7 +100,7 @@ checking java................. 25.0.4 (>= 25.0.0)        OK
 checking quarkus............... 3.40.0 (>= 3.33.0)        OK
 checking python................ 3.15.0 (>= 3.14.0)        OK
 checking poetry................ 2.5.1 (>= 2.4.0)          OK
-checking asyncapi.............. 6.1.0 (>= 5.0.0)          OK
+checking asyncapi.............. 6.2.1 (>= 5.0.0)          OK
 checking docker................ 29.1.2                    OK
 checking docker compose........ 5.6.0 (>= 2.20.0)         OK
 checking k6..................... 2.3.0 (>= 1.0.0)          OK

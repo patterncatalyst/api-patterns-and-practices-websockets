@@ -3,6 +3,7 @@ title: "Choosing the Right Tool"
 order: 2
 part: "Foundations"
 description: "WebSockets vs Server-Sent Events vs long-polling vs webhooks, a decision table, and when each one wins."
+duration: "21 min read"
 ---
 
 The booking confirmation page opens a WebSocket the moment it loads and keeps the connection open for the life of the tab, even though the booking it watches changes status twice a day at most. A customs broker's integration wants to know the instant a container clears, but the broker's system exposes no public endpoint and can't hold a connection open from its side either — polling a REST endpoint every thirty seconds is the only option it has, and it burns a request on a status that hasn't moved in hours. A warehouse dashboard needs a feed of handling events for every active shipment on the yard floor: dozens of updates a minute, one direction only, nothing the dashboard ever needs to send back. Three interactions, three different shapes, and a site about WebSockets has an obvious bias toward answering all three the same way.

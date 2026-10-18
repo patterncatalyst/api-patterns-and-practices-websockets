@@ -3,6 +3,7 @@ title: "The Shared Domain"
 order: 4
 part: "Foundations"
 description: "The shipping/cargo domain recapped for a live handling-event feed, and the event vocabulary every later chapter reuses."
+duration: "20 min read"
 ---
 
 Chapter 3 decoded a WebSocket frame down to its bytes and found a handling-event payload sitting inside, without stopping to say what any of those bytes meant in the shipping domain. This chapter names it: the nouns the socket pushes, the shape of the feed that carries them, and the seam where a live connection meets the REST booking service it exists to stop polling. Chapter 5 turns this vocabulary into the formal AsyncAPI 3 contract that both stacks generate from; this chapter is the domain underneath that contract, stated once so every later chapter can point back at it instead of re-deriving it.

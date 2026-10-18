@@ -3,6 +3,7 @@ title: "Message Design"
 order: 6
 part: "Contract-first for Sockets"
 description: "Designing the handling-event message shapes a contract — and both implementations — commit to."
+duration: "22 min read"
 ---
 
 Chapter 5 put `contracts/asyncapi.yaml` in place as the thing both stacks generate from and validate against. This chapter is about what goes inside it: the shape of the `HandlingEvent` message itself, field by field, and the decisions that shape carries that a REST JSON body or a gRPC `.proto` message would make differently — or the same way, for the same reasons. A WebSocket connection has no request/response pair to frame a payload against; every message the server pushes has to carry enough of its own context to be useful standing alone, in whatever order it arrives, to a client that might have missed the one before it. That's what message design means on a socket: not "what fields does this event have" but "what does a client need to know, with nothing else to go on, to act on this message correctly."
