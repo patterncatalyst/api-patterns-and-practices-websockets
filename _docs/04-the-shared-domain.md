@@ -4,3 +4,9 @@ order: 4
 part: "Foundations"
 description: "The shipping/cargo domain recapped for a live handling-event feed, and the event vocabulary every later chapter reuses."
 ---
+
+## The shipping/cargo domain recap
+
+## The live handling-event feed
+
+## Event vocabulary
