@@ -99,7 +99,9 @@ chapter.
   drift (the WebSockets analog of the gRPC site's `buf breaking` gate).
 - The hub entry: `patterncatalyst/workshops-tutorials-list` `_data/sites.yml`
   gets this site added once there is real content to point at.
-- The companion deck(s) for this site.
+- The companion decks for this site: a 101 concept deck plus a 201 per language
+  (201 Quarkus, 201 Python), each targeting ~50 slides with overflow in
+  appendices (DRQ-017).
 - `_example_pages/index.md` and `bibliography.md` filled in with real content
   (currently nav stubs only).
 

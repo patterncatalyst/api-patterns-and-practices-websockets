@@ -116,3 +116,26 @@ Revisit only if the contract grows enough to warrant `$ref` splitting.
 
 Each r02 chapter ships roughly two paired SVG+`.excalidraw` figures, matching
 the gRPC sibling's pacing; the hard floor is one per chapter.
+
+## DRQ-016 — Chapter length: prose-word target, 2k floor / 2.5k soft target
+
+Chapter depth is measured in **prose words, excluding code blocks and diagrams**.
+**2,000 words is a hard floor** (never ship below). **2,500 words is a target,
+not a ceiling** — exceeding it is fine when the extra words carry value, not
+padding; longer chapters should carry more explanatory diagrams. Do not trim a
+chapter just to reach 2,500. This replaces the earlier byte-size heuristic
+borrowed from the sibling sites.
+
+## DRQ-017 — Companion decks: one 101 plus a 201 per language
+
+The site ships **three** companion decks (deferred past r02, same posture as the
+gRPC/REST siblings): a **101** concept-level deck (transport-agnostic real-time
+and WebSockets fundamentals, the decision framework, the contract story), and
+**two 201** decks — **one per language** (201 Quarkus WebSockets Next, 201 Python
+native `websockets`) — each a hands-on build against the shared AsyncAPI
+contract. Built with `lgtm-presentation` (pptxgenjs, site figures reused as PNGs,
+notes==slides, 0 ban-tier), no docx.
+
+Each deck **targets ~50 slides** in the main body; anything beyond that goes into
+**appendices** rather than inflating the core narrative, so the main track stays
+deliverable in a session while depth stays available on reference.
