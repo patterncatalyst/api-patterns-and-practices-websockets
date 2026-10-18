@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tiny diagram compiler for the API Patterns and Practices: REST site.
+"""Tiny diagram compiler for the API Patterns and Practices: WebSockets site.
 
 Each diagram is a spec of bands (background lanes), nodes (rounded boxes with a
 bold title line + smaller grey detail lines), edges (arrows with optional
@@ -20,7 +20,7 @@ STYLES = {
     "kernel": ("#f4f4f4", "#6a6e73"),
     "user":   ("#eef4fb", "#2f6db5"),
     "ghost":  ("#ffffff", "#8a8d91"),   # dashed
-    "ink":    ("#1a1a1a", "#1a1a1a"),   # filled dark, white text
+    "ink":    ("#f1f5f9", "#64748b"),   # emphasis/ink box: light fill, dark text (DRQ-008)
 }
 INK = "#1a1a1a"; GREY = "#555555"; AMBER = "#e8870c"; AMBER_DARK = "#b8650a"
 
@@ -51,8 +51,8 @@ def _svg(width, height, bands, nodes, edges, notes):
         x,y,w,h = n["x"],n["y"],n["w"],n["h"]
         o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="9" fill="{fill}" stroke="{stroke}" stroke-width="{sw}"{dash}/>')
         lines = n["lines"]; cx = x+w/2
-        tcol = "#ffffff" if n.get("style")=="ink" else INK
-        scol = "#dddddd" if n.get("style")=="ink" else GREY
+        tcol = INK
+        scol = GREY
         n_extra = len(lines)-1
         block_h = 17 + n_extra*15
         ty = y + (h-block_h)/2 + 14
@@ -107,7 +107,7 @@ def _exc(bands, nodes, edges, notes):
     for n in nodes:
         fill,stroke = STYLES[n.get("style","box")]
         rect(n["x"],n["y"],n["w"],n["h"],stroke,fill,dashed=(n.get("style")=="ghost"))
-        text(n["x"]+10,n["y"]+8,n["lines"][0],14,"#ffffff" if n.get("style")=="ink" else "#1a1a1a")
+        text(n["x"]+10,n["y"]+8,n["lines"][0],14,"#1a1a1a")
         for i,ln in enumerate(n["lines"][1:]):
             text(n["x"]+10,n["y"]+28+i*15,ln,11,"#555555")
     for e in edges:
