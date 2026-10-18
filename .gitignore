@@ -40,3 +40,6 @@ presentation/**/qa/
 *_pb2_grpc.py
 *_pb2.pyi
 buf.lock.bak
+
+# Contract-derived build artifacts (DRQ-018) — generated, never committed
+build/
