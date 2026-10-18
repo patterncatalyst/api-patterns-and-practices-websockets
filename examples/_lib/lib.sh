@@ -101,11 +101,18 @@ ensure_websocat() {
 
 _LIB_COMPOSE_FILE=""
 _LIB_COMPOSE_PROJECT=""
+_LIB_COMPOSE_PROFILE=""
 
-# compose_up <compose-file> <project-name>
+# compose_up <compose-file> <project-name> [profile]
+#
+# [profile] is optional: pass an opt-in compose profile name (e.g.
+# "observability") to bring its services up alongside the default ones —
+# mirrors `docker compose --profile <name> up`. Omit it (or pass "") for the
+# default, profile-less stack.
 compose_up() {
   local compose_file="$1"
   local project="$2"
+  local profile="${3:-}"
 
   if [[ ! -f "$compose_file" ]]; then
     echo "lib.sh: compose file not found: $compose_file" >&2
@@ -122,24 +129,40 @@ compose_up() {
 
   _LIB_COMPOSE_FILE="$compose_file"
   _LIB_COMPOSE_PROJECT="$project"
+  _LIB_COMPOSE_PROFILE="$profile"
 
-  echo "lib.sh: docker compose -p $project up -d --build" >&2
-  docker compose -p "$project" -f "$compose_file" up -d --build
+  local -a profile_args=()
+  if [[ -n "$profile" ]]; then
+    profile_args=(--profile "$profile")
+  fi
 
-  trap 'compose_down "$_LIB_COMPOSE_FILE" "$_LIB_COMPOSE_PROJECT"' EXIT
+  echo "lib.sh: docker compose -p $project ${profile_args[*]} up -d --build" >&2
+  docker compose -p "$project" -f "$compose_file" "${profile_args[@]}" up -d --build
+
+  trap 'compose_down "$_LIB_COMPOSE_FILE" "$_LIB_COMPOSE_PROJECT" "$_LIB_COMPOSE_PROFILE"' EXIT
 }
 
-# compose_down <compose-file> <project-name>
+# compose_down <compose-file> <project-name> [profile]
+#
+# [profile] should match whatever was passed to compose_up, so the
+# profile's services (e.g. "observability"'s lgtm) are included in the
+# teardown, not just the default-profile ones.
 compose_down() {
   local compose_file="$1"
   local project="$2"
+  local profile="${3:-}"
 
   if [[ -z "$project" ]]; then
     return 0
   fi
 
-  echo "lib.sh: docker compose -p $project down -v --remove-orphans" >&2
-  docker compose -p "$project" -f "$compose_file" down -v --remove-orphans || true
+  local -a profile_args=()
+  if [[ -n "$profile" ]]; then
+    profile_args=(--profile "$profile")
+  fi
+
+  echo "lib.sh: docker compose -p $project ${profile_args[*]} down -v --remove-orphans" >&2
+  docker compose -p "$project" -f "$compose_file" "${profile_args[@]}" down -v --remove-orphans || true
 }
 
 # ---------------------------------------------------------------------------
