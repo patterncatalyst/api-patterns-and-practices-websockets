@@ -1,0 +1,21 @@
+# Shared, non-secret config for all four app instances (PROTOCOL.md
+# "Backplane modes" / "Ports / instances") — the OpenShift-Local equivalent
+# of ../../k8s/base/configmap.yaml. INSTANCE_ID is NOT here — it is distinct
+# per Deployment, set as a per-container env var in templates/services.yaml.
+#
+# The pod template's `checksum/config` annotation (templates/services.yaml)
+# hashes THIS file, so a `helm upgrade --set backplane=redis` changes the
+# annotation and is paired with an explicit `oc rollout restart` in
+# ../../verify-crc.sh — envFrom/configMapRef does not hot-reload into
+# already-running pods on its own.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backplane-config
+  labels:
+    {{- include "part4-backplane.labels" . | nindent 4 }}
+data:
+  BACKPLANE_MODE: {{ .Values.backplane | quote }}
+  KAFKA_BOOTSTRAP_SERVERS: "{{ .Values.kafka.cluster }}-kafka-bootstrap:9092"
+  KAFKA_TOPIC: "handling-events"
+  REDIS_URL: "redis://redis:6379/0"

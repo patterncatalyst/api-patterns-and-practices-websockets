@@ -1,0 +1,94 @@
+# One Deployment + Service per entry in .Values.services (quarkus-a,
+# quarkus-b, python-a, python-b — see values.yaml's doc comment for the
+# per-key shape). Container name is the part of the instance name before the
+# first "-" (quarkus-a/b -> "quarkus", python-a/b -> "python") — matches the
+# container names ../../verify-crc.sh and ../../capture-evidence.sh `oc exec`
+# / `oc logs -c` into.
+{{- range $name, $svc := .Values.services }}
+{{- $container := index (splitList "-" $name) 0 }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "part4-backplane.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+        app.kubernetes.io/part-of: {{ $.Release.Name }}
+      annotations:
+        # Env from a ConfigMap is read at pod start: roll the pods when it
+        # changes (see templates/config.yaml's doc comment).
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") $ | sha256sum }}
+    spec:
+      containers:
+        - name: {{ $container }}
+          image: {{ include "part4-backplane.image" (dict "root" $ "name" $svc.image) | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            {{- range $svc.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: backplane-config
+          env:
+            - name: INSTANCE_ID
+              value: {{ $svc.instanceId | quote }}
+          {{- if eq $svc.probe.type "tcpSocket" }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ $svc.probe.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: {{ $svc.probe.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          {{- else }}
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.probe.path }}
+              port: {{ $svc.probe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.probe.path }}
+              port: {{ $svc.probe.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          {{- end }}
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+          {{- include "part4-backplane.containerSecurity" $ | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "part4-backplane.labels" $ | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+  ports:
+    {{- range $svc.ports }}
+    - name: {{ .name }}
+      port: {{ .containerPort }}
+      targetPort: {{ .name }}
+    {{- end }}
+---
+{{- end }}

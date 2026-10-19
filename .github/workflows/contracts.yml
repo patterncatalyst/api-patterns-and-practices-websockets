@@ -365,6 +365,83 @@ jobs:
           echo "all 3 attempts failed for ${{ matrix.example }}"
           exit 1
 
+  k8s-manifests:
+    # Static Kubernetes-manifest validation — renders every manifest OFFLINE
+    # (kustomize/helm templating only, no `apply`) and runs it through
+    # kubeconform. This does NOT stand up minikube or CRC and must never call
+    # verify-minikube.sh / verify-crc.sh; those stay live-cluster-only checks
+    # run by hand (`_plans/version-matrix.md`'s Headless Cluster Verification
+    # note). `-ignore-missing-schemas` is required wherever a CRD-defined kind
+    # appears — Strimzi's `kafka.strimzi.io` CRs (k8s/strimzi/*.yaml) and the
+    # OpenShift/OLM kinds the openshift/ chart+infra render (`route.openshift.io`
+    # Routes, `operators.coreos.com` Subscription) have no bundled JSON Schema,
+    # so without the flag this job red-fails on manifests that are otherwise
+    # valid.
+    name: Validate Kubernetes manifests (kustomize/helm render, offline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install kubeconform (pinned, checksum-verified)
+        env:
+          KUBECONFORM_VERSION: v0.8.0   # _plans/version-matrix.md — no floating tag
+          KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+        run: |
+          curl -fsSL -o /tmp/kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  /tmp/kubeconform.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp kubeconform
+          sudo install -m 0755 /tmp/kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: Install kubectl (pinned; also provides `kubectl kustomize`)
+        uses: azure/setup-kubectl@v5
+        with:
+          version: v1.37.1   # _plans/version-matrix.md — kustomize v5.8.1 bundled, no standalone binary
+
+      - name: Install helm (pinned)
+        uses: azure/setup-helm@v5
+        with:
+          version: v4.2.2   # _plans/version-matrix.md
+
+      - name: Show kubectl and helm versions
+        run: |
+          kubectl version --client
+          helm version --short
+
+      - name: minikube overlay — kustomize render + kubeconform -strict
+        run: |
+          kubectl kustomize examples/part4-backplane/k8s/overlays/minikube \
+            | kubeconform -strict -kubernetes-version 1.37.1 -ignore-missing-schemas -
+
+      - name: minikube-redis overlay — kustomize render + kubeconform -strict
+        run: |
+          kubectl kustomize examples/part4-backplane/k8s/overlays/minikube-redis \
+            | kubeconform -strict -kubernetes-version 1.37.1 -ignore-missing-schemas -
+
+      - name: base — kustomize render + kubeconform -strict
+        run: |
+          kubectl kustomize examples/part4-backplane/k8s/base \
+            | kubeconform -strict -kubernetes-version 1.37.1 -ignore-missing-schemas -
+
+      - name: Strimzi CRs (raw, not kustomized) — kubeconform -strict
+        # kafka.strimzi.io Kafka/KafkaNodePool/KafkaTopic CRs — no bundled
+        # schema, hence -ignore-missing-schemas (same as every other step
+        # here that touches a CRD-defined kind).
+        run: kubeconform -strict -ignore-missing-schemas examples/part4-backplane/k8s/strimzi/*.yaml
+
+      - name: OpenShift Helm chart — helm template + kubeconform -strict
+        # route.openshift.io Routes render from this chart — no bundled
+        # schema either.
+        run: |
+          helm template examples/part4-backplane/openshift/helm/part4-backplane \
+            | kubeconform -strict -ignore-missing-schemas -
+
+      - name: OpenShift infra manifests (raw) — kubeconform -strict
+        # operators.coreos.com Subscription (AMQ Streams) + the Kafka CR —
+        # both CRD-defined, no bundled schema.
+        run: kubeconform -strict -ignore-missing-schemas examples/part4-backplane/openshift/infra/*.yaml
+
   examples-summary:
     name: Verify stacks against the contract
     needs: [discover-examples, examples]

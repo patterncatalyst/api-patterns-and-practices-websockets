@@ -1,0 +1,9 @@
+# Part 4 backplane example — minikube deploy. One namespace for the apps,
+# Strimzi cluster operator, Kafka CR and Redis — mirrors the single-profile
+# convention in modernizing-enterprise-applications/deploy/k8s and the
+# lgtm-minikube-stack skill (operator installed INTO the app namespace via
+# `helm --namespace "$NS" --create-namespace`, not a separate operator ns).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: part4-backplane

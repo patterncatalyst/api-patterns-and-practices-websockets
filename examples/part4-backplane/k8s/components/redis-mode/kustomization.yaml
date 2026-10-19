@@ -1,0 +1,19 @@
+# Kustomize Component — the redis/kafka TOGGLE (PROTOCOL.md "Backplane
+# modes"). base/configmap.yaml ships BACKPLANE_MODE=kafka as the primary
+# mode; composing this component on top (see
+# ../../overlays/minikube-redis/kustomization.yaml) flips it to redis
+# without a second copy of the ConfigMap or the Deployments. Kafka itself
+# stays installed either way (strimzi/kafka.yaml is always applied by
+# scripts/install-strimzi.sh) — this only changes which backplane the apps
+# actually route through at runtime.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: backplane-config
+    patch: |-
+      - op: replace
+        path: /data/BACKPLANE_MODE
+        value: redis

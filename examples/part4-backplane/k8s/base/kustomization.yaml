@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: part4-backplane
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - quarkus-a.yaml
+  - quarkus-b.yaml
+  - python-a.yaml
+  - python-b.yaml
+  - ingress.yaml

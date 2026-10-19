@@ -1,0 +1,72 @@
+# Instance B of the Quarkus stack. Never reached through the Ingress —
+# verify-minikube.sh's cross-pod fan-out proof (Ch18) injects events through
+# THIS instance's in-cluster Service (`quarkus-b:8080`) via `kubectl exec`
+# into a running pod's curl (no port-forward — reaches the Service's
+# cluster-DNS name directly from inside the cluster), and asserts the frame
+# shows up on a client connected to quarkus-a instead.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quarkus-b
+  namespace: part4-backplane
+  labels:
+    app.kubernetes.io/name: quarkus-b
+    app.kubernetes.io/part-of: part4-backplane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: quarkus-b
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: quarkus-b
+        app.kubernetes.io/part-of: part4-backplane
+    spec:
+      containers:
+        - name: quarkus
+          image: part4-backplane-quarkus:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: backplane-config
+          env:
+            - name: INSTANCE_ID
+              value: "quarkus-b"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quarkus-b
+  namespace: part4-backplane
+  labels:
+    app.kubernetes.io/name: quarkus-b
+    app.kubernetes.io/part-of: part4-backplane
+spec:
+  selector:
+    app.kubernetes.io/name: quarkus-b
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

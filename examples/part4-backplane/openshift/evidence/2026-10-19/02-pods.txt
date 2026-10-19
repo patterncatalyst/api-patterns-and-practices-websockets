@@ -1,0 +1,9 @@
+POD                                                READY       RESTARTS   SCC             UID
+part4-backplane-dual-role-0                        true        0          restricted-v2   1000650000
+part4-backplane-entity-operator-69dd46fd75-zbfwm   true,true   0,0        restricted-v2   1000650000
+python-a-648b5fdb89-vtjct                          true        0          restricted-v2   1000650000
+python-b-69ccbd4d8f-jv8xq                          true        0          restricted-v2   1000650000
+quarkus-a-78ddf7dbbc-7w2cq                         true        0          restricted-v2   1000650000
+quarkus-b-666f8575df-57zmq                         true        0          restricted-v2   1000650000
+redis-64b68785b4-cr27m                             true        0          restricted-v2   1000650000
+namespace uid-range: 1000650000/10000

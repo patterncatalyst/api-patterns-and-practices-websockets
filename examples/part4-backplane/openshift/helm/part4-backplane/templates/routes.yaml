@@ -1,0 +1,35 @@
+# Host access on OpenShift Local is through the router, never NodePorts,
+# port-forward or tunnels. Edge TLS, plain HTTP redirected — curl/websocat
+# verify the router certificate against the cluster's ingress CA
+# (../../verify-crc.sh, ../../capture-evidence.sh), never --insecure/-k.
+#
+# haproxy.router.openshift.io/timeout raises the router's per-route idle
+# timeout from its (lower) default to 3600s — the OpenShift/HAProxy
+# equivalent of ../../k8s/base/ingress.yaml's nginx proxy-read-timeout/
+# proxy-send-timeout annotations, so a long-lived upgraded WebSocket that
+# goes quiet doesn't get torn down by the edge. Only instance A of each
+# stack gets a Route (quarkus-a, python-a) — instance B is reached only
+# in-cluster (PROTOCOL.md's "A is the externally reachable one" split).
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.route }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "part4-backplane.labels" $ | nindent 4 }}
+  annotations:
+    haproxy.router.openshift.io/timeout: "3600s"
+spec:
+  to:
+    kind: Service
+    name: {{ $name }}
+  port:
+    targetPort: {{ $svc.routeTargetPort }}
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}
+{{- end }}

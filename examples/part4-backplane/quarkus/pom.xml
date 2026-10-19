@@ -201,5 +201,22 @@
                 <quarkus.native.enabled>true</quarkus.native.enabled>
             </properties>
         </profile>
+        <!-- OpenShift Local (CRC) appendix ONLY — see
+             ../openshift/build-images.sh. No <activation>, so this profile is
+             dormant unless explicitly selected with `-Popenshift`; it adds
+             nothing to a plain `./mvnw package` or the compose/minikube
+             image builds. quarkus-openshift (not
+             quarkus-container-image-openshift alone) is what generates the
+             BuildConfig manifest that drives the in-cluster binary S2I build
+             on ubi10/openjdk-25. -->
+        <profile>
+            <id>openshift</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-openshift</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
     </profiles>
 </project>

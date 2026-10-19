@@ -1,0 +1,7 @@
+{{ .Release.Name }} is deploying into {{ .Release.Namespace }} (backplane: {{ .Values.backplane }}).
+
+  Rollout:      ../../deploy.sh waits on `oc rollout status` per Deployment
+  Route hosts:  oc get routes -n {{ .Release.Namespace }}
+  Verify:       ../../verify-crc.sh (seed + idle-hold + Ch18 fan-out, both stacks, both backplanes)
+  Evidence:     ../../capture-evidence.sh
+  Tear down:    ../../teardown.sh   (then crc stop)
