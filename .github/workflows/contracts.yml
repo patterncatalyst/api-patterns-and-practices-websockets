@@ -1,0 +1,197 @@
+# The AsyncAPI contract-drift CI gate — the WebSockets analog of the gRPC
+# site's `buf lint` / `buf breaking` / example-matrix pipeline
+# (../../api-patterns-and-practices-grpc/.github/workflows/contracts.yml),
+# adapted for a single-file AsyncAPI 3 document instead of a Buf module.
+#
+# Moved out of pages.yml (which kept only a validate-only `contract` job,
+# DRQ-012) once the examples generate from the contract (DRQ-011, DRQ-018):
+# this is the full "regenerate both stacks and fail on drift" gate. Don't
+# duplicate `asyncapi validate` in pages.yml — it runs here only.
+name: contracts
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate the AsyncAPI contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: asyncapi validate
+        run: npx -y @asyncapi/cli@6.2.1 validate contracts/asyncapi.yaml
+
+  breaking:
+    name: Detect breaking changes (vs main)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # asyncapi diff needs the main ref available
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: asyncapi diff (vs main)
+        run: |
+          # The evolution gate — the AsyncAPI analog of the gRPC site's
+          # `buf breaking`. On the first introduction main has no baseline
+          # contract, so skip; once this lands on main, every later change is
+          # diffed against it.
+          #
+          # `asyncapi diff`'s own `-t breaking` classification only covers
+          # structural changes (channel/operation/server/address edits) — it
+          # leaves payload-schema changes (a removed enum member, a retyped
+          # or re-patterned field, a newly-required property) as
+          # "unclassified" rather than committing to breaking/non-breaking
+          # (verified locally against this contract). The jq filter below
+          # closes that gap: anything the CLI calls "breaking" outright, OR
+          # any `remove`, OR an `edit` of a `type`/`pattern`, OR an `add` to
+          # a `required` array, fails the gate. A purely additive, optional
+          # field is an `add` to `properties` only and is NOT flagged.
+          if git ls-tree -r origin/main --name-only -- contracts/asyncapi.yaml 2>/dev/null | grep -q 'asyncapi\.yaml$'; then
+            git show origin/main:contracts/asyncapi.yaml > /tmp/asyncapi.main.yaml
+            npx -y @asyncapi/cli@6.2.1 diff /tmp/asyncapi.main.yaml contracts/asyncapi.yaml \
+              -t all -f json > /tmp/asyncapi.diff.json
+            breaking="$(jq '[.changes[]? | select(
+                .type == "breaking" or
+                .action == "remove" or
+                (.action == "edit" and (.path | test("/(type|pattern)$"))) or
+                (.action == "add" and (.path | test("/required/[0-9]+$")))
+              )]' /tmp/asyncapi.diff.json)"
+            count="$(jq 'length' <<<"$breaking")"
+            if [ "$count" -gt 0 ]; then
+              echo "BREAKING changes detected vs origin/main:"
+              jq '.' <<<"$breaking"
+              exit 1
+            fi
+            echo "no breaking changes vs origin/main"
+          else
+            echo "no baseline contract on main yet — skipping breaking check (first introduction)"
+          fi
+
+  drift:
+    name: Contract-drift gate (extract, regenerate, conformance-test both stacks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: "temurin"
+          cache: "maven"
+
+      - uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: |
+            examples/part3-handling-events/python/uv.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Extract the contract-derived JSON Schema
+        run: python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
+
+      - name: Regenerate the Python model (datamodel-codegen)
+        run: ./scripts/generate-models.sh
+        working-directory: examples/part3-handling-events/python
+
+      - name: Quarkus conformance test (HandlingEventContractTest)
+        run: ./mvnw -B test -Dtest=HandlingEventContractTest
+        working-directory: examples/part3-handling-events/quarkus
+
+      - name: Python conformance test (test_contract.py)
+        run: uv run pytest tests/test_contract.py -v
+        working-directory: examples/part3-handling-events/python
+
+  discover-examples:
+    name: Discover examples
+    runs-on: ubuntu-latest
+    outputs:
+      examples: ${{ steps.find.outputs.examples }}
+      any: ${{ steps.find.outputs.any }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: find
+        name: Build the example matrix from examples/*/verify.sh
+        run: |
+          shopt -s nullglob
+          names=()
+          for s in examples/*/verify.sh; do
+            names+=("$(basename "$(dirname "$s")")")
+          done
+          if [ ${#names[@]} -eq 0 ]; then
+            echo "any=false" >> "$GITHUB_OUTPUT"
+            echo "examples=[]" >> "$GITHUB_OUTPUT"
+            echo "No examples/*/verify.sh yet."
+            exit 0
+          fi
+          json=$(printf '%s\n' "${names[@]}" | sort | jq -R . | jq -cs .)
+          echo "any=true" >> "$GITHUB_OUTPUT"
+          echo "examples=$json" >> "$GITHUB_OUTPUT"
+          echo "Matrix: $json"
+
+  examples:
+    name: "verify: ${{ matrix.example }}"
+    needs: discover-examples
+    if: needs.discover-examples.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJSON(needs.discover-examples.outputs.examples) }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify ${{ matrix.example }} (response semantics vs contract, both stacks)
+        # Retry up to 3x: each verify.sh is self-contained (compose up ->
+        # assert -> compose down via lib.sh's EXIT trap), so a retry starts
+        # from a clean slate. This absorbs transient CI flakes — image pulls,
+        # JVM cold-start timing, websocat download — without masking real
+        # failures (a deterministic bug fails all three attempts).
+        run: |
+          for attempt in 1 2 3; do
+            echo "::group::verify attempt $attempt/3 — ${{ matrix.example }}"
+            if bash "examples/${{ matrix.example }}/verify.sh"; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "attempt $attempt failed for ${{ matrix.example }}"
+            [ "$attempt" -lt 3 ] && { echo "retrying in 15s..."; sleep 15; }
+          done
+          echo "all 3 attempts failed for ${{ matrix.example }}"
+          exit 1
+
+  examples-summary:
+    name: Verify stacks against the contract
+    needs: [discover-examples, examples]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate on the example matrix result
+        run: |
+          result="${{ needs.examples.result }}"
+          echo "examples matrix result: $result"
+          if [ "${{ needs.discover-examples.outputs.any }}" = "true" ] && [ "$result" != "success" ]; then
+            echo "One or more example verify.sh jobs failed."
+            exit 1
+          fi
+          echo "All example verifications passed (or none to run)."
