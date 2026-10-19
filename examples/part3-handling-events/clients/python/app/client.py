@@ -35,7 +35,7 @@ Run it directly:
 
     uv run python -m app.client
 
-Configuration is via environment variables (see the `_Config` fields below
+Configuration is via environment variables (see the `Config` fields below
 for names/defaults) so the same image/checkout can point at either server
 without code changes.
 """
