@@ -1,0 +1,61 @@
+# Part 3 "Handling It" example — Quarkus, UBI 10, JVM mode (fast-jar), no native.
+# Build (from the REPO ROOT, so this context can reach the shared fixture):
+#   docker build -f examples/part3-handling-events/quarkus/Containerfile \
+#     -t part3-handling-events-quarkus .
+#
+# examples/part3-handling-events/fixtures/handling-events.json is the single
+# source of truth for the sequence this app replays (the SAME fixture the
+# Python/FastAPI sibling app replays) — it is not committed into this module.
+# This build COPIES it to /fixtures, a sibling of the /build working
+# directory, reproducing the same relative layout (../fixtures from the
+# module's basedir) that pom.xml's copy-handling-events-fixture execution
+# already uses for a local, non-container `mvn package`. The copy is
+# build-time only — never baked in as a second committed copy (see
+# ../.gitignore's `fixtures` entry).
+#
+# contracts/asyncapi.yaml itself is NOT copied in: it is only needed by
+# scripts/extract-message-schema.py and HandlingEventContractTest on the
+# host/CI side, never by the running service.
+#
+# Base image pins (re-check with `skopeo list-tags
+# docker://registry.access.redhat.com/ubi10/openjdk-25`, confirm with
+# `skopeo inspect`; bump deliberately):
+#   registry.access.redhat.com/ubi10/openjdk-25:1.24-16
+#   registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25:1.24-16 AS build
+
+WORKDIR /build
+COPY examples/part3-handling-events/quarkus/pom.xml .
+COPY examples/part3-handling-events/quarkus/src ./src
+
+# Sibling of /build, matching fixtures/ sibling to quarkus/ in the repo, so
+# pom.xml's `${project.basedir}/../fixtures` resource reference resolves
+# identically here and on a local non-container build.
+COPY examples/part3-handling-events/fixtures /fixtures
+
+# The extra -Daether.* / -Dmaven.wagon.* flags give the resolver more room
+# under CI's shared Maven local-repo lock and more retries against a flaky
+# mirror — see the gRPC sibling site's Ch8 Containerfile for the same note.
+RUN mvn -B package -DskipTests -Dmaven.javadoc.skip=true \
+      -Daether.syncContext.named.time=300 -Daether.syncContext.named.time.unit=SECONDS \
+      -Dmaven.wagon.http.retryHandler.count=3 -Daether.connector.http.retryHandler.count=3
+
+# ── Stage 2: Runtime (fast-jar) ─────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+ENV LANGUAGE='en_US:en'
+
+COPY --from=build --chown=185 /build/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build --chown=185 /build/target/quarkus-app/*.jar /deployments/
+COPY --from=build --chown=185 /build/target/quarkus-app/app/ /deployments/app/
+COPY --from=build --chown=185 /build/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
+
+ENV JAVA_OPTS_APPEND="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]

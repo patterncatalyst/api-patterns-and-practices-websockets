@@ -1,0 +1,92 @@
+# Ch9 example — Python, UBI 10, uv-managed. The WS endpoint is driven by the
+# native `websockets` library; FastAPI/uvicorn serves HTTP/app lifecycle on a
+# separate port. See README.md.
+#
+# Build (from the REPO ROOT, so this context can reach contracts/ + the
+# shared fixtures/ dir):
+#   docker build -f examples/part3-handling-events/python/Containerfile \
+#     -t ch09-handling-events-python .
+#
+# This build runs the SAME two build-time steps as local dev (see
+# scripts/generate-models.sh and ../../../scripts/extract-message-schema.py):
+# extract contracts/asyncapi.yaml's HandlingEvent schema to a self-contained
+# JSON Schema, then generate app/models_generated.py from it with
+# datamodel-code-generator. Both are build-time only — neither the extracted
+# schema nor the generated model is committed (see ../../../.gitignore and
+# ./.gitignore).
+#
+# UBI 10 publishes only the -minimal Python image (no ubi10/python-314).
+# Pin: registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+# Re-check with:
+#   skopeo list-tags docker://registry.access.redhat.com/ubi10/python-314-minimal
+# and confirm with `skopeo inspect`. Bump deliberately.
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506 AS build
+
+# The image runs as UID 1001; the build stage needs root to write /app.
+# Build at the same path the runtime uses: a venv is not relocatable, its
+# console scripts carry the absolute interpreter path.
+USER 0
+WORKDIR /app
+
+RUN pip install --no-cache-dir uv==0.13.1
+
+COPY examples/part3-handling-events/python/pyproject.toml ./
+COPY examples/part3-handling-events/python/uv.lock ./
+COPY examples/part3-handling-events/python/app ./app
+
+# `--group dev` pulls in datamodel-code-generator + jsonschema (needed below
+# to generate the model and, for CI, to run tests — not needed at runtime).
+RUN uv sync --locked --group dev
+
+# Stage the one contract file and the shared fixture this service needs,
+# extract HandlingEvent to a self-contained JSON Schema, then generate the
+# Pydantic v2 model from it. Mirrors scripts/generate-models.sh exactly
+# (datamodel-code-generator's AsyncAPI input is unreliable; the extracted
+# JSON Schema is the reliable generator input — see contracts/README.md).
+COPY contracts/asyncapi.yaml ./contracts/asyncapi.yaml
+COPY scripts/extract-message-schema.py ./scripts/extract-message-schema.py
+RUN .venv/bin/python3 -I scripts/extract-message-schema.py build/handling-event.schema.json && \
+    .venv/bin/datamodel-codegen \
+      --input build/handling-event.schema.json \
+      --input-file-type jsonschema \
+      --output app/models_generated.py \
+      --output-model-type pydantic_v2.BaseModel \
+      --target-python-version 3.14 \
+      --use-schema-description \
+      --disable-timestamp \
+      --formatters black isort
+
+# The shared fixture both stacks replay.
+COPY examples/part3-handling-events/fixtures/handling-events.json \
+     ./fixtures/handling-events.json
+
+# Rebuild the venv without the dev group (datamodel-code-generator and
+# jsonschema are not needed to run the server).
+RUN rm -rf .venv && uv sync --locked --no-dev
+
+# ── Stage 2: Runtime ────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+
+WORKDIR /app
+
+COPY --from=build --chown=1001:0 /app/.venv /app/.venv
+COPY --from=build --chown=1001:0 /app/app /app/app
+COPY --from=build --chown=1001:0 /app/fixtures /app/fixtures
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app" \
+    PYTHONUNBUFFERED=1 \
+    WS_HOST=0.0.0.0 \
+    WS_PORT=8081 \
+    HTTP_HOST=0.0.0.0 \
+    HTTP_PORT=8082 \
+    HANDLING_EVENTS_FIXTURE=/app/fixtures/handling-events.json
+
+EXPOSE 8081 8082
+USER 1001
+
+# app.main starts both listeners (the native-websockets WS feed and the
+# FastAPI/uvicorn HTTP side) on the same event loop — see app/main.py.
+ENTRYPOINT ["python3", "-m", "app.main"]

@@ -40,3 +40,9 @@ presentation/**/qa/
 *_pb2_grpc.py
 *_pb2.pyi
 buf.lock.bak
+
+# Contract-derived build artifacts (DRQ-018) — generated, never committed
+build/
+
+# stray websocat download if ensure_websocat runs from repo root
+.bin/

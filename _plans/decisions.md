@@ -149,3 +149,28 @@ deliverable in a session while depth stays available on reference.
 appendix) and all runnable examples/demos ship first; the three decks are built
 only once the book and its code are complete. Decks are mined from finished
 chapters, so writing them earlier would mean reworking them as chapters land.
+
+## DRQ-018 — Generate-from-contract + drift-gate design (r03)
+
+Generated artifacts are **never committed** (series norm). `scripts/extract-message-schema.py`
+derives a standalone JSON Schema (Draft 2020-12) for `HandlingEvent` from
+`contracts/asyncapi.yaml`. **Python** models are generated at build time with
+`datamodel-code-generator` (gitignored). **Quarkus** uses idiomatic hand-written
+Java records guarded by a build-time schema-conformance test
+(`networknt/json-schema-validator`). The **full drift gate** is: (a) `asyncapi
+validate`; (b) `asyncapi diff` vs `main` (the breaking-change detector, analog of
+the gRPC site's `buf breaking`, with a first-introduction skip guard); (c) a
+`drift` job that extracts the schema, regenerates the Python model, and runs both
+stacks' conformance tests; (d) an `examples` matrix running each `verify.sh`.
+Rejected: commit-generated-models + `git diff --exit-code` (commits generated
+code, invites codetab/real-code drift). User-confirmed at r03 planning.
+
+## DRQ-019 — Examples verified by live headless boot (r03)
+
+Each example ships a `verify.sh` that boots both stacks via `docker compose`,
+opens a real WebSocket with a pinned self-downloaded `websocat`, captures the
+first server-pushed `HandlingEvent` frame, and validates it against the extracted
+schema on both stacks — a genuine end-to-end run, not test-only assertions.
+Matches the gRPC sibling and the house headless-verification posture. k6 stays
+load-only and deferred to Part 4 (DRQ-006); Newman is not needed in Part 3 (no
+REST seam).

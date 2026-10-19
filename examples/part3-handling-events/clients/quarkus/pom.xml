@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Part 3 "Handling It" / Ch10 example — consuming CLIENT for the
+  `handlingEvents` channel (contracts/asyncapi.yaml
+  `operations.receiveHandlingEvent`), implemented with the WebSockets Next
+  `@WebSocketClient` API (NOT a hand-rolled java.net.http.WebSocket or
+  vertx-core WebSocketClient — WebSockets Next is the series' chosen
+  abstraction for both server and client endpoints on Quarkus; see
+  ../../quarkus/pom.xml for the matching server-side choice).
+
+  Connects to ../../quarkus (ws://localhost:8080) or ../../python
+  (ws://localhost:8081) — same channel, same contract, either stack — via
+  `client.ws.base-uri` (see src/main/resources/application.properties).
+  Demonstrates two teaching points for Ch10 ("Handling It"):
+
+    1. STATELESS reconnect with exponential backoff + jitter on connection
+       drop (ReconnectingClient). It does NOT replay missed events across
+       the gap — that requires a durable, replayable event log on the
+       server side (Kafka-backed replay lands in Part 4 Ch16); this client
+       only resumes receiving NEW frames pushed after it reconnects.
+    2. Backpressure on the incoming-frame buffer (EventBuffer) with an
+       explicit, configurable policy (BLOCK vs DROP_OLDEST) for when the
+       consumer is slower than the server.
+
+  Pinned to the SAME Quarkus platform version as the server
+  (../../quarkus/pom.xml) so both sides of this example build against one
+  release.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.patterncatalyst.shipping</groupId>
+    <artifactId>part3-handling-events-client-quarkus</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>quarkus</packaging>
+
+    <properties>
+        <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <!-- Same pin as ../../quarkus/pom.xml. -->
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- @WebSocketClient / WebSocketConnector / WebSocketClientConnection
+             — the client-side half of the same extension the server uses. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-websockets-next</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

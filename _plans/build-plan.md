@@ -87,6 +87,38 @@ Build sequence: contract → Ch0–Ch3 (parallel) → Ch4–Ch7 (contract-bound)
 hub → CI step → `bundle exec jekyll build` + voice scan. Checkpoint commit per
 chapter.
 
+## r03 scope (in progress)
+
+**Part 3 "Building It" (Ch8–11) + the first runnable examples + the full
+contract-drift gate.** The first iteration with runnable code.
+
+- **Per-Part example app** under `examples/part3-handling-events/`
+  (`quarkus/` + `python/` + `clients/`, one `compose.yaml`, one `verify.sh`),
+  both stacks serving the `contracts/asyncapi.yaml` handling-events feed, code
+  grown **additively** across Ch8→11 so earlier codetabs stay valid. Harness
+  copied/extended from the gRPC sibling's `examples/_lib/lib.sh`.
+- **Generate-from-contract without committing generated code** (DRQ-018):
+  `scripts/extract-message-schema.py` derives a JSON Schema from the contract;
+  Python models generated at build time (`datamodel-code-generator`), Quarkus
+  uses idiomatic hand-written records guarded by a schema-conformance test.
+- **Full contract-drift gate** (DRQ-018, upgrades the r02 validate-only job):
+  `asyncapi diff` vs `main` (breaking-change detector, the `buf breaking`
+  analog) + a `drift` job that regenerates models and runs both stacks'
+  conformance tests + an `examples` matrix running `verify.sh`.
+- **Verification = live headless boot** (DRQ-019): `verify.sh` boots both stacks
+  via `docker compose`, opens a real socket with pinned `websocat`, and asserts
+  a live `HandlingEvent` frame validates against the extracted schema.
+- **uv** throughout the Python stack (pinned `0.13.1`), not Poetry (DRQ-002
+  amended). **k6 deferred to Part 4** (DRQ-006: k6 = load). Ch10 Quarkus client
+  uses the WebSockets-Next `@WebSocketClient` API.
+- Chapters Ch8–11 to the house standard (DRQ-016 word floor, DRQ-008/015
+  diagrams, On-the-wire box, Decision callout), codetabs citing the real
+  `examples/` code.
+
+Build order: harness + extractor → scaffold both apps + pass `verify.sh` →
+write Ch8–11 against the working code → wire the drift gate → build + voice +
+checkpoint. Chapters follow working code so codetabs are real.
+
 ## Deferred to later iterations (r02+)
 
 - Chapter prose for all 29 chapters, to the house depth standard (paired
