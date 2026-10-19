@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 460" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="920" height="420" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">OutboundBackpressureGuard.java / OutboundQueue in app/outbound.py — decouples the producer from the slow socket write</text>
+<rect x="50" y="160" width="210" height="85" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="155.0" y="193.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Producer</text>
+<text x="155.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">fixture replay / a new</text>
+<text x="155.0" y="225.0" font-size="11.5" fill="#555555" text-anchor="middle">HandlingEvent is recorded</text>
+<rect x="370" y="160" width="230" height="85" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="485.0" y="193.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">BOUNDED OUTBOUND BUFFER</text>
+<text x="485.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">maxPendingSends / QUEUE_MAXSIZE</text>
+<text x="485.0" y="225.0" font-size="11.5" fill="#555555" text-anchor="middle">(default 32)</text>
+<rect x="700" y="160" width="210" height="85" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="805.0" y="193.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">connection.sendText() /</text>
+<text x="805.0" y="210.0" font-size="11.5" fill="#555555" text-anchor="middle">websocket.send()</text>
+<text x="805.0" y="225.0" font-size="11.5" fill="#555555" text-anchor="middle">— the slow client&#x27;s socket</text>
+<rect x="90" y="300" width="300" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="240.0" y="330.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CLOSE (default)</text>
+<text x="240.0" y="347.5" font-size="11.5" fill="#555555" text-anchor="middle">close(4290 SLOW_CONSUMER) —</text>
+<text x="240.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">stop sending, safe default</text>
+<rect x="510" y="300" width="300" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="660.0" y="330.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">DROP</text>
+<text x="660.0" y="347.5" font-size="11.5" fill="#555555" text-anchor="middle">log + skip this event,</text>
+<text x="660.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">keep the connection open</text>
+<path d="M260,202 L370,202" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="321.0" y="196.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">enqueue / pending++</text>
+<text x="321.0" y="196.0" font-size="11" fill="#555" text-anchor="middle">enqueue / pending++</text>
+<path d="M600,202 L700,202" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="656.0" y="196.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">sendText / send()</text>
+<text x="656.0" y="196.0" font-size="11" fill="#555" text-anchor="middle">sendText / send()</text>
+<path d="M500,245 L260,300" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="386.0" y="266.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">full, or send() &gt; timeout</text>
+<text x="386.0" y="266.5" font-size="11" fill="#555" text-anchor="middle">full, or send() &gt; timeout</text>
+<path d="M560,245 L630,300" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="601.0" y="266.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">full, or send() &gt; timeout</text>
+<text x="601.0" y="266.5" font-size="11" fill="#555" text-anchor="middle">full, or send() &gt; timeout</text>
+<path d="M240,300 L500,202" fill="none" stroke="#b8650a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#am)"/>
+<text x="376.0" y="245.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">connection torn down — no more frames</text>
+<text x="376.0" y="245.0" font-size="11" fill="#b8650a" text-anchor="middle">connection torn down — no more frames</text>
+<path d="M660,300 L700,245" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="686.0" y="266.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">next event still enqueued</text>
+<text x="686.0" y="266.5" font-size="11" fill="#b8650a" text-anchor="middle">next event still enqueued</text>
+<text x="480" y="400" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Two signals trip the policy: the buffer is full (sustained rate mismatch), or one send() hangs past the timeout (peer stopped reading entirely).</text>
+</svg>
