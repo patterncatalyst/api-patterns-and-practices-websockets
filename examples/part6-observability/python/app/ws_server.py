@@ -19,8 +19,9 @@ starts a span BY HAND, with the OTel SDK tracer directly, the same
 `opentelemetry-instrument` has already configured the global TracerProvider
 and OTLP exporter (from `OTEL_EXPORTER_OTLP_ENDPOINT` /
 `OTEL_SERVICE_NAME`) before `app/main.py` ever imports this module, so
-`trace.get_tracer(__name__)` here picks that configuration up for free —
-only the span itself is manual.
+`trace.get_tracer(__name__)` here reads that already-configured global
+TracerProvider directly, with no setup code in this module — only the span
+itself is manual.
 
 One span per connection, `ws.handling-events.connection`, covers the whole
 replay (the connection's initial push); `app/metrics.py`'s

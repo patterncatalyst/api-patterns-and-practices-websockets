@@ -34,7 +34,7 @@ table is authoritative yet, except the rows marked below as reconciled.
 | k6 | 2.3.0 — current stable; load-testing tool, enters in **Part 4** (not Part 5 — DRQ-023) |
 | Newman | 6.2.3 — current stable (npm); no `docker.io/postman/newman` image tag newer than `6.1.3` exists yet, so `examples/part6-testing/verify.sh` pins it via `npx newman@6.2.3` instead (DRQ-030, surveyed 2026-10-19) |
 | JDK | 25.0.4 (Temurin) — current LTS line patch (Ch0 pin, `_docs/00-setup-and-the-lab.md`) |
-| Node | TBD — confirm latest stable |
+| Node | 24.22.0 (LTS "Krypton") — current 24.x LTS patch; CI runtime for `npx newman` and any other JS tooling (`.github/workflows/contracts.yml` pins `actions/setup-node@v4` to `node-version: "24"`) |
 | **Protobuf / buf (DRQ-025, Part 5)** | |
 | `protobuf-java` | 4.36.2 — current stable (Maven Central); matches `protoc` 36.2's minor.point |
 | Maven proto-generation plugin | `io.github.ascopes:protobuf-maven-plugin:5.1.11` — current stable; the maintained fork of `org.xolstice.maven.plugins:protobuf-maven-plugin`, which GitHub marks archived/read-only as of April 2025 |
