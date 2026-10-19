@@ -142,6 +142,46 @@ Same convention as part3 — off by default so a first boot and CI stay fast:
 docker compose --profile observability up --build
 ```
 
+### k6 smoke load (DRQ-023)
+
+[`k6/smoke.js`](k6/smoke.js) is a deliberately SMOKE-level load script (3
+VUs, 1 iteration each, no ramp) — it mints one shared-secret JWT, opens the
+channel, asserts the upgrade succeeds and the 3 fixture frames arrive
+correctly shaped, holds briefly, then closes. It is NOT a stress/load test;
+treat it as a fast liveness gate, not a capacity benchmark.
+
+```bash
+docker compose up --build -d quarkus python
+TOKEN="$(cd python && uv run python -m app.mint_token)"
+
+# against Quarkus (:8080)
+k6 run -e K6_WS_URL="ws://localhost:8080/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+       -e K6_TOKEN="$TOKEN" k6/smoke.js
+
+# against Python (:8081)
+k6 run -e K6_WS_URL="ws://localhost:8081/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+       -e K6_TOKEN="$TOKEN" k6/smoke.js
+
+docker compose down -v --remove-orphans
+```
+
+No local `k6`? Use the pinned image instead (same one the CI gate uses,
+`docker.io/grafana/k6:2.3.0` — see Ch0's version matrix):
+
+```bash
+docker run --rm --network host \
+  -e K6_WS_URL="ws://localhost:8080/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+  -e K6_TOKEN="$TOKEN" \
+  -v "$(pwd)/k6:/scripts" \
+  docker.io/grafana/k6:2.3.0 run /scripts/smoke.js
+```
+
+**CI context:** the `contracts.yml` workflow's `k6-smoke` job runs this
+script against BOTH stacks on every push/PR — a k6 threshold failure (any
+failed check) fails that job, and thus the PR (DRQ-023's "gated", not
+merely opt-in). The job mints its own token the same way shown above and
+tears the stack down afterward.
+
 ## Diagram
 
 [`../../assets/diagrams/part4-connection-architecture.svg`](../../assets/diagrams/part4-connection-architecture.svg) /

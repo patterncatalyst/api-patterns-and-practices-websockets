@@ -90,6 +90,47 @@ and CI stay fast:
 docker compose --profile observability up --build
 ```
 
+### k6 smoke load (DRQ-023)
+
+[`k6/smoke.js`](k6/smoke.js) is a deliberately SMOKE-level load script (3
+VUs, 1 iteration each, no ramp) against the **default (stateless) profile's**
+single always-up instance per stack — this channel has no auth gate
+(PROTOCOL.md), so no token is needed. It only proves the channel itself is
+alive and streams the 3 fixture frames correctly shaped; it does NOT
+exercise Ch16 replay or Ch18 fan-out (those stay covered by `verify.sh`,
+which brings up the brokers and runs for several minutes).
+
+```bash
+docker compose up --build -d quarkus-a python-a
+
+# against Quarkus (:8080)
+k6 run -e K6_WS_URL="ws://localhost:8080/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+       k6/smoke.js
+
+# against Python (:8081)
+k6 run -e K6_WS_URL="ws://localhost:8081/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+       k6/smoke.js
+
+docker compose down -v --remove-orphans
+```
+
+No local `k6`? Use the pinned image instead (same one the CI gate uses,
+`docker.io/grafana/k6:2.3.0` — see Ch0's version matrix):
+
+```bash
+docker run --rm --network host \
+  -e K6_WS_URL="ws://localhost:8080/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+  -v "$(pwd)/k6:/scripts" \
+  docker.io/grafana/k6:2.3.0 run /scripts/smoke.js
+```
+
+**CI context:** the `contracts.yml` workflow's `k6-smoke` job runs this
+script against both the `quarkus-a` and `python-a` instances on every
+push/PR — a k6 threshold failure (any failed check) fails that job, and
+thus the PR (DRQ-023's "gated", not merely opt-in). The job brings up only
+the default-profile `*-a` instances (no broker), runs the smoke script, and
+tears the stack down afterward.
+
 ## A documented, benign race (Ch16)
 
 `PROTOCOL.md` and each stack's own README call out a narrow timing window on
