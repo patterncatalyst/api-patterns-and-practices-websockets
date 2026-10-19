@@ -160,6 +160,13 @@ jobs:
         example: ${{ fromJSON(needs.discover-examples.outputs.examples) }}
     steps:
       - uses: actions/checkout@v5
+      # verify.sh Step 4 (client reconnect check) runs the uv-managed Python
+      # client on the host via `uv run`; docker alone is not enough. uv also
+      # provisions the Python interpreter the client needs.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
       - name: Verify ${{ matrix.example }} (response semantics vs contract, both stacks)
         # Retry up to 3x: each verify.sh is self-contained (compose up ->
         # assert -> compose down via lib.sh's EXIT trap), so a retry starts
