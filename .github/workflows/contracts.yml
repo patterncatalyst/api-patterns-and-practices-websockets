@@ -62,13 +62,26 @@ jobs:
           # any `remove`, OR an `edit` of a `type`/`pattern`, OR an `add` to
           # a `required` array, fails the gate. A purely additive, optional
           # field is an `add` to `properties` only and is NOT flagged.
+          #
+          # Carve-out (Part 5, DRQ-026): widening a `const` constraint to an
+          # `enum` that still contains the old value — e.g.
+          # `const: handling-events.v1` -> `enum: [handling-events.v1,
+          # handling-events.v1+json, handling-events.v1+protobuf]` — is
+          # modeled by `asyncapi diff` as a `remove` of the `/const` keyword
+          # plus an `add` of `/enum` (verified locally against this
+          # contract's Sec-WebSocket-Protocol header). That `remove` is
+          # purely additive/widening, not breaking: every value the old
+          # `const` accepted is still accepted by the new `enum`. So a
+          # `remove` whose path ends in `/const` is EXCLUDED from the
+          # breaking set below. Every other `remove` (a field, message,
+          # channel, or operation disappearing) is still breaking.
           if git ls-tree -r origin/main --name-only -- contracts/asyncapi.yaml 2>/dev/null | grep -q 'asyncapi\.yaml$'; then
             git show origin/main:contracts/asyncapi.yaml > /tmp/asyncapi.main.yaml
             npx -y @asyncapi/cli@6.2.1 diff /tmp/asyncapi.main.yaml contracts/asyncapi.yaml \
               -t all -f json > /tmp/asyncapi.diff.json
             breaking="$(jq '[.changes[]? | select(
                 .type == "breaking" or
-                .action == "remove" or
+                (.action == "remove" and ((.path | test("/const$")) | not)) or
                 (.action == "edit" and (.path | test("/(type|pattern)$"))) or
                 (.action == "add" and (.path | test("/required/[0-9]+$")))
               )]' /tmp/asyncapi.diff.json)"

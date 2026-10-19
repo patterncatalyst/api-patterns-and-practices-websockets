@@ -71,12 +71,19 @@ cleanup_all() {
   fi
 }
 
-for tool in uv protoc; do
+for tool in uv; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "verify.sh: FAIL — '$tool' is required but not found on PATH" >&2
     exit 1
   fi
 done
+
+# protoc is self-provisioned (pinned release download, cached under
+# examples/_lib/.bin/) rather than required pre-installed — see
+# ensure_protoc's doc comment in ../_lib/lib.sh. Must run before Step 1
+# (stub generation) and before Step 5 (check-proto-parity.py, which shells
+# out to `protoc --descriptor_set_out`).
+ensure_protoc
 
 # ---------------------------------------------------------------------------
 # decode_protobuf_frame <bin-file>
