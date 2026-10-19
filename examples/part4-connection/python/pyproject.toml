@@ -1,0 +1,26 @@
+[project]
+name = "connection-concerns-python"
+version = "1.0.0"
+description = "Part 4 example — Python native-websockets handling-events feed with connection concerns: backpressure (Ch12), error handling (Ch13), heartbeats (Ch14), and JWT auth (Ch17). Forks examples/part3-handling-events/python (FastAPI for HTTP/app lifecycle, the websockets library drives the WS connection)."
+requires-python = ">=3.15"
+dependencies = [
+    "fastapi>=0.146.0",
+    "opentelemetry-distro>=0.66b1",
+    "pyjwt==2.15.1",
+    "uvicorn[standard]>=0.54.0",
+    "websockets>=17.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator>=0.86.0",
+    "jsonschema>=4.26.0",
+    "pytest>=9.1.1",
+]
