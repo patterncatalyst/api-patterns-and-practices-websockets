@@ -52,7 +52,7 @@ lib.sh: ok — inject evt_5f145ef4d54c4dd79368618e27 via exec(quarkus-a)->http:/
 verify-crc.sh: ok — quarkus/kafka: late frame arrived after a 65s idle hold over the edge-TLS Route (haproxy.router.openshift.io/timeout: 3600s present)
 ```
 
-The script confirms the annotation is actually present on the live Route before trusting it, injects the late event by `oc exec`-ing into the same pod the idle connection is attached to, and only then asserts the frame arrived on the still-open socket — not a reconnect, the same connection that sat quiet for 65 seconds. `evidence/2026-10-19/05-delivered-logs.txt` carries the matching server-side line, `delivered eventId=evt_5f145ef4d54c4dd79368618e27 bookingId=bkg_90c618e7a9ac47e0a97c1f3c43 instance=quarkus-a`, confirming the pod that answers through the Route is the same pod that logged the delivery.
+The script confirms the annotation is actually present on the live Route before trusting it, injects the late event by `oc exec`-ing into the same pod the idle connection is attached to, and only then asserts the frame arrived on the still-open socket — not a reconnect, the same connection that sat quiet for 65 seconds. The server-side half of delivery is captured separately in `evidence/2026-10-19/05-delivered-logs.txt`, the per-stack `delivered eventId=… instance=quarkus-a` / `instance=python-a` pod-log lines read straight off each Route-facing pod — for example the cross-pod fan-out delivery `delivered eventId=evt_f117514c222941dbaa91eccf42 bookingId=bkg_1aa9ad91853b4e119a8c64ed8f instance=quarkus-a`, logged by the same pod the Route routes to.
 
 ## What broke / watch for
 
