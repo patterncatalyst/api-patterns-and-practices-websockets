@@ -6,6 +6,18 @@ description: "Tuning a socket server for throughput once it carries real load."
 duration: "18 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Measure Protobuf's fixed, load-independent frame-size discount against JSON using `k6/benchmark.js`'s `json`/`protobuf`/`json_deflate` scenarios.
+- Decide when to batch or coalesce events into fewer, larger frames, trading added latency for lower per-frame overhead.
+- Check a stack's permessage-deflate default before assuming it's active — Quarkus WebSockets Next requires `per-message-compression-supported=true`, while Python's `websockets` enables `compression="deflate"` unless told not to.
+- Bound a single frame with `max-message-size`/`max-frame-size` (Quarkus) or `max_size`/`max_queue` (Python), independent of Chapter 12's bounded outbound queue.
+- Distinguish a reproducible ratio or negotiation outcome from a host-dependent absolute rate when citing a `k6` benchmark number.
+
+## Why this matters
+
 Chapter 19 proved Protobuf frames measure smaller than JSON frames for the same `HandlingEvent` and left one question open: does that size difference show up anywhere a server operator would notice it, and what else is sitting on the table once wire size stops being the only lever? `examples/part5-performance/k6/benchmark.js` answers the first half directly — it drives both encodings, plus a JSON-with-compression variant, against both stacks and prints bytes/frame, connects/sec, and success rate side by side. It also raises a question this chapter has to answer with precision: what can that benchmark prove, and where does its own tooling stop being able to see the thing it's measuring? This chapter walks four levers that bound a WebSocket server's throughput — encoding (recap from Ch19), batching, compression, and size limits — then closes with Chapter 12's backpressure as the ceiling all four sit under, and the k6 numbers that ground every claim in real, captured output rather than an assumed percentage.
 
 ## Encoding: a fixed, load-independent cost
@@ -157,3 +169,11 @@ This chapter closes Part 5. Chapter 19 moved the wire format to Protobuf and mea
 Part 6, Testing, Debugging & Observability, picks up from here with a different question: not how fast a channel can go, but how a team proves it still behaves correctly, finds out why it doesn't, and watches it in production once it's live. The k6 scripts this chapter leaned on are themselves half of that answer — a gated smoke test and a local comparative benchmark are both testing infrastructure, aimed at different questions — and the next chapters widen that lens to the rest of the toolbox: structured test suites across both stacks, the debugging workflow for a connection that's misbehaving in ways a log line alone doesn't explain, and the OpenTelemetry instrumentation this site has wired through every example's `OTEL_EXPORTER_OTLP_ENDPOINT` since Part 3 without yet asking what it's for.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Treat throughput as four independent levers sitting on top of one shared ceiling, not one knob. Encoding (Ch19's Protobuf vs. JSON) is a fixed, load-independent per-frame discount — 40.7% smaller, measured identically at any connection rate. Batching trades latency for fewer, larger frames, and only pays off once per-frame overhead dominates a small, frequent payload. Compression is a per-stack opt-in, not a universal default: Python's <code>websockets</code> library negotiates permessage-deflate unless told not to, Quarkus WebSockets Next requires <code>quarkus.websockets-next.server.per-message-compression-supported=true</code> to negotiate it at all — this example's own benchmark measured 100% negotiation on Python against 0% on Quarkus with the identical client request, a real framework-default difference to check before assuming a feature is active on both stacks. Size limits (<code>max-message-size</code>/<code>max-frame-size</code> on Quarkus, <code>max_size</code>/<code>max_queue</code> on Python, the latter defaulting to a real 1&nbsp;MiB ceiling even when unset explicitly) bound a single frame the same way Chapter 12's queue bounds accumulated sends. Backpressure governs all four: a smaller or compressed frame buys more throughput for the same queue depth, a batched one buys less, but none of them changes whether or when the bound trips. Measure every claim as a ratio or a negotiation outcome reproduced across repeated runs — never as a bare connects/sec number from one host in one ephemeral-port state — which is exactly why <code>k6/benchmark.js</code> stays local-only and cited in prose, while <code>k6/smoke.js</code>'s deterministic checks are the ones that gate a PR.</p></div>
+
+## For deeper coverage
+
+- Pekka Enberg, *Latency: Reduce delay in software systems* (Manning, 2025) — the systems-level latency-versus-throughput tradeoffs behind this chapter's batching-adds-latency argument.
+- Martin Kleppmann & Chris Riccomini, *Designing Data-Intensive Applications, Second Edition* (O'Reilly, 2026) — bounded queues and backpressure as a throughput ceiling, the same shape Chapter 12's outbound queue bounds every lever in this chapter.
+- *Cloud Native Design Patterns* — "Stream Processing" chapter — batching and coalescing tradeoffs for a continuously-pushed feed.
+- *Cloud Native Design Patterns* — "Caching Patterns" chapter — the same amortize-a-fixed-cost-across-more-work reasoning this chapter applies to frame batching.
+- RFC 7692 — permessage-deflate, the compression extension this chapter measures stack-by-stack for negotiation, not for wire-size savings.

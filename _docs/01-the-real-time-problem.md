@@ -6,6 +6,19 @@ description: "What 'push' means, why request/response falls short for a client w
 duration: "17 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why `GET /bookings/{id}` can answer "what is true right now" but has no channel to say "tell me the moment that changes."
+- Quantify the cost of polling the booking service: wasted requests, provisioned-for-peak server capacity, and a latency-vs-staleness trade-off that no fixed or adaptive interval resolves.
+- Diagnose which interactions need a standing connection versus a one-time `GET` or a scheduled batch query.
+- Trace how a WebSocket's `Upgrade` handshake replaces repeated polling with one connection held open for as long as the client cares to watch.
+
+## Why this matters
+
+Chapter 0 pinned the toolchain and raised the lab without yet explaining why any of it needs a live socket at all. This chapter makes that case against the shipping domain's own numbers: a server has no channel to speak first in a request/response exchange, so a client watching for a change is left guessing at a polling interval, and every guess trades latency against wasted requests with no interval that fixes both. That cost, measured here, is what Chapter 2 spends its own space deciding how to close.
+
 A client watching booking `BKG-4471` move through customs does not need an answer right now — it needs to know the instant the answer changes, and request/response has no way to express that distinction. Every HTTP call is a question the server answers once and forgets; if the client wants to know about a change it has to ask again, and again, most of those questions landing on an answer identical to the one before. This chapter sets up the cost of that pattern against the shipping/cargo domain this site shares with its REST and gRPC siblings, and the next chapter turns the cost into a decision about which push mechanism fits.
 
 ## A booking that doesn't move on request
@@ -92,3 +105,11 @@ The push column's message count scales with events, not with watchers times poll
 Polling a REST resource for a status that hasn't changed costs real requests, real server capacity, and a latency-vs-staleness trade with no good answer, because the client is guessing at an interval instead of being told. A WebSocket replaces the guess with a standing connection the server uses to push a handling event the moment it's recorded, and the cost of that connection scales with real events instead of request volume. That's the case for push in general — it says nothing yet about which push mechanism fits a given interaction. A one-way status feed, a two-way negotiation, a client behind a strict proxy that can't hold a long-lived connection, and a background job that wants a callback instead of a live view all want different answers, and WebSockets isn't the only one. Chapter 2 lays WebSockets, Server-Sent Events, long-polling, and webhooks side by side against explicit criteria and picks among them for the shipping domain's actual interactions, the same way the REST and gRPC sibling sites turn their opening chapter's vocabulary into a decision framework in their second.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>The handling-event feed for a watched booking moves from pull to push: a client that needs to know about a status change soon after it happens, for as long as it's watching, gets a standing connection instead of a poll loop. Chapter 2 picks the specific mechanism — WebSockets, SSE, long-polling, or webhooks — against the shipping domain's actual interactions.</p></div>
+
+## For deeper coverage
+
+- Martin Kleppmann & Chris Riccomini, *Designing Data-Intensive Applications, Second Edition* (O'Reilly, 2026) — the latency, freshness, and delivery trade-offs behind "tell me when it changes" versus "what is true right now."
+- Dynowski, L. & Dulak, M., *Learning API Styles* (O'Reilly, 2025) — where push-based interaction fits among the broader set of API styles this series compares.
+- *Cloud Native Design Patterns* — "Communications" and "Event-Driven" chapters — the interaction-style landscape and the event-backbone alternative to polling.
+- [RFC 6455](https://datatracker.ietf.org/doc/html/rfc6455) — the protocol behind the standing connection this chapter argues for.
+- [MDN: WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) — the browser-native interface a client uses instead of a polling loop.

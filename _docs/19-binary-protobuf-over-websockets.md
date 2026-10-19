@@ -6,6 +6,18 @@ description: "Carrying binary Protobuf frames over a WebSocket instead of JSON t
 duration: "16 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Add a second, binary wire encoding for `HandlingEvent` with `contracts/handling-event.proto` as a hand-kept, parity-gated twin of `asyncapi.yaml` — not a second contract.
+- Negotiate JSON versus Protobuf through `Sec-WebSocket-Protocol` subprotocol values (`handling-events.v1+json` / `+protobuf`), with JSON as the safe fallback for a client that offers neither.
+- Encode and decode `HandlingEvent` identically on Quarkus (`HandlingEventProtoMapper`) and Python (`mapper.to_proto`), keeping timestamps and amounts as plain strings so either encoding decodes to byte-for-byte identical values.
+- Run `scripts/check-proto-parity.py` to catch field-name, required/optional, and enum-order drift between the proto and the JSON Schema that `buf lint`/`buf breaking` can't see.
+- Explain why a Protobuf field number, not its name, is the wire identity, and why reusing one is a silent data-corruption risk rather than a build-time error.
+
+## Why this matters
+
 Every chapter before this one pushed `HandlingEvent` as JSON — human-readable field names, quoted strings, no compression, one WebSocket TEXT frame (opcode `0x1`) per event. That's the right default: a client opens dev tools, reads the frame, and understands it without a decoder. `examples/part5-performance` forks part4's connection example (dropping JWT auth, backpressure, and heartbeats to isolate one variable) and adds a second wire encoding of the *exact same message*: Protobuf, carried in a WebSocket BINARY frame (opcode `0x2`), negotiated through the same `Sec-WebSocket-Protocol` header this site has used for versioning since Chapter 3. `contracts/handling-event.proto` is the new artifact this chapter is about — a hand-kept, parity-gated binary twin of `contracts/asyncapi.yaml`'s `HandlingEvent` schema — and `verify.sh` proves, live against both stacks, that the two encodings decode to identical field values while the Protobuf frame measures roughly 40% smaller. This chapter walks through what that `.proto` buys, how the two stacks encode and decode it, what a client gives up to get the smaller frame, and why the schema discipline underneath it is the same discipline Chapter 7 already taught for JSON.
 
 ## A second wire encoding, not a second contract
@@ -197,3 +209,11 @@ A passing run prints one final line: both stacks negotiate both subprotocols, de
 This chapter added a second wire encoding to one channel and proved, live, that it's both smaller and faithful to the same contract JSON already carries. What it didn't measure is the thing a smaller frame exists to improve: whether a server pushing thousands of these events per second notices the difference in CPU, memory, or sustained throughput, and where the bottleneck sits once wire size stops being the limiting factor. Chapter 20 picks that question up directly — tuning a socket server for throughput once it carries real load, on top of the exact same `+protobuf`/`+json` choice this chapter built, so the size win proven here becomes a measured latency and messages-per-second number rather than a byte count alone.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Protobuf is a second wire encoding of the same message, not a second contract — <code>contracts/handling-event.proto</code> mirrors <code>asyncapi.yaml</code>'s <code>HandlingEvent</code> field-for-field, keeping timestamps and amounts as plain strings so a value decoded from either encoding is byte-for-byte identical, and <code>scripts/check-proto-parity.py</code> closes the one gap <code>buf lint</code>/<code>buf breaking</code> can't see: proto-vs-JSON-Schema drift in field names, required/optional split, or enum order. A client selects the encoding via <code>Sec-WebSocket-Protocol</code> (<code>+json</code> default, <code>+protobuf</code> opt-in) — DRQ-026's reuse of the subprotocol mechanism Chapter 3 introduced, not a new negotiation scheme. <code>verify.sh</code> proves the trade live on both stacks: the Protobuf frame measures ~40% smaller for every fixture event and decodes to field values identical to the JSON path, at the cost of a build-time <code>protoc</code> dependency and a frame no longer readable without a schema and a decoder. Reach for it when a feed's volume makes JSON's per-key string overhead a real cost — not as a default replacement for the JSON path every other chapter in this site already uses, and never by reusing a proto field number once it's shipped: a reused tag is a silent misread, not a type error, which is exactly what buf's breaking-change gate and this chapter's field-number discipline exist to prevent.</p></div>
+
+## For deeper coverage
+
+- Martin Kleppmann & Chris Riccomini, *Designing Data-Intensive Applications, Second Edition* (O'Reilly, 2026) — encoding formats and schema evolution behind the additive-only field-numbering rule `contracts/handling-event.proto` enforces.
+- Clément Jean, *gRPC Go for Professionals* (Packt, 2023) — the Protocol Buffers language, field numbering, and schema evolution this chapter's `.proto` contract is built on.
+- *Cloud Native Design Patterns* — "Protocols in Depth" chapter — binary-versus-text wire tradeoffs for a contract served over more than one encoding.
+- *Cloud Native Design Patterns* — "Versioning & Evolution" chapter — the non-breaking-change discipline this chapter applies to a proto contract alongside the existing AsyncAPI one.
+- [Protocol Buffers documentation](https://protobuf.dev/) — the proto3 language reference behind `handling-event.proto`'s field numbers, `optional` keyword, and enum conventions.

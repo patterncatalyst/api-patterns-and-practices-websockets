@@ -6,6 +6,18 @@ description: "Evolving a socket's contract without breaking a client that's alre
 duration: "20 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Classify a proposed change to `HandlingEvent` or its channel as breaking or safe, using the test "does any code compiled before this change have to look at the part that's different."
+- Explain why an already-open WebSocket connection has no REST or gRPC-unary analog for contract renegotiation, and name the three populations a rolling deploy creates at once.
+- Choose among channel-path, subprotocol, and message-field versioning for a given kind of change, and state what each lever does to a connection that is already open.
+- Implement a defensive `HandlingEventType` deserializer (`fromWire` / `unknown_becomes_unspecified`) that degrades an unrecognized enum value to `UNSPECIFIED` instead of failing the connection.
+- Size and close a dual-publish window using observed connection lifetimes and an application-defined close code in the `4000`–`4999` range.
+
+## Why this matters
+
 Chapter 5 built `contracts/asyncapi.yaml` and fixed the shape of one message, `HandlingEvent`, on one channel, `/ws/v1/bookings/{% raw %}{bookingId}{% endraw %}/handling-events`. Chapter 6 settled what belongs in that shape. Neither chapter answered the question that matters the moment this contract ships a second time: what happens to a client already running against version one when version one changes underneath it? A REST client makes one request, gets one response, and is gone; its next request, whenever that is, picks up whatever the server looks like by then. A gRPC unary call behaves the same way. A WebSocket connection doesn't get that luxury — it opens once and stays open for as long as a booking is worth watching, minutes or days, and every message the server pushes down it has to make sense to whatever code the client compiled before the connection opened. This chapter is about keeping that promise as the contract moves: what counts as breaking it, the three places a version number can live, why `HandlingEventType`'s unspecified zero matters more here than it looks like it should, and the one problem a socket has that nothing else in this series does — the client is already on the call when you change what you're saying.
 
 ## What counts as breaking, for a socket
@@ -188,3 +200,11 @@ The field is still called `amount`, still sits in the same place in the payload,
 Part 2 closes here with a contract that validates, a message shape Chapter 6 settled, and now a documented answer for every way that shape is allowed to move without breaking a client holding a connection open against an earlier version of it. Part 3 is where that contract stops being paper: Chapter 8 builds the Quarkus WebSockets Next side of `handlingEvents`, Chapter 9 builds the Python side, and Chapter 11 is the one that proves both independently-built implementations agree with each other because they both agree with this file — not because either one imports the other. Every evolution rule this chapter named gets its first real test the moment two actual handlers, on two actual stacks, have to honor the same dual-publish window at the same time.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>This contract versions at three granularities — channel path for a structural break, subprotocol for a payload-shape break with an acceptable reconnect, and a message-level field for a change that has to reach connections already open — and picks among them by asking what an already-open connection is allowed to keep assuming. A gRPC streaming call or a long-poll loop both run into a version of this same already-connected problem; a WebSocket makes it the common case instead of an edge case, because every connection this feed serves is long-lived by design. The one discipline that makes all three levers work is sizing the dual-publish window against observed connection lifetimes rather than deploy duration, and closing it in two steps — stop offering the old version to anything new, then close the stragglers with a close code a client's reconnect logic can act on. Skipping either step doesn't save time; it moves the breakage from a planned window a reader can watch in a diagram to an unplanned one a client discovers in production.</p></div>
+
+## For deeper coverage
+
+- J. J. Geewax, *API Design Patterns* (Manning, 2021) — the compatibility and versioning patterns this chapter's breaking/safe classification draws on, generalized across API styles.
+- Olaf Zimmermann, Mirko Stocker, Daniel Lübke, Uwe Zdun & Cesare Pautasso, *Patterns for API Design* (Addison-Wesley, 2022) — message-level evolution patterns for a channel that can't renegotiate mid-connection.
+- *Cloud Native Design Patterns* — "Versioning & Evolution" chapter — the channel-path, subprotocol, and payload-field levers this chapter applies to one WebSocket feed, treated at the level of an API's whole lifecycle.
+- [AsyncAPI 3.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.0.0) — the `servers`/`channels` structure that makes `/ws/v1/...` and `/ws/v2/...` two independently addressable routes.
+- [Semantic Versioning](https://semver.org/) — the additive-vs-breaking vocabulary this chapter's evolution gate maps onto a schema instead of a package version number.

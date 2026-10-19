@@ -6,6 +6,19 @@ description: "The shipping/cargo domain recapped for a live handling-event feed,
 duration: "20 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Name the `HandlingEvent` fields — `bookingId`, `cargoId`, `eventType`, `location`, `occurredAt`, `registeredAt`, `amount` — and explain why each is an identifier or scalar rather than a nested object.
+- Explain why `Route`, `Leg`, and `Operation` are part of the shared domain but never appear on a `HandlingEvent` message.
+- Diagnose why `Money` is a decimal string matching `^\d+\.\d{2}$` rather than a JSON number.
+- Trace the seam between this feed and the REST booking service: what the socket replaces, and what it explicitly does not — replay, catch-up, or full current state.
+
+## Why this matters
+
+Every protocol chapter so far has pushed bytes without naming what they mean. This chapter closes that gap: the shipping/cargo domain's nouns, the one message type this socket ever sends, and the seam marking exactly what a live connection replaces and what it leaves to the REST booking service — the domain vocabulary every later chapter, starting with Chapter 5's AsyncAPI contract, builds on without re-deriving it.
+
 Chapter 3 decoded a WebSocket frame down to its bytes and found a handling-event payload sitting inside, without stopping to say what any of those bytes meant in the shipping domain. This chapter names it: the nouns the socket pushes, the shape of the feed that carries them, and the seam where a live connection meets the REST booking service it exists to stop polling. Chapter 5 turns this vocabulary into the formal AsyncAPI 3 contract that both stacks generate from; this chapter is the domain underneath that contract, stated once so every later chapter can point back at it instead of re-deriving it.
 
 ## The shipping/cargo domain recap
@@ -113,3 +126,11 @@ Every field name, every enum member, and every pattern above is copied directly 
 This chapter named the nouns in prose: `Booking` and `Cargo` as identifiers, `Location` as a UN/LOCODE string, `Money` as a decimal string, `HandlingEventType`'s eight members, and the seam that keeps the REST booking service as the single source of truth this feed never duplicates. Chapter 5 takes that same vocabulary and gives it a formal AsyncAPI 3 contract — the file this chapter has already been quoting from directly, `contracts/asyncapi.yaml` — and shows how both the Quarkus and Python stacks generate their message types from one `components.schemas.HandlingEvent` definition rather than two independently hand-written ones. Chapter 6 then works through message design questions this chapter deferred, like why `HandlingEvent` stays flat instead of nesting a `Location` or `Money` object, and Chapter 7 covers what happens to this exact schema the day a new field needs to be added without breaking a client built against today's shape.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>This feed carries one noun, <code>HandlingEvent</code>, and treats everything else in the shared shipping/cargo glossary as context the REST booking service owns and this socket only references by id or value. <code>bookingId</code> and <code>cargoId</code> stay as identifiers rather than growing into embedded <code>Booking</code> and <code>Cargo</code> objects, <code>Location</code> stays a bare UN/LOCODE string rather than a richer object, and <code>Route</code>, <code>Leg</code>, and <code>Operation</code> don't appear on this message at all. That keeps every event small and cheap to push at the volume a live feed implies, and it keeps exactly one system — the booking service — answerable for what a <code>Booking</code> or <code>Cargo</code> currently looks like. The cost is real: a client that wants more than an event's own fields has to go back to the booking service for it, and a client that misses events during a disconnect gets no replay from this contract alone. Both are trade-offs accepted for a feed whose only job is telling a watching client that something changed, the instant it did — not re-deriving or caching the fuller state the booking service already owns correctly.</p></div>
+
+## For deeper coverage
+
+- Vlad Khononov, *Learning Domain-Driven Design* (O'Reilly, 2021) — modeling a bounded context's vocabulary and deciding what a message carries versus what it only references by id.
+- Eric Evans, *Domain-Driven Design: Tackling Complexity in the Heart of Software* (Addison-Wesley, 2003) — the originating case for the kind of ownership boundary this chapter draws around the booking service.
+- *Cloud Native Design Patterns* — "DDD & Hexagonal Architecture" chapter — placing a service boundary and keeping a contract's shape independent of the protocol carrying it.
+- [JSON Schema](https://json-schema.org/) — the pattern constraints (`bookingId`, `cargoId`, `location`, `amount`) this chapter's nouns are validated against.
+- [AsyncAPI 3.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.0.0) — the `action: receive` operation and `components.schemas` shape Chapter 5 builds from this chapter's vocabulary.

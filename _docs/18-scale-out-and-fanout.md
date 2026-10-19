@@ -6,6 +6,18 @@ description: "Fanning one event out to many connected clients across multiple se
 duration: "20 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why sticky sessions pin a client's connection to one instance but do nothing for where an injected event originates, and why closing that gap needs a shared backplane.
+- Compare `KafkaBackplane`'s per-instance, non-shared consumer group against `RedisBackplane`'s pure pub/sub, and explain why each turns its broker into a broadcast channel rather than a work queue.
+- Trace the shared `publish`/`subscribe` interface (`Backplane.java` / `backplane/base.py`) that lets the inject endpoint and the WebSocket handler stay ignorant of which backplane mode is running.
+- Weigh Kafka's durability-and-replay trade-off against Redis's lower-latency, lower-operational-cost trade-off (DRQ-005), and state which deployment requirement should drive the choice.
+- Estimate fan-out amplification — roughly N times the deserialize-and-filter cost per injected event across N instances — and explain why it scales with instance count, not connected-client count.
+
+## Why this matters
+
 Every example through Chapter 17 ran one server instance. A load balancer never entered the picture because there was nothing to balance across. That assumption breaks the moment a second instance exists for the same reason any stateless-looking service gets a second instance: to handle more connections than one process can hold open, or to survive one instance dying without taking every client with it. `examples/part4-backplane` forks `part4-connection`'s `handlingEvents` channel (same `contracts/asyncapi.yaml` operation, same wire shape) and runs **two instances per stack** — `quarkus-a`/`quarkus-b` on WebSockets Next, `python-a`/`python-b` on native `websockets` — specifically to expose the problem a single-instance example can never show: a client connected to instance A, and an event that originates at instance B. `examples/part4-backplane/PROTOCOL.md`'s "Backplane modes" section names three interchangeable delivery strategies behind that one channel, and `verify.sh`'s Stage B/Stage C prove the cross-instance case live, on both brokers, on both stacks. This chapter teaches fan-out on Kafka and on Redis side by side: the trade-off between them, not a single recommended answer, is the point (DRQ-005).
 
 ## Why sticky sessions alone don't solve this
@@ -183,3 +195,11 @@ This chapter closes Part 4. Chapters 12 through 17 hardened a single connection 
 Part 5, Performance & Optimization, picks up from here with a different kind of scaling question: not "can an event reach the right instance" but "how much data can one connection carry, and how fast." Chapter 19 moves the wire format itself from JSON to binary Protobuf frames — a change orthogonal to everything in this chapter (a backplane doesn't care what bytes it's forwarding) but one that compounds with it: a fan-out system paying the per-instance amplification cost this chapter described benefits doubly from a smaller, faster-to-serialize payload on every hop. Chapter 20 picks up throughput optimization from there. Neither chapter revisits the backplane directly, but every later example still runs on top of the same two-instance, dual-broker topology this chapter introduced — the default production shape assumed from here forward, not a special case to leave behind.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>A sticky load balancer solves one problem — keeping a client's connection on the same instance — and does nothing for a different problem it's easy to conflate with it: getting an event from wherever it originates to whichever instance happens to be holding the connection that wants it. Close that second gap with a backplane every instance subscribes to and any instance can publish to (a Kafka topic with a per-instance, non-shared consumer group, or a Redis Pub/Sub channel), never by trying to route events through the load balancer or by reaching across instances directly. Teach Kafka and Redis as a contrasted pair, not a recommendation: Kafka buys durability and replay (it also powers resume-after-reconnect at no extra cost) against topic/partition/offset bookkeeping and a consumer per instance per booking; Redis buys near-zero operational surface and lower latency at the cost of losing anything published while a subscriber wasn't listening, with no log anywhere to ask for it again. Expect fan-out to cost roughly one deserialize-and-filter per instance per event, not per connected client — a backplane with N instances subscribed does N times the discard work of a single instance, regardless of how many of those instances actually have someone watching, so size the instance count and the partitioning/keying strategy with that multiplier in mind rather than assuming scale-out divides cost evenly.</p></div>
+
+## For deeper coverage
+
+- Adam Bellemare, *Building Event-Driven Microservices, Second Edition* (O'Reilly, 2025) — the broker-as-broadcast-channel reasoning behind giving each instance its own consumer group instead of sharing one.
+- Martin Kleppmann & Chris Riccomini, *Designing Data-Intensive Applications, Second Edition* (O'Reilly, 2026) — the durability-versus-latency trade-off this chapter's Kafka-versus-Redis comparison is a concrete instance of.
+- Sam Newman, *Building Microservices, 2nd Edition* (O'Reilly, 2021) — scaling a service beyond one instance and the shared-state problems, cross-instance fan-out among them, that introduces.
+- *Cloud Native Design Patterns* — "WebSockets at Scale" chapter — the pub/sub-backplane-plus-resume-don't-restart posture this chapter's two-broker proof directly implements.
+- [Apache Kafka documentation](https://kafka.apache.org/documentation/) and [Redis Pub/Sub documentation](https://redis.io/docs/latest/develop/interact/pubsub/) — the two broker mechanisms this chapter contrasts side by side.
