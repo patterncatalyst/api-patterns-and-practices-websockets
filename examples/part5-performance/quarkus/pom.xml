@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Part 5 "Performance" example — Quarkus side. Forks the layout of
+  examples/part4-connection/quarkus's pom.xml (same Quarkus/JDK pins, same
+  copy-handling-events-fixture mechanism), but NOT its connection-concern
+  dependencies (JWT, scheduler for heartbeats) — this part is about wire
+  ENCODING (JSON text vs. Protobuf binary frames), not connection hardening,
+  so those are deliberately left out (scope discipline: this module adds
+  exactly one new concern, the protobuf-java + protobuf-maven-plugin pair
+  below).
+
+  Implements the SAME `receiveHandlingEvent` operation from
+  contracts/asyncapi.yaml as part3/part4 — one WebSocket connection per
+  booking at /ws/v1/bookings/{bookingId}/handling-events, replaying the
+  shared fixture on open — but now negotiates the wire ENCODING via
+  Sec-WebSocket-Protocol (DRQ-026): `handling-events.v1+protobuf` gets
+  Protobuf binary frames (generated from contracts/handling-event.proto by
+  protobuf-maven-plugin below); anything else (the bare `handling-events.v1`,
+  `handling-events.v1+json`, or no subprotocol at all) gets the original
+  JSON text frames. See
+  src/main/java/.../handlingevents/HandlingEventPerformanceWebSocket for the
+  implementation and README.md for the measured JSON-vs-Protobuf frame
+  sizes.
+
+  The fixture is reused from part3, NOT duplicated here — identical
+  copy-handling-events-fixture mechanism as part4's pom.xml, resolving
+  ../../part3-handling-events/fixtures relative to THIS module's basedir
+  (two levels up, since part5's and part3's quarkus/ modules are siblings
+  under examples/). The Containerfile reproduces the same relative layout.
+
+  The protobuf-maven-plugin execution below generates Java sources from
+  contracts/handling-event.proto (the repo-root contract, NOT copied into
+  this module — see the plugin's sourceDirectories below, resolved relative
+  to this module's basedir: ../../../contracts, three levels up since
+  part5's quarkus/ module sits two levels below examples/ and contracts/ is
+  a repo-root sibling of examples/) into target/generated-sources (gitignored
+  via the repo root's blanket `target/` rule — no generated stub is ever
+  committed, matching contracts/README.md's "No generated stubs are
+  committed" convention). The Containerfile COPYs contracts/handling-event.proto
+  into the build context at the same relative path so the identical
+  sourceDirectories reference resolves inside a container build too.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.patterncatalyst.shipping</groupId>
+    <artifactId>part5-performance-quarkus</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>quarkus</packaging>
+
+    <properties>
+        <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <!-- Matches part3/part4's pin — re-check before bumping. -->
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
+        <!-- Latest stable com.networknt:json-schema-validator as of this
+             writing (not Quarkus-BOM-managed; re-check before bumping). -->
+        <json-schema-validator.version>1.5.6</json-schema-validator.version>
+        <!-- Latest stable protobuf-java as of this writing (re-check
+             `npm view` equivalent — `mvn versions:display-dependency-updates`
+             — before bumping). The `com.google.protobuf:protoc` Maven
+             artifact (what protobuf-maven-plugin.protoc below pulls) is
+             versioned identically (4.36.2), so this one property pins both
+             the runtime library and the compiler to the same release — the
+             pair must always match. -->
+        <protobuf.version>4.36.2</protobuf.version>
+        <!-- Latest stable io.github.ascopes:protobuf-maven-plugin as of this
+             writing; re-check before bumping. -->
+        <protobuf-maven-plugin.version>5.1.11</protobuf-maven-plugin.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- @WebSocket / @OnOpen; WebSocketConnection#subprotocol() is what
+             HandlingEventPerformanceWebSocket reads to pick the wire
+             encoding. Pulls in quarkus-jackson transitively, which
+             serializes HandlingEvent to the JSON text frame path. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-websockets-next</artifactId>
+        </dependency>
+        <!-- Traces the WebSocket upgrade and the push; off unless an OTLP
+             endpoint is reachable (see application.properties). -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <!-- The generated HandlingEvent/HandlingEventType Protobuf Java
+             classes (io.github.ascopes:protobuf-maven-plugin below) extend
+             com.google.protobuf.GeneratedMessage et al. — this is the
+             runtime library they depend on. -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- HandlingEventContractTest validates each emitted HandlingEvent
+             against build/handling-event.schema.json (generated from
+             contracts/asyncapi.yaml by scripts/extract-message-schema.py);
+             HandlingEventProtoRoundTripTest reuses it to validate a
+             proto-decoded-then-JSON-shaped event against the same schema. -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+            <!-- Copies the canonical fixture (owned by part3, reused here —
+                 see the file header above) onto the classpath before
+                 process-resources runs. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-handling-events-fixture</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/fixtures</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../part3-handling-events/fixtures</directory>
+                                    <includes>
+                                        <include>handling-events.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Generates Java sources from contracts/handling-event.proto
+                 (DRQ-025) into target/generated-sources, registered as a
+                 compilation root automatically (registerAsCompilationRoot
+                 defaults true) — no generated stub is committed. `protoc`
+                 pins the EXACT same release as the protobuf-java runtime
+                 dependency above (see that property's comment). -->
+            <plugin>
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>${protobuf-maven-plugin.version}</version>
+                <configuration>
+                    <protoc>${protobuf.version}</protoc>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.basedir}/../../../contracts</sourceDirectory>
+                    </sourceDirectories>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-handling-event-proto</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
+                <skipITs>false</skipITs>
+                <quarkus.native.enabled>true</quarkus.native.enabled>
+            </properties>
+        </profile>
+    </profiles>
+</project>

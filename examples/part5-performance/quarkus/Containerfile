@@ -1,0 +1,73 @@
+# Part 5 "Performance" example — Quarkus, UBI 10, JVM mode (fast-jar), no
+# native. Forked from examples/part4-connection/quarkus/Containerfile.
+#
+# Build (from the REPO ROOT, so this context can reach the shared fixture
+# AND the shared Protobuf contract):
+#   docker build -f examples/part5-performance/quarkus/Containerfile \
+#     -t part5-performance-quarkus .
+#
+# This module does NOT duplicate the fixture: it reuses
+# examples/part3-handling-events/fixtures/handling-events.json (the SAME
+# fixture the Python/FastAPI sibling app and part3/part4 all replay) via
+# pom.xml's copy-handling-events-fixture execution, which resolves
+# `${project.basedir}/../../part3-handling-events/fixtures` relative to this
+# module's basedir. To make that same relative Maven resource path resolve
+# identically inside a container build, this stage recreates the real
+# sibling relationship under /build: pom.xml/src land at
+# /build/examples/part5-performance/quarkus (this module's basedir) and the
+# fixture lands at /build/examples/part3-handling-events/fixtures.
+#
+# It ALSO does not duplicate the Protobuf contract: pom.xml's
+# protobuf-maven-plugin execution resolves
+# `${project.basedir}/../../../contracts` (three levels up — contracts/ is a
+# repo-root sibling of examples/, and this module sits two levels below
+# examples/) to find contracts/handling-event.proto. This stage recreates
+# THAT same relative layout too: contracts/handling-event.proto lands at
+# /build/contracts/handling-event.proto, a sibling of /build/examples.
+#
+# contracts/asyncapi.yaml is NOT copied in: it is only needed by
+# scripts/extract-message-schema.py and the conformance tests on the
+# host/CI side, never by the running service.
+#
+# Base image pins (re-check with `skopeo list-tags
+# docker://registry.access.redhat.com/ubi10/openjdk-25`, confirm with
+# `skopeo inspect`; bump deliberately) — matches part3/part4's pin:
+#   registry.access.redhat.com/ubi10/openjdk-25:1.24-16
+#   registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25:1.24-16 AS build
+
+WORKDIR /build/examples/part5-performance/quarkus
+COPY examples/part5-performance/quarkus/pom.xml .
+COPY examples/part5-performance/quarkus/src ./src
+
+COPY examples/part3-handling-events/fixtures /build/examples/part3-handling-events/fixtures
+COPY contracts/handling-event.proto /build/contracts/handling-event.proto
+
+# The extra -Daether.* / -Dmaven.wagon.* flags give the resolver more room
+# under CI's shared Maven local-repo lock and more retries against a flaky
+# mirror — see part3/part4's Containerfile for the same note. protoc itself
+# is downloaded by protobuf-maven-plugin from Maven Central during
+# generate-sources, same mirror-flakiness exposure as any other dependency.
+RUN mvn -B package -DskipTests -Dmaven.javadoc.skip=true \
+      -Daether.syncContext.named.time=300 -Daether.syncContext.named.time.unit=SECONDS \
+      -Dmaven.wagon.http.retryHandler.count=3 -Daether.connector.http.retryHandler.count=3
+
+# ── Stage 2: Runtime (fast-jar) ─────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+ENV LANGUAGE='en_US:en'
+
+COPY --from=build --chown=185 /build/examples/part5-performance/quarkus/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build --chown=185 /build/examples/part5-performance/quarkus/target/quarkus-app/*.jar /deployments/
+COPY --from=build --chown=185 /build/examples/part5-performance/quarkus/target/quarkus-app/app/ /deployments/app/
+COPY --from=build --chown=185 /build/examples/part5-performance/quarkus/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8090
+USER 185
+
+ENV JAVA_OPTS_APPEND="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]
