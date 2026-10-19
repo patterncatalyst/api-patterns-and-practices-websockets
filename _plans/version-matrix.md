@@ -63,6 +63,22 @@ profile but does not pin the per-language OTel library versions above —
 those stay app-level pins (`pyproject.toml`/the Quarkus BOM) surveyed here
 rather than duplicated into Ch0.
 
+| **Kubernetes / minikube (Part 7, DRQ-007/DRQ-031)** | |
+| minikube | v1.39.0 (floor; `examples/part4-backplane/k8s/verify-minikube.sh` checks this at runtime) — docker driver + containerd runtime ONLY (DRQ-007; podman is NOT supported) |
+| Kubernetes (`--kubernetes-version`) | v1.37.1 — verified-live combination with minikube v1.39.0 (`lgtm-minikube-stack` skill, `references/versions.md`, surveyed 2026-10-17); override via `KUBERNETES_VERSION` |
+| ingress-nginx (minikube addon) | whatever `minikube addons enable ingress` ships for v1.39.0 — not separately version-pinned; DRQ-031's WS proxy-read-timeout/proxy-send-timeout/affinity-cookie annotations are the part under test, not the controller version |
+| Strimzi (Kafka operator) | 1.3.0 (Helm chart `oci://quay.io/strimzi-helm/strimzi-kafka-operator`) — current stable (confirmed via the GitHub releases API, published 2026-10-12); serves ONLY the `kafka.strimzi.io/v1` CRD API (v1beta2/v1beta1/v1alpha1 are gone) |
+| Kafka (via Strimzi) | 4.3.1 / `metadataVersion: 4.3-IV0` — Strimzi 1.3.0's own default (confirmed against its `kafka-versions.yaml`), matching compose.yaml's `apache/kafka:4.3.1` pin for the same example so both environments run the identical release |
+| Redis (k8s Deployment) | 8.10.2-alpine — same pin as compose.yaml | 
+| Helm | v4.2.2 (installed; not separately pinned by the script — any Helm v3.x+/v4.x able to pull an OCI chart works) |
+| kubectl / kustomize | kubectl v1.37.1 client, bundling kustomize v5.8.1 (`kubectl apply -k` / `kubectl kustomize`) — no standalone `kustomize` binary used |
+| kubeconform | v0.8.0 — static manifest validation (`kubeconform -strict -kubernetes-version 1.37.1`) before `kubectl apply -k`; Strimzi/Kafka CRs are validated with `-ignore-missing-schemas` (no bundled schema for `kafka.strimzi.io` kinds) |
+
+Surveyed 2026-10-19 directly against each tool's own source (Strimzi via the
+GitHub releases API live at authoring time; minikube/Kubernetes via the
+already-verified-live combination the `lgtm-minikube-stack` skill records)
+rather than carried over from another project.
+
 ## Dependency policy
 
 Pin every dependency to the **upstream latest stable** release at the time

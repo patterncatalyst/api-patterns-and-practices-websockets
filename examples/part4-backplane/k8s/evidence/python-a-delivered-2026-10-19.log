@@ -1,0 +1,8 @@
+2026-10-19 18:19:51,713 INFO handling-events-python: delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_650626e7262e4b9481e609e6b8 instance=python-a
+2026-10-19 18:20:57,797 INFO handling-events-python: injected eventId=evt_1cd98fd1524e4a69900048df77 bookingId=bkg_650626e7262e4b9481e609e6b8 instance=python-a
+2026-10-19 18:20:57,798 INFO handling-events-python: delivered eventId=evt_1cd98fd1524e4a69900048df77 bookingId=bkg_650626e7262e4b9481e609e6b8 instance=python-a
+2026-10-19 18:20:57,840 INFO handling-events-python: handling-events: accepted connection bookingId=bkg_938a30e1cb85432c9968815463 afterEventId=None instance=python-a
+2026-10-19 18:20:57,840 INFO handling-events-python: delivered eventId=evt_01HZY3M1V8X4D7Q6B2N9C0T5E8 bookingId=bkg_938a30e1cb85432c9968815463 instance=python-a
+2026-10-19 18:20:57,840 INFO handling-events-python: delivered eventId=evt_01HZY3M2W9Y5E8R7C3P0D1U6F9 bookingId=bkg_938a30e1cb85432c9968815463 instance=python-a
+2026-10-19 18:20:57,840 INFO handling-events-python: delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_938a30e1cb85432c9968815463 instance=python-a
+2026-10-19 18:21:00,928 INFO handling-events-python: delivered eventId=evt_119d8d8c52e84fb39b069ec4f9 bookingId=bkg_938a30e1cb85432c9968815463 instance=python-a

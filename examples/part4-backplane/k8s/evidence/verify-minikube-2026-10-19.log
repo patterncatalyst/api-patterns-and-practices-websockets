@@ -1,0 +1,369 @@
+
+=== Step 0: tool checks + regenerate the contract-derived JSON Schema ===
+Wrote /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-minikube.sh: minikube v1.39.0 OK (>= v1.39.0); schema regenerated at /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+
+=== Step 1: minikube profile 'part4-backplane' (docker driver, containerd, Kubernetes v1.37.1) ===
+* [part4-backplane] minikube v1.39.0 on Fedora 44
+! Specified Kubernetes version 1.37.1 is newer than the newest supported version: v1.37.0. Use `minikube config defaults kubernetes-version` for details.
+! Specified Kubernetes version 1.37.1 not found in Kubernetes version list
+* Searching the internet for Kubernetes version...
+* Kubernetes version 1.37.1 found in GitHub version list
+* Using the docker driver based on user configuration
+* Using Docker driver with root privileges
+* Starting "part4-backplane" primary control-plane node in "part4-backplane" cluster
+* Pulling base image v0.0.51 ...
+* Preparing Kubernetes v1.37.1 on containerd 2.3.4 ...
+* Configuring CNI (Container Networking Interface) ...
+* Verifying Kubernetes components...
+  - Using image gcr.io/k8s-minikube/storage-provisioner:v5
+* Enabled addons: storage-provisioner, default-storageclass
+* Done! kubectl is now configured to use "part4-backplane" cluster and "default" namespace by default
+NAME              STATUS     ROLES           AGE   VERSION
+part4-backplane   NotReady   control-plane   4s    v1.37.1
+
+=== Step 1b: ingress-nginx addon ===
+* ingress is an addon maintained by Kubernetes. For any concerns contact minikube on GitHub.
+You can view the list of minikube maintainers at: https://github.com/kubernetes/minikube/blob/master/OWNERS
+  - Using image registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.6.9
+  - Using image registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.6.9
+  - Using image registry.k8s.io/ingress-nginx/controller:v1.15.1
+* Verifying ingress addon...
+* The 'ingress' addon is enabled
+Waiting for deployment "ingress-nginx-controller" rollout to finish: 0 of 1 updated replicas are available...
+deployment "ingress-nginx-controller" successfully rolled out
+
+=== Step 2: build + load both app images (docker build from repo root, minikube image load — no registry) ===
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Containerfile
+#1 transferring dockerfile: 3.06kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+#2 DONE 0.0s
+
+#3 [internal] load metadata for registry.access.redhat.com/ubi10/openjdk-25:1.24-16
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [build 1/6] FROM registry.access.redhat.com/ubi10/openjdk-25:1.24-16@sha256:c81b4a281ee65901e5367b07ca23d62100be3f86083a9e595786be0ade758cf4
+#5 resolve registry.access.redhat.com/ubi10/openjdk-25:1.24-16@sha256:c81b4a281ee65901e5367b07ca23d62100be3f86083a9e595786be0ade758cf4 0.0s done
+#5 DONE 0.0s
+
+#6 [stage-1 1/5] FROM registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16@sha256:5161ac11d66c3c998387192d7f6fc22ac7d25792a172eb0b93b718d0ef38cc65
+#6 resolve registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16@sha256:5161ac11d66c3c998387192d7f6fc22ac7d25792a172eb0b93b718d0ef38cc65 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 64.77kB done
+#7 DONE 0.0s
+
+#8 [stage-1 4/5] COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/app/ /deployments/app/
+#8 CACHED
+
+#9 [build 4/6] COPY examples/part4-backplane/quarkus/src ./src
+#9 CACHED
+
+#10 [stage-1 3/5] COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/*.jar /deployments/
+#10 CACHED
+
+#11 [build 6/6] RUN mvn -B package -DskipTests -Dmaven.javadoc.skip=true       -Daether.syncContext.named.time=300 -Daether.syncContext.named.time.unit=SECONDS       -Dmaven.wagon.http.retryHandler.count=3 -Daether.connector.http.retryHandler.count=3
+#11 CACHED
+
+#12 [build 5/6] COPY examples/part3-handling-events/fixtures /build/examples/part3-handling-events/fixtures
+#12 CACHED
+
+#13 [build 3/6] COPY examples/part4-backplane/quarkus/pom.xml .
+#13 CACHED
+
+#14 [build 2/6] WORKDIR /build/examples/part4-backplane/quarkus
+#14 CACHED
+
+#15 [stage-1 2/5] COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/lib/ /deployments/lib/
+#15 CACHED
+
+#16 [stage-1 5/5] COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/quarkus/ /deployments/quarkus/
+#16 CACHED
+
+#17 exporting to image
+#17 exporting layers done
+#17 exporting manifest sha256:be651eeace72d838e9281cbfaa0b25251d34c34b2ac41e50731eab5e7eaacf12 done
+#17 exporting config sha256:567279645b5e722fce6d40a0e2474e1aee0d7856c46e2d4c2808924ce455aac7 done
+#17 exporting attestation manifest sha256:a1de8d67c4f372f46bea6d06270284cea7854b1d3d5f6609c304940dfdfe9b31 0.0s done
+#17 exporting manifest list sha256:3e43601f9392a54ff4922166715f411af39e55c03d063c68107cdd71eecb0e12 done
+#17 naming to docker.io/library/part4-backplane-quarkus:minikube done
+#17 unpacking to docker.io/library/part4-backplane-quarkus:minikube done
+#17 DONE 0.1s
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Containerfile
+#1 transferring dockerfile: 6.97kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [build  1/13] FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506@sha256:3754d6dacac3177e62637420cadf7dcf438e390f664c527b0457a79653a47488
+#4 resolve registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506@sha256:3754d6dacac3177e62637420cadf7dcf438e390f664c527b0457a79653a47488 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 222.93kB done
+#5 DONE 0.0s
+
+#6 [build 10/13] COPY scripts/extract-message-schema.py ./scripts/extract-message-schema.py
+#6 CACHED
+
+#7 [stage-1 5/6] COPY --from=build --chown=1001:0 /app/app /app/app
+#7 CACHED
+
+#8 [build  6/13] COPY examples/part4-backplane/python/uv.lock ./
+#8 CACHED
+
+#9 [build  4/13] RUN pip install --no-cache-dir uv==0.13.1 &&     uv python install 3.15.0
+#9 CACHED
+
+#10 [build 12/13] COPY examples/part3-handling-events/fixtures/handling-events.json      ./fixtures/handling-events.json
+#10 CACHED
+
+#11 [stage-1 2/6] WORKDIR /app
+#11 CACHED
+
+#12 [build  3/13] RUN microdnf install -y gcc make zlib-devel && microdnf clean all
+#12 CACHED
+
+#13 [build 11/13] RUN .venv/bin/python3 -I scripts/extract-message-schema.py build/handling-event.schema.json &&     .venv/bin/datamodel-codegen       --input build/handling-event.schema.json       --input-file-type jsonschema       --output app/models_generated.py       --output-model-type pydantic_v2.BaseModel       --target-python-version 3.15       --use-schema-description       --disable-timestamp       --formatters black isort
+#13 CACHED
+
+#14 [stage-1 4/6] COPY --from=build --chown=1001:0 /app/.venv /app/.venv
+#14 CACHED
+
+#15 [build 13/13] RUN rm -rf .venv && uv sync --locked --no-dev
+#15 CACHED
+
+#16 [build  9/13] COPY contracts/asyncapi.yaml ./contracts/asyncapi.yaml
+#16 CACHED
+
+#17 [build  7/13] COPY examples/part4-backplane/python/app ./app
+#17 CACHED
+
+#18 [build  5/13] COPY examples/part4-backplane/python/pyproject.toml ./
+#18 CACHED
+
+#19 [build  8/13] RUN uv sync --locked --group dev
+#19 CACHED
+
+#20 [stage-1 3/6] COPY --from=build --chown=1001:0 /app/.uv-python /app/.uv-python
+#20 CACHED
+
+#21 [build  2/13] WORKDIR /app
+#21 CACHED
+
+#22 [stage-1 6/6] COPY --from=build --chown=1001:0 /app/fixtures /app/fixtures
+#22 CACHED
+
+#23 exporting to image
+#23 exporting layers done
+#23 exporting manifest sha256:710ea91ee1186d3f8c07aff357d342df5e0a3a625ce6c53b970a7f86dd7fbf28 done
+#23 exporting config sha256:193ed117bd01bf4bd3a759e7af67e1e31b48910400d1a2e6e7296f42e7fd5c56 done
+#23 exporting attestation manifest sha256:8cbb44d319e6429f4c44cfbf2d372bec2ca0ba2ddad12f73704e825613cf8a3b
+#23 exporting attestation manifest sha256:8cbb44d319e6429f4c44cfbf2d372bec2ca0ba2ddad12f73704e825613cf8a3b done
+#23 exporting manifest list sha256:f67388b716f349a407776f128b8f12f4960d653242b33ed3803bc6f9f2a94f13 done
+#23 naming to docker.io/library/part4-backplane-python:minikube done
+#23 unpacking to docker.io/library/part4-backplane-python:minikube done
+#23 DONE 0.1s
+verify-minikube.sh: images built and loaded into profile 'part4-backplane': part4-backplane-quarkus:minikube, part4-backplane-python:minikube
+
+=== Step 3: Strimzi operator + Kafka + Redis (must be Ready before the apps roll out) ===
+
+==> Namespace part4-backplane
+
+==> Strimzi cluster operator 1.3.0 (Helm, into part4-backplane)
+Release "strimzi-cluster-operator" does not exist. Installing it now.
+Pulled: quay.io/strimzi-helm/strimzi-kafka-operator:1.3.0
+Digest: sha256:08852fb5aca9782750ec1698616cad0efe15d5eef1a366d124373129ff9c29ea
+NAME: strimzi-cluster-operator
+LAST DEPLOYED: Mon Oct 19 14:14:19 2026
+NAMESPACE: part4-backplane
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+Thank you for installing strimzi-kafka-operator-1.3.0
+
+To create a Kafka cluster refer to the following documentation.
+
+https://strimzi.io/docs/operators/latest/deploying.html#deploying-cluster-operator-helm-chart-str
+
+==> Waiting for the Strimzi operator to be Available
+Waiting for deployment "strimzi-cluster-operator" rollout to finish: 0 of 1 updated replicas are available...
+deployment "strimzi-cluster-operator" successfully rolled out
+
+==> Waiting for Strimzi CRDs to be Established
+customresourcedefinition.apiextensions.k8s.io/kafkas.kafka.strimzi.io condition met
+customresourcedefinition.apiextensions.k8s.io/kafkanodepools.kafka.strimzi.io condition met
+
+==> Applying the Kafka CR (KafkaNodePool + Kafka, single-node KRaft, ephemeral)
+kafkanodepool.kafka.strimzi.io/dual-role created
+kafka.kafka.strimzi.io/my-cluster created
+
+==> Applying Redis (Deployment + Service)
+deployment.apps/redis created
+service/redis created
+
+==> Waiting for Kafka cluster 'my-cluster' to be Ready (this is the slow step — can take several minutes on a cold pull)
+kafka.kafka.strimzi.io/my-cluster condition met
+
+==> Waiting for Redis to be available
+deployment "redis" successfully rolled out
+
+==> Strimzi + Kafka + Redis ready in namespace part4-backplane
+NAME                                READY   WARNINGS   KAFKA VERSION   METADATA VERSION
+kafka.kafka.strimzi.io/my-cluster   True    True       4.3.1           4.3-IV0
+
+NAME                                       DESIRED REPLICAS   ROLES                     NODEIDS
+kafkanodepool.kafka.strimzi.io/dual-role   1                  ["controller","broker"]   [0]
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+redis   1/1     1            1           52s
+
+=== Step 4: deploy the apps (overlays/minikube — Kafka-mode primary) ===
+namespace/part4-backplane configured
+configmap/backplane-config created
+service/python-a created
+service/python-b created
+service/quarkus-a created
+service/quarkus-b created
+deployment.apps/python-a created
+deployment.apps/python-b created
+deployment.apps/quarkus-a created
+deployment.apps/quarkus-b created
+ingress.networking.k8s.io/part4-backplane created
+Waiting for deployment "quarkus-a" rollout to finish: 0 of 1 updated replicas are available...
+deployment "quarkus-a" successfully rolled out
+deployment "quarkus-b" successfully rolled out
+deployment "python-a" successfully rolled out
+deployment "python-b" successfully rolled out
+verify-minikube.sh: all four app Deployments rolled out
+
+=== Step 5: resolve the ingress URL ===
+verify-minikube.sh: minikube ip = 192.168.49.2
+verify-minikube.sh: quarkus ingress host = http://quarkus.192.168.49.2.nip.io/
+verify-minikube.sh: python  ingress host = http://python.192.168.49.2.nip.io/
+
+=== Step 5b: patch the Ingress to the live nip.io hostnames ===
+ingress.networking.k8s.io/part4-backplane patched
+verify-minikube.sh: ingress routing confirmed for Host: quarkus.192.168.49.2.nip.io after 4s
+verify-minikube.sh: ingress routing confirmed for Host: python.192.168.49.2.nip.io after 0s
+
+=== Step 6: live proof over the KAFKA backplane (primary mode) — both stacks ===
+
+--- quarkus/kafka: seed frame + schema validation ---
+lib.sh: ok — quarkus/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-minikube.sh: ok — quarkus/kafka: seed frame received through the ingress and is schema-valid
+
+--- quarkus/kafka: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---
+verify-minikube.sh: quarkus/kafka: connected, received the 3 seed frames; holding idle for 65s (nginx's default proxy-read-timeout is 60s) ...
+verify-minikube.sh: inject eventId=evt_45579ad2403e41ba973d708253 bookingId=bkg_b370fc4e07974d808ea9ee8cec via exec(quarkus-a)->http://localhost:8080 -> HTTP 202
+lib.sh: ok — inject evt_45579ad2403e41ba973d708253 via exec(quarkus-a)->http://localhost:8080 accepted: '202'
+verify-minikube.sh: ok — quarkus/kafka: late frame arrived after a 65s idle hold — the raised proxy-read-timeout/proxy-send-timeout annotations are working
+
+--- quarkus/kafka: Ch18 cross-pod fan-out — instance A (ingress) <- instance B (in-cluster inject) ---
+verify-minikube.sh: inject eventId=evt_b27734c3bc1c4b70a024e1ad37 bookingId=bkg_519905cca0b74d3a89e0ff4aab via exec(quarkus-a)->http://quarkus-b:8080 -> HTTP 202
+lib.sh: ok — inject evt_b27734c3bc1c4b70a024e1ad37 via exec(quarkus-a)->http://quarkus-b:8080 accepted: '202'
+verify-minikube.sh: ok — quarkus/kafka: instance A's CLIENT (through the ingress) received instance B's injected event evt_b27734c3bc1c4b70a024e1ad37
+verify-minikube.sh: ok — quarkus/kafka: instance A's own POD LOG shows it delivering
+
+--- python/kafka: seed frame + schema validation ---
+lib.sh: ok — python/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-minikube.sh: ok — python/kafka: seed frame received through the ingress and is schema-valid
+
+--- python/kafka: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---
+verify-minikube.sh: python/kafka: connected, received the 3 seed frames; holding idle for 65s (nginx's default proxy-read-timeout is 60s) ...
+verify-minikube.sh: inject eventId=evt_2092e6a5405843d7b88aa148ee bookingId=bkg_a626d8f5f1444fe7a3b2b66301 via exec(python-a)->http://localhost:8082 -> HTTP 202
+lib.sh: ok — inject evt_2092e6a5405843d7b88aa148ee via exec(python-a)->http://localhost:8082 accepted: '202'
+verify-minikube.sh: ok — python/kafka: late frame arrived after a 65s idle hold — the raised proxy-read-timeout/proxy-send-timeout annotations are working
+
+--- python/kafka: Ch18 cross-pod fan-out — instance A (ingress) <- instance B (in-cluster inject) ---
+verify-minikube.sh: inject eventId=evt_8f364d87972848ef9563823614 bookingId=bkg_dc7f0f5daf3d413e8d5cbae5aa via exec(python-a)->http://python-b:8082 -> HTTP 202
+lib.sh: ok — inject evt_8f364d87972848ef9563823614 via exec(python-a)->http://python-b:8082 accepted: '202'
+verify-minikube.sh: ok — python/kafka: instance A's CLIENT (through the ingress) received instance B's injected event evt_8f364d87972848ef9563823614
+verify-minikube.sh: ok — python/kafka: instance A's own POD LOG shows it delivering
+
+=== Step 6 complete: seed + idle-hold + Ch18 Kafka fan-out PROVEN LIVE on both stacks ===
+
+=== Step 7: switch to the REDIS backplane toggle (overlays/minikube-redis) and re-prove Ch18 fan-out ===
+namespace/part4-backplane unchanged
+configmap/backplane-config configured
+service/python-a unchanged
+service/python-b unchanged
+service/quarkus-a unchanged
+service/quarkus-b unchanged
+deployment.apps/python-a unchanged
+deployment.apps/python-b unchanged
+deployment.apps/quarkus-a unchanged
+deployment.apps/quarkus-b unchanged
+ingress.networking.k8s.io/part4-backplane configured
+deployment.apps/quarkus-a restarted
+deployment.apps/quarkus-b restarted
+deployment.apps/python-a restarted
+deployment.apps/python-b restarted
+Waiting for deployment "quarkus-a" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "quarkus-a" rollout to finish: 1 old replicas are pending termination...
+deployment "quarkus-a" successfully rolled out
+deployment "quarkus-b" successfully rolled out
+deployment "python-a" successfully rolled out
+deployment "python-b" successfully rolled out
+ingress.networking.k8s.io/part4-backplane patched
+verify-minikube.sh: ingress routing confirmed for Host: quarkus.192.168.49.2.nip.io after 2s
+verify-minikube.sh: ingress routing confirmed for Host: python.192.168.49.2.nip.io after 0s
+
+--- quarkus/redis: seed frame + schema validation ---
+lib.sh: ok — quarkus/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-minikube.sh: ok — quarkus/redis: seed frame received through the ingress and is schema-valid
+
+--- quarkus/redis: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---
+verify-minikube.sh: quarkus/redis: connected, received the 3 seed frames; holding idle for 65s (nginx's default proxy-read-timeout is 60s) ...
+verify-minikube.sh: inject eventId=evt_0e7711c25850465f86d4ed98d4 bookingId=bkg_88597b28fdf04cfca0ac44f3c4 via exec(quarkus-a)->http://localhost:8080 -> HTTP 202
+lib.sh: ok — inject evt_0e7711c25850465f86d4ed98d4 via exec(quarkus-a)->http://localhost:8080 accepted: '202'
+verify-minikube.sh: ok — quarkus/redis: late frame arrived after a 65s idle hold — the raised proxy-read-timeout/proxy-send-timeout annotations are working
+
+--- quarkus/redis: Ch18 cross-pod fan-out — instance A (ingress) <- instance B (in-cluster inject) ---
+verify-minikube.sh: inject eventId=evt_3b5479dba9fe461e8d3ba3e2ec bookingId=bkg_2be1ce99d8334e90a77816dfd3 via exec(quarkus-a)->http://quarkus-b:8080 -> HTTP 202
+lib.sh: ok — inject evt_3b5479dba9fe461e8d3ba3e2ec via exec(quarkus-a)->http://quarkus-b:8080 accepted: '202'
+verify-minikube.sh: ok — quarkus/redis: instance A's CLIENT (through the ingress) received instance B's injected event evt_3b5479dba9fe461e8d3ba3e2ec
+verify-minikube.sh: ok — quarkus/redis: instance A's own POD LOG shows it delivering
+
+--- python/redis: seed frame + schema validation ---
+lib.sh: ok — python/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-minikube.sh: ok — python/redis: seed frame received through the ingress and is schema-valid
+
+--- python/redis: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---
+verify-minikube.sh: python/redis: connected, received the 3 seed frames; holding idle for 65s (nginx's default proxy-read-timeout is 60s) ...
+verify-minikube.sh: inject eventId=evt_1cd98fd1524e4a69900048df77 bookingId=bkg_650626e7262e4b9481e609e6b8 via exec(python-a)->http://localhost:8082 -> HTTP 202
+lib.sh: ok — inject evt_1cd98fd1524e4a69900048df77 via exec(python-a)->http://localhost:8082 accepted: '202'
+verify-minikube.sh: ok — python/redis: late frame arrived after a 65s idle hold — the raised proxy-read-timeout/proxy-send-timeout annotations are working
+
+--- python/redis: Ch18 cross-pod fan-out — instance A (ingress) <- instance B (in-cluster inject) ---
+verify-minikube.sh: inject eventId=evt_119d8d8c52e84fb39b069ec4f9 bookingId=bkg_938a30e1cb85432c9968815463 via exec(python-a)->http://python-b:8082 -> HTTP 202
+lib.sh: ok — inject evt_119d8d8c52e84fb39b069ec4f9 via exec(python-a)->http://python-b:8082 accepted: '202'
+verify-minikube.sh: ok — python/redis: instance A's CLIENT (through the ingress) received instance B's injected event evt_119d8d8c52e84fb39b069ec4f9
+verify-minikube.sh: ok — python/redis: instance A's own POD LOG shows it delivering
+
+=== Step 7 complete: Ch18 Redis fan-out PROVEN LIVE on both stacks (toggle overlay works) ===
+
+PASS — part4-backplane on minikube (docker+containerd, Kubernetes v1.37.1): ingress-nginx delivers a schema-valid seed frame on both stacks, the raised proxy-read-timeout/proxy-send-timeout annotations keep an idle WS open past nginx's 60s default, and the Ch18 cross-pod fan-out proof holds over BOTH the Strimzi-managed Kafka backplane and the Redis toggle overlay, with instance A's own pod log confirming every delivery.
+exit 0
+verify-minikube.sh: --keep set — leaving profile 'part4-backplane' running

@@ -1,0 +1,38 @@
+# part4-backplane — minikube live evidence (2026-10-19)
+# minikube v1.39.0, Kubernetes v1.37.1 (docker driver + containerd)
+
+## nodes
+NAME              STATUS   ROLES           AGE     VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION                  CONTAINER-RUNTIME
+part4-backplane   Ready    control-plane   7m56s   v1.37.1   192.168.49.2   <none>        Debian GNU/Linux 12 (bookworm)   7.2.9-200.fc44.x86_64 (amd64)   containerd://2.3.4
+
+## pods (namespace part4-backplane)
+NAME                                          READY   STATUS    RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES
+my-cluster-dual-role-0                        1/1     Running   0          6m25s   10.244.0.8    part4-backplane   <none>           <none>
+my-cluster-entity-operator-658574449f-vfsmw   2/2     Running   0          5m57s   10.244.0.9    part4-backplane   <none>           <none>
+python-a-76c4fdcfd6-rh55r                     1/1     Running   0          2m56s   10.244.0.16   part4-backplane   <none>           <none>
+python-b-66d6f97d54-cq2nz                     1/1     Running   0          2m56s   10.244.0.17   part4-backplane   <none>           <none>
+quarkus-a-6b97c6dbfb-wwcrb                    1/1     Running   0          2m56s   10.244.0.14   part4-backplane   <none>           <none>
+quarkus-b-6f86bb8894-m76gs                    1/1     Running   0          2m56s   10.244.0.15   part4-backplane   <none>           <none>
+redis-845bcb6464-fzmh9                        1/1     Running   0          6m27s   10.244.0.7    part4-backplane   <none>           <none>
+strimzi-cluster-operator-64785b5d4d-qnt4b     1/1     Running   0          7m3s    10.244.0.6    part4-backplane   <none>           <none>
+
+## kafka + kafkanodepool
+NAME                                READY   WARNINGS   KAFKA VERSION   METADATA VERSION
+kafka.kafka.strimzi.io/my-cluster   True    True       4.3.1           4.3-IV0
+
+NAME                                       DESIRED REPLICAS   ROLES                     NODEIDS
+kafkanodepool.kafka.strimzi.io/dual-role   1                  ["controller","broker"]   [0]
+
+## services
+NAME                         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                               AGE
+my-cluster-kafka-bootstrap   ClusterIP   10.106.117.131   <none>        9091/TCP,9092/TCP                     6m25s
+my-cluster-kafka-brokers     ClusterIP   None             <none>        9090/TCP,9091/TCP,8443/TCP,9092/TCP   6m25s
+python-a                     ClusterIP   10.102.50.112    <none>        8081/TCP,8082/TCP                     5m35s
+python-b                     ClusterIP   10.108.39.138    <none>        8081/TCP,8082/TCP                     5m35s
+quarkus-a                    ClusterIP   10.106.144.200   <none>        8080/TCP                              5m35s
+quarkus-b                    ClusterIP   10.107.10.186    <none>        8080/TCP                              5m35s
+redis                        ClusterIP   10.102.121.6     <none>        6379/TCP                              6m27s
+
+## ingress (live nip.io hosts)
+NAME              CLASS   HOSTS                                                    ADDRESS        PORTS   AGE
+part4-backplane   nginx   quarkus.192.168.49.2.nip.io,python.192.168.49.2.nip.io   192.168.49.2   80      5m35s

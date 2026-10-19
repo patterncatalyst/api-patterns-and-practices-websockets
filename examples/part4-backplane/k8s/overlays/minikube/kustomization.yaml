@@ -1,0 +1,38 @@
+# minikube overlay — retags both app images to the tag verify-minikube.sh
+# builds+loads (`minikube image load`, never a registry pull — DRQ-007:
+# docker driver + containerd, podman NOT supported), forces
+# imagePullPolicy: Never on all four Deployments so the kubelet never tries
+# a registry pull for an image that only exists in minikube's local
+# containerd store, and rewrites the Ingress hosts to names
+# verify-minikube.sh resolves itself (minikube ip + an explicit Host header
+# on every request — no /etc/hosts edit, no `minikube tunnel`).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: part4-backplane-quarkus
+    newTag: minikube
+  - name: part4-backplane-python
+    newTag: minikube
+
+patches:
+  - target:
+      kind: Deployment
+      labelSelector: "app.kubernetes.io/part-of=part4-backplane"
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Ingress
+      name: part4-backplane
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: quarkus.part4-backplane.minikube.local
+      - op: replace
+        path: /spec/rules/1/host
+        value: python.part4-backplane.minikube.local
