@@ -1,0 +1,245 @@
+# Part 4 "Production Concerns" — backplane example compose topology for the
+# SAME `handlingEvents` channel as part3/part4-connection
+# (contracts/asyncapi.yaml `operations.receiveHandlingEvent`), now carrying
+# Ch15 (visible gap, stateless), Ch16 (`?afterEventId=` replay via Kafka),
+# and Ch18 (DRQ-005 scale-out fan-out: stateless/kafka/redis) — see
+# ./PROTOCOL.md for the shared wire/behavior contract both stacks implement
+# identically, and {quarkus,python}/README.md for the per-stack notes.
+#
+# FOUR app instances always start (two per stack, so Ch18's cross-instance
+# fan-out proof has somewhere for the injected event to cross FROM/TO):
+#   quarkus-a (8080) / quarkus-b (8083) — Quarkus WebSockets Next
+#   python-a  (8081, health 8082) / python-b (8084, health 8085) — Python
+#     native `websockets` + FastAPI
+#
+# The backplane MODE is selected by the host shell's BACKPLANE_MODE env var
+# (default `stateless` — see each service's `environment:` below), NOT by
+# which compose profile is active. Profiles only control which BROKER
+# container comes up:
+#   (no profile)        — no broker; BACKPLANE_MODE defaults to `stateless`
+#   --profile kafka     — apache/kafka:4.3.1 (single-node KRaft); run with
+#                          BACKPLANE_MODE=kafka AND KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+#   --profile redis     — redis:8.10.2-alpine; run with BACKPLANE_MODE=redis
+#                          AND REDIS_URL=redis://redis:6379/0
+#
+# KAFKA_BOOTSTRAP_SERVERS/REDIS_URL are ALSO host-env-driven (default to
+# `localhost:9092` / `redis://localhost:6379/0`), not hardcoded to the
+# `kafka`/`redis` service hostnames — confirmed live: Quarkus's
+# `quarkus-messaging-kafka` channel is wired statically regardless of mode
+# (see quarkus/README.md), and constructing its consumer with a bootstrap
+# hostname that DOESN'T RESOLVE AT ALL (e.g. `kafka` when the `kafka`
+# profile isn't active, so no such container/DNS entry exists) throws
+# `ConfigException: No resolvable bootstrap urls` SYNCHRONOUSLY at consumer
+# construction — a hard CDI startup failure, not the soft/async
+# connection-refused Quarkus's own README describes for an UNREACHABLE but
+# RESOLVABLE host like `localhost:9092`. verify.sh exports both vars to the
+# real service hostnames only for the stage that actually brings that broker
+# up; every other stage gets the resolvable-but-unreachable `localhost`
+# default, which both apps' own READMEs already document as safe.
+# This split (profile = infrastructure, env var = app behavior) is what lets
+# ONE set of four app services serve all three scenarios without three
+# copies of each service: `depends_on.<broker>.required: false` makes each
+# app wait for a broker's health ONLY when that broker's profile actually
+# brought it up; when it didn't, the (optional) dependency is skipped
+# entirely rather than failing compose validation. See verify.sh, which
+# drives all three combinations.
+#
+# Usage:
+#   docker compose up --build                                   # stateless (Ch15)
+#   BACKPLANE_MODE=kafka docker compose --profile kafka up --build   # Ch16 + Ch18
+#   BACKPLANE_MODE=redis docker compose --profile redis up --build   # Ch18
+#   docker compose --profile observability up --build           # + Grafana LGTM
+#
+# Ports: same four-instance map PROTOCOL.md documents — quarkus-a 8080,
+# quarkus-b 8083, python-a 8081 (health 8082), python-b 8084 (health 8085).
+# Each stack's own compose project (this file, one project for both stacks,
+# like part4-connection) stays isolated from every other example via its own
+# project name (see verify.sh's PROJECT var).
+
+services:
+  quarkus-a:
+    build:
+      context: ../..
+      dockerfile: examples/part4-backplane/quarkus/Containerfile
+    container_name: part4-backplane-quarkus-a
+    ports:
+      - "8080:8080"
+    environment:
+      - INSTANCE_ID=quarkus-a
+      - BACKPLANE_MODE=${BACKPLANE_MODE:-stateless}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379/0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      # No dedicated health endpoint on this chapter's example (just the WS
+      # upgrade path) — curl without -f treats any HTTP response (including
+      # the 404/426 a plain GET gets back) as "the server is up and
+      # answering", same convention as part4-connection.
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  quarkus-b:
+    build:
+      context: ../..
+      dockerfile: examples/part4-backplane/quarkus/Containerfile
+    container_name: part4-backplane-quarkus-b
+    ports:
+      - "8083:8080"
+    environment:
+      - INSTANCE_ID=quarkus-b
+      - BACKPLANE_MODE=${BACKPLANE_MODE:-stateless}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379/0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+  python-a:
+    build:
+      context: ../..
+      dockerfile: examples/part4-backplane/python/Containerfile
+    container_name: part4-backplane-python-a
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+    environment:
+      - INSTANCE_ID=python-a
+      - BACKPLANE_MODE=${BACKPLANE_MODE:-stateless}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379/0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8082/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  python-b:
+    build:
+      context: ../..
+      dockerfile: examples/part4-backplane/python/Containerfile
+    container_name: part4-backplane-python-b
+    ports:
+      - "8084:8081"
+      - "8085:8082"
+    environment:
+      - INSTANCE_ID=python-b
+      - BACKPLANE_MODE=${BACKPLANE_MODE:-stateless}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
+      - REDIS_URL=${REDIS_URL:-redis://localhost:6379/0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8082/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  # ─── Backplanes (profile-gated; mutually exclusive in practice — verify.sh
+  # never activates both at once) ─────────────────────────────────────────
+  kafka:
+    image: apache/kafka:4.3.1
+    container_name: part4-backplane-kafka
+    profiles: ["kafka"]
+    ports:
+      - "9092:9092"
+    environment:
+      # Single-node KRaft (combined broker+controller) — the standard
+      # minimal config documented for this image. CLUSTER_ID is a fixed,
+      # arbitrary base64 UUID (any value works; it just has to be present —
+      # the image's /etc/kafka/docker/configure script hard-requires it in
+      # KRaft mode and refuses to start without one).
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - CLUSTER_ID=4L6g3nShT-eMCtK--X86sw
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  redis:
+    image: redis:8.10.2-alpine
+    container_name: part4-backplane-redis
+    profiles: ["redis"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # ─── Observability (opt-in) ────────────────────────────────────────────
+  # `docker compose --profile observability up` to include. Off by default
+  # so CI's examples job (and a first boot) stay fast — same convention as
+  # part3/part4-connection.
+  lgtm:
+    image: docker.io/grafana/otel-lgtm:0.36.0
+    container_name: part4-backplane-lgtm
+    profiles: ["observability"]
+    ports:
+      - "3000:3000" # Grafana UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "9090:9090" # Prometheus / Mimir query
+      - "3100:3100" # Loki
+      - "3200:3200" # Tempo
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s

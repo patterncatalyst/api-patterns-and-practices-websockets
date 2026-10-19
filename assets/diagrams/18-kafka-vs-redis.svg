@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="940" height="420" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">Same fan-out outcome, different trade-off -- no single winner (DRQ-005)</text>
+<rect x="50" y="65" width="400" height="55" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="250.0" y="98.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">KAFKA -- durability + replay</text>
+<rect x="530" y="65" width="400" height="55" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="730.0" y="98.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">REDIS -- simplicity + latency</text>
+<rect x="50" y="140" width="400" height="75" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="250.0" y="175.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Topic handling-events, keyed by bookingId</text>
+<text x="250.0" y="192.5" font-size="11.5" fill="#555555" text-anchor="middle">per-instance consumer group = fan-out to every instance</text>
+<rect x="530" y="140" width="400" height="75" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="730.0" y="175.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Channel handling-events:{bookingId}</text>
+<text x="730.0" y="192.5" font-size="11.5" fill="#555555" text-anchor="middle">pub/sub -- every subscriber gets every publish</text>
+<rect x="50" y="235" width="400" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="250.0" y="268.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Durable: retained on disk, replayable</text>
+<text x="250.0" y="285.0" font-size="11.5" fill="#555555" text-anchor="middle">powers Ch16&#x27;s afterEventId resume too</text>
+<rect x="530" y="235" width="400" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="730.0" y="268.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Live only: no history, no replay</text>
+<text x="730.0" y="285.0" font-size="11.5" fill="#555555" text-anchor="middle">afterEventId behaves as stateless</text>
+<rect x="50" y="325" width="400" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="250.0" y="358.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Cost: topic/partition/offset bookkeeping,</text>
+<text x="250.0" y="375.0" font-size="11.5" fill="#555555" text-anchor="middle">a consumer per instance per booking</text>
+<rect x="530" y="325" width="400" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="730.0" y="358.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Cost: a dropped subscriber loses in-flight</text>
+<text x="730.0" y="375.0" font-size="11.5" fill="#555555" text-anchor="middle">messages -- nothing to catch it back up</text>
+<path d="M450,92 L530,92" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="496.0" y="86.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">DRQ-005: contrasted, not ranked</text>
+<text x="496.0" y="86.0" font-size="11" fill="#b8650a" text-anchor="middle">DRQ-005: contrasted, not ranked</text>
+<text x="490" y="425" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">verify.sh proves the SAME cross-instance delivery on both brokers, for both stacks -- the trade-off is durability/replay vs. operational surface, not correctness.</text>
+</svg>

@@ -15,10 +15,18 @@ encoded).
 | `compose_up <file> <project>` | `docker compose up -d --build`; registers an EXIT trap that tears the stack down automatically. |
 | `compose_down <file> <project>` | `docker compose down -v --remove-orphans` (called by the trap). |
 | `wait_for_ws <host:port> <path> [timeout]` | Poll until the endpoint accepts a WebSocket upgrade (default timeout 90s, covers JVM/native cold start). |
+| `wait_for_tcp <host> <port> [timeout]` | Poll until a raw TCP connection succeeds (default timeout 90s) — for broker dependencies (Kafka, Redis) that don't speak HTTP/WebSocket. Prefers bash's `/dev/tcp`; falls back to `nc -z` if available. |
 | `ws_first_frame <ws-url> [timeout]` | Connect, read exactly one text frame (no input sent), print it to stdout, close. Bounded by `timeout` (default 15s) so a silent server fails loudly instead of hanging. |
+| `ws_first_frame_auth <ws-url> <token> [timeout]` | Like `ws_first_frame`, but appends `?token=<token>` (or `&token=<token>` if the URL already has a query string) — for Ch17 auth checks. |
+| `ws_frames_n <ws-url> <n> [timeout]` | Connect, read exactly `n` frames (prints one per line, in order), close. Bounded by `timeout` (default 20s). Internally uses websocat's `--max-messages-rev` — `--max-messages` alone caps the client-to-server direction, not server-to-client. |
+| `ws_connect_bg <ws-url> <logfile>` | Open a long-lived **background** connection, appending every received frame to `<logfile>`; prints its PID to stdout. Caller must `kill`/`wait` the PID when done. For fan-out/broadcast proofs (Ch18): stay connected to instance A in the background while an event is injected through instance B, then assert the frame landed in `<logfile>`. |
+| `assert_ws_rejected <ws-url> [timeout] [context]` | Assert a connection is **rejected** — either a non-101 handshake failure, or a 101 upgrade immediately followed by a close with zero application frames sent (e.g. an `@OnOpen` handler that closes the session). Checks received data, not exit code, since a server-side close after a successful upgrade still makes websocat exit 0. For Ch17 missing/invalid-token checks. |
+| `ws_idle_hold <ws-url> <seconds>` | Hold a connection open for `<seconds>` without sending any application data (websocat answers WS pings with pongs automatically), to observe heartbeat/idle-timeout behavior (Ch14). Prints `held` (connection survived) or `closed` (server closed it first) to stdout — a report, not a pass/fail judgment; the caller decides which outcome its chapter expects. |
 | `schema_validate <json-string-or-file> <schema-file>` | Validate a JSON document against a JSON Schema (Draft 2020-12). Exits non-zero with a readable error on failure. |
 | `json_field <dot.path>` | Extract a value from JSON on stdin (supports numeric indices: `.legs.0.carrier`). |
 | `assert_eq <expected> <actual> <ctx>` / `assert_contains <needle> <hay> <ctx>` | Value assertions. |
+| `wait_for_log_pattern <file> <pattern> [timeout]` | Poll a file for a line containing a fixed-string `<pattern>` (default timeout 30s); fails loudly with a tail of the file on timeout. Promoted from `part3-handling-events/verify.sh` so new examples can reuse it without redefining it locally. |
+| `wait_for_log_count <file> <pattern> <min-count> [timeout]` | Poll a file until at least `<min-count>` lines match `<pattern>` (default timeout 30s) — distinguishes "happened once" from "happened again," e.g. proving a client resumed receiving after a reconnect. Also promoted from `part3-handling-events/verify.sh`. |
 
 `websocat` is downloaded into a cached `.bin/` on first use (pinned via
 `WEBSOCAT_VERSION`, currently **v1.14.1**), so `verify.sh` is self-contained and

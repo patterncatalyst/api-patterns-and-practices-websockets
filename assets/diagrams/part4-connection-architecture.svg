@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="350" y="15" width="240" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="470.0" y="45.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">client</text>
+<text x="470.0" y="62.5" font-size="11.5" fill="#555555" text-anchor="middle">WS upgrade + ?token=&lt;jwt&gt;</text>
+<rect x="300" y="110" width="340" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="470.0" y="143.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">auth gate (Ch17)</text>
+<text x="470.0" y="160.0" font-size="11.5" fill="#555555" text-anchor="middle">verify HS256 signature + exp, shared secret</text>
+<rect x="40" y="220" width="400" height="150" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="240.0" y="270.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Quarkus — WebSockets Next</text>
+<text x="240.0" y="287.5" font-size="11.5" fill="#555555" text-anchor="middle">ws://localhost:8080/ws/v1/bookings/{id}/handling-events</text>
+<text x="240.0" y="302.5" font-size="11.5" fill="#555555" text-anchor="middle">OutboundBackpressureGuard -&gt; fixture replay</text>
+<text x="240.0" y="317.5" font-size="11.5" fill="#555555" text-anchor="middle">onTextMessage/onBinaryMessage -&gt; 4400</text>
+<text x="240.0" y="332.5" font-size="11.5" fill="#555555" text-anchor="middle">auto-ping-interval 20s + idle-timeout 40s</text>
+<rect x="500" y="220" width="400" height="150" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="700.0" y="270.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Python — native websockets + FastAPI</text>
+<text x="700.0" y="287.5" font-size="11.5" fill="#555555" text-anchor="middle">ws://localhost:8081/ws/v1/bookings/{id}/handling-events (+ :8082)</text>
+<text x="700.0" y="302.5" font-size="11.5" fill="#555555" text-anchor="middle">OutboundQueue -&gt; fixture replay</text>
+<text x="700.0" y="317.5" font-size="11.5" fill="#555555" text-anchor="middle">_receive_loop -&gt; 4400</text>
+<text x="700.0" y="332.5" font-size="11.5" fill="#555555" text-anchor="middle">ping_interval 20s + ping_timeout 20s</text>
+<rect x="60" y="410" width="360" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="240.0" y="438.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">reject: 1008 (auth)</text>
+<text x="240.0" y="455.0" font-size="11.5" fill="#555555" text-anchor="middle">no data streamed, before replay starts</text>
+<rect x="520" y="410" width="360" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="700.0" y="438.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">reject: 4400 (error) / 4290 (backpressure)</text>
+<text x="700.0" y="455.0" font-size="11.5" fill="#555555" text-anchor="middle">envelope + close (4400); close-only (4290)</text>
+<rect x="300" y="495" width="340" height="50" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="470.0" y="518.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">heartbeat: ping/pong keeps the connection alive;</text>
+<text x="470.0" y="535.0" font-size="11.5" fill="#555555" text-anchor="middle">a silent peer is closed on idle-timeout (Ch14)</text>
+<path d="M440,80 L440,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="450.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade</text>
+<text x="450.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">upgrade</text>
+<path d="M390,180 L240,220" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="321.0" y="194.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">token valid</text>
+<text x="321.0" y="194.0" font-size="11" fill="#b8650a" text-anchor="middle">token valid</text>
+<path d="M550,180 L700,220" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="631.0" y="194.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">token valid</text>
+<text x="631.0" y="194.0" font-size="11" fill="#b8650a" text-anchor="middle">token valid</text>
+<path d="M240,370 L240,410" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="246.0" y="384.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">token invalid</text>
+<text x="246.0" y="384.0" font-size="11" fill="#555" text-anchor="middle">token invalid</text>
+<path d="M700,370 L700,410" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="706.0" y="384.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">bad frame / overrun</text>
+<text x="706.0" y="384.0" font-size="11" fill="#555" text-anchor="middle">bad frame / overrun</text>
+<path d="M240,370 L700,410" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M700,370 L240,410" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M440,370 L440,495" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="446.0" y="426.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">both stacks</text>
+<text x="446.0" y="426.5" font-size="11" fill="#555" text-anchor="middle">both stacks</text>
+<text x="470" y="545" font-size="12" fill="#555555" text-anchor="middle">Same shared JWT secret, same close codes on both stacks — verify.sh asserts a client can&#x27;t tell them apart.</text>
+</svg>

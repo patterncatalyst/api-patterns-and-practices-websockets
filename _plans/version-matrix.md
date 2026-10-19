@@ -6,23 +6,26 @@ render_with_liquid: false
 
 # Version Matrix
 
-> Surveyed: TBD at authoring time (r01 placeholder, 2026-10-18)
+> Surveyed: TBD at authoring time (r01 placeholder, 2026-10-18); Python, k6,
+> Kafka, Redis, and PyJWT reconciled against Ch0 in the r04 toolchain pass
+> (DRQ-023, DRQ-024), surveyed 2026-10-18.
 
 This is a placeholder laid down at r01 bootstrap. Every row below gets a real,
 dated survey pass — checked against the vendor's own release notes, not
 memory — before the chapter that depends on it is written. Nothing in this
-table is authoritative yet.
+table is authoritative yet, except the rows marked below as reconciled.
 
 | Component | Version |
 |---|---|
 | Quarkus (LTS) | TBD — confirm latest stable |
 | Quarkus WebSockets Next | TBD — confirm latest stable |
-| Python | TBD — confirm latest stable |
+| Python | 3.15.0 — current stable; matches Ch0 and every example's `requires-python` (DRQ-024) |
 | FastAPI | TBD — confirm latest stable |
 | websockets (library) | TBD — confirm latest stable |
-| Kafka | TBD — confirm latest stable |
-| Redis | TBD — confirm latest stable |
-| k6 | TBD — confirm latest stable |
+| Kafka | 4.3.1 (KRaft mode, `apache/kafka` image) — current stable; 4.4.0 is RC-only as of this survey |
+| Redis | 8.10.2-alpine — current stable |
+| PyJWT | 2.15.1 — current stable; Ch17 JWT auth |
+| k6 | 2.3.0 — current stable; load-testing tool, enters in **Part 4** (not Part 5 — DRQ-023) |
 | Newman | TBD — confirm latest stable |
 | JDK | TBD — confirm latest stable |
 | Node | TBD — confirm latest stable |

@@ -119,6 +119,34 @@ Build order: harness + extractor → scaffold both apps + pass `verify.sh` →
 write Ch8–11 against the working code → wire the drift gate → build + voice +
 checkpoint. Chapters follow working code so codetabs are real.
 
+## r04 scope (in progress)
+
+**All of Part 4 "Production Concerns" (Ch12–18) + two runnable example apps +
+broker infra + CI extension.** The largest iteration.
+
+- **Two apps (DRQ-020):** `examples/part4-connection/` (Ch12 backpressure
+  server-side, Ch13 error handling, Ch14 liveness/heartbeats, Ch17 security —
+  no broker) and `examples/part4-backplane/` (Ch15 stateless reconnect, Ch16
+  Kafka-backed reconnect, Ch18 scale-out fan-out — brokers behind compose
+  profiles). Both fork the part3 convention, reuse the contract + fixture +
+  `_lib/lib.sh`, stay drift-gated.
+- **Centerpiece:** Ch15 (visible gap, no backplane) vs Ch16 (Kafka
+  offsets/replay/dedup) in one profile-toggled codebase, with paired both-stack
+  with/without-Kafka diagrams.
+- **Auth (DRQ-021):** self-minted HS256 JWT at the upgrade, both stacks,
+  Keycloak named not run.
+- **Scale-out (DRQ-022):** fan-out proven live in CI on **both** Kafka and
+  Redis, two instances, with a serving-instance id in each frame.
+- **k6 (DRQ-023):** gated smoke load in CI; k6 enters in Part 4.
+- **Infra:** Kafka (KRaft) + Redis via compose profiles, pinned; healthcheck-
+  gated start to tame CI flakiness.
+- **Reconcile (DRQ-024):** one Python version across Ch0 matrix, the version
+  matrix, and all examples; fix the k6 "Part 5"→"Part 4" label.
+
+Build order: version/ledger survey → extend harness → App A + verify → App B +
+broker infra + verify → chapters against working code → CI drift/gate + k6 →
+build + voice + checkpoint. Chapters follow working code.
+
 ## Deferred to later iterations (r02+)
 
 - Chapter prose for all 29 chapters, to the house depth standard (paired

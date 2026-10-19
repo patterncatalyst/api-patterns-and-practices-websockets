@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Part 4 "Production Concerns" backplane example — Quarkus side. Forks
+  examples/part4-connection/quarkus's pom.xml structure (same BOM pin,
+  fixture-copy mechanism, test/package wiring); adds the two new backplane
+  transports per examples/part4-backplane/PROTOCOL.md: quarkus-messaging-kafka
+  (Ch16 replay + Ch18 fan-out) and quarkus-redis-client (Ch18 fan-out, no
+  replay). Also adds quarkus-rest + quarkus-rest-jackson for the internal
+  `POST /internal/bookings/{bookingId}/handling-events` inject endpoint,
+  which part3/part4-connection never needed (push-only channel, no REST).
+
+  Build (from the REPO ROOT, so the fixture-copy below can reach it):
+    ./examples/part4-backplane/quarkus/mvnw -f examples/part4-backplane/quarkus/pom.xml -q package
+
+  The fixture is reused from part3, NOT duplicated here — see
+  copy-handling-events-fixture below and this module's README.md.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.patterncatalyst.shipping</groupId>
+    <artifactId>part4-backplane-quarkus</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>quarkus</packaging>
+
+    <properties>
+        <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <!-- Matches part3/part4-connection's pin — re-check before bumping. -->
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
+        <!-- Latest stable com.networknt:json-schema-validator as of this
+             writing (not Quarkus-BOM-managed; re-check before bumping). -->
+        <json-schema-validator.version>1.5.6</json-schema-validator.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- @WebSocket / @OnOpen / @OnTextMessage / @OnClose / @OnError;
+             WebSocketConnection, CloseReason, OpenConnections. Pulls in
+             quarkus-jackson transitively for HandlingEvent (de)serialization. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-websockets-next</artifactId>
+        </dependency>
+        <!-- The internal POST /internal/bookings/{bookingId}/handling-events
+             inject endpoint (not part of the public AsyncAPI contract — see
+             PROTOCOL.md). -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <!-- Ch16/Ch18 kafka backplane mode: SmallRye Reactive Messaging's
+             Kafka connector. KafkaBackplane's @Incoming/@Outgoing channels
+             forward consumed records to local connections and publish
+             injected events, keyed by bookingId. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-messaging-kafka</artifactId>
+        </dependency>
+        <!-- Ch18 redis backplane mode: ReactiveRedisDataSource's Pub/Sub
+             commands back RedisBackplane's subscribe/publish on
+             handling-events:{bookingId}. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-redis-client</artifactId>
+        </dependency>
+        <!-- Traces the WebSocket upgrade and the push; off unless an OTLP
+             endpoint is reachable (see application.properties) — same
+             convention as part3/part4-connection. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- HandlingEventContractTest validates each emitted HandlingEvent
+             against build/handling-event.schema.json (generated from
+             contracts/asyncapi.yaml by scripts/extract-message-schema.py). -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+            <!-- Copies the canonical fixture (owned by part3, reused here —
+                 see the file header above) onto the classpath before
+                 process-resources runs. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-handling-events-fixture</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/fixtures</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../part3-handling-events/fixtures</directory>
+                                    <includes>
+                                        <include>handling-events.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
+                <skipITs>false</skipITs>
+                <quarkus.native.enabled>true</quarkus.native.enabled>
+            </properties>
+        </profile>
+    </profiles>
+</project>

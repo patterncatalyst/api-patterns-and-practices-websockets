@@ -1,0 +1,57 @@
+# Part 4 "Production Concerns" backplane example — Quarkus, UBI 10, JVM mode
+# (fast-jar), no native. Forked from
+# examples/part4-connection/quarkus/Containerfile.
+#
+# Build (from the REPO ROOT, so this context can reach the shared fixture):
+#   docker build -f examples/part4-backplane/quarkus/Containerfile \
+#     -t part4-backplane-quarkus .
+#
+# This module does NOT duplicate the fixture: it reuses
+# examples/part3-handling-events/fixtures/handling-events.json via pom.xml's
+# copy-handling-events-fixture execution, which resolves
+# `${project.basedir}/../../part3-handling-events/fixtures` relative to this
+# module's basedir. This stage recreates the two directories' real sibling
+# relationship under /build so that identical relative Maven resource path
+# resolves inside a container build too — see part3/part4-connection's
+# Containerfiles for the same note.
+#
+# Base image pins (re-check with `skopeo list-tags
+# docker://registry.access.redhat.com/ubi10/openjdk-25`; bump deliberately) —
+# matches part3/part4-connection's pin:
+#   registry.access.redhat.com/ubi10/openjdk-25:1.24-16
+#   registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25:1.24-16 AS build
+
+WORKDIR /build/examples/part4-backplane/quarkus
+COPY examples/part4-backplane/quarkus/pom.xml .
+COPY examples/part4-backplane/quarkus/src ./src
+
+COPY examples/part3-handling-events/fixtures /build/examples/part3-handling-events/fixtures
+
+RUN mvn -B package -DskipTests -Dmaven.javadoc.skip=true \
+      -Daether.syncContext.named.time=300 -Daether.syncContext.named.time.unit=SECONDS \
+      -Dmaven.wagon.http.retryHandler.count=3 -Daether.connector.http.retryHandler.count=3
+
+# ── Stage 2: Runtime (fast-jar) ─────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+ENV LANGUAGE='en_US:en'
+
+COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/*.jar /deployments/
+COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/app/ /deployments/app/
+COPY --from=build --chown=185 /build/examples/part4-backplane/quarkus/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
+
+ENV JAVA_OPTS_APPEND="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+# Dev-only defaults — override per compose service (INSTANCE_ID, BACKPLANE_MODE,
+# KAFKA_BOOTSTRAP_SERVERS, REDIS_URL — see application.properties).
+ENV INSTANCE_ID="quarkus"
+ENV BACKPLANE_MODE="stateless"
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]

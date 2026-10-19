@@ -84,8 +84,18 @@ jobs:
           fi
 
   drift:
-    name: Contract-drift gate (extract, regenerate, conformance-test both stacks)
+    # DRIFT_APPS is the single place that lists every example whose Python
+    # model + Quarkus HandlingEventContractTest must be regenerated/run
+    # against build/handling-event.schema.json on every change to
+    # contracts/asyncapi.yaml. All three apps (part3's plain replay, and
+    # part4's connection-concerns and backplane forks — DRQ-020) generate
+    # their model from that SAME extracted schema, so one shared loop over
+    # this list keeps the gate DRY instead of three near-duplicate step
+    # blocks. Add a new app's directory name here when Part 5+ forks again.
+    name: Contract-drift gate (extract, regenerate, conformance-test all apps/stacks)
     runs-on: ubuntu-latest
+    env:
+      DRIFT_APPS: "part3-handling-events part4-connection part4-backplane"
     steps:
       - uses: actions/checkout@v5
 
@@ -98,10 +108,12 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
         with:
           version: "0.13.1"
-          python-version: "3.14"
+          python-version: "3.15"
           enable-cache: true
           cache-dependency-glob: |
             examples/part3-handling-events/python/uv.lock
+            examples/part4-connection/python/uv.lock
+            examples/part4-backplane/python/uv.lock
 
       - uses: actions/setup-node@v4
         with:
@@ -110,17 +122,30 @@ jobs:
       - name: Extract the contract-derived JSON Schema
         run: python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
 
-      - name: Regenerate the Python model (datamodel-codegen)
-        run: ./scripts/generate-models.sh
-        working-directory: examples/part3-handling-events/python
+      - name: Regenerate Python models + Python conformance tests (every DRIFT_APPS entry)
+        run: |
+          set -euo pipefail
+          for app in $DRIFT_APPS; do
+            echo "::group::python drift — $app"
+            (
+              cd "examples/$app/python"
+              ./scripts/generate-models.sh
+              uv run pytest tests/test_contract.py -v
+            )
+            echo "::endgroup::"
+          done
 
-      - name: Quarkus conformance test (HandlingEventContractTest)
-        run: ./mvnw -B test -Dtest=HandlingEventContractTest
-        working-directory: examples/part3-handling-events/quarkus
-
-      - name: Python conformance test (test_contract.py)
-        run: uv run pytest tests/test_contract.py -v
-        working-directory: examples/part3-handling-events/python
+      - name: Quarkus conformance tests (HandlingEventContractTest, every DRIFT_APPS entry)
+        run: |
+          set -euo pipefail
+          for app in $DRIFT_APPS; do
+            echo "::group::quarkus drift — $app"
+            (
+              cd "examples/$app/quarkus"
+              ./mvnw -B test -Dtest=HandlingEventContractTest
+            )
+            echo "::endgroup::"
+          done
 
   discover-examples:
     name: Discover examples
@@ -154,6 +179,14 @@ jobs:
     needs: discover-examples
     if: needs.discover-examples.outputs.any == 'true'
     runs-on: ubuntu-latest
+    # Generous per-matrix-job cap: part4-backplane's verify.sh runs THREE
+    # sequential docker-compose up/down stages (stateless, kafka, redis),
+    # each with its own broker cold start, inside the retry loop below (up
+    # to 3 full attempts) — comfortably longer than part3/part4-connection's
+    # single-stage runs, which finish in a few minutes. One shared cap keeps
+    # the matrix definition simple; it just needs to be big enough for the
+    # slowest member.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -202,3 +235,132 @@ jobs:
             exit 1
           fi
           echo "All example verifications passed (or none to run)."
+
+  k6-smoke:
+    # DRQ-023 — k6 is a GATED smoke run, not merely opt-in: a k6 threshold
+    # failure here fails this job, and thus the PR. Deliberately
+    # SMOKE-level (examples/part4-*/k6/smoke.js: 3 VUs, 1 iteration each,
+    # no ramp) so this stays a fast gate — the heavier, multi-stage/broker
+    # scenarios (Ch15/16/18) stay covered by each app's verify.sh in the
+    # `examples` matrix above; this job only proves the live channel itself
+    # (auth-gated on part4-connection, open on part4-backplane's default
+    # profile) still accepts a connection and streams the fixture.
+    name: k6 smoke load (gated) — Part 4
+    runs-on: ubuntu-latest
+    env:
+      # Pin: k6 2.3.0 (contracts/README.md / Ch0 version matrix / DRQ-023)
+      # — no floating tag.
+      K6_IMAGE: docker.io/grafana/k6:2.3.0
+      # Must match examples/part4-connection/compose.yaml's WS_JWT_SECRET
+      # exactly (see that file's own comment on why it's a dedicated
+      # test-only value, not either image's "dev-secret-change-me" default).
+      SHARED_JWT_SECRET: part4-verify-harness-shared-secret-value
+      BOOKING_ID: bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
+        with:
+          version: "0.13.1"
+          python-version: "3.15"
+          enable-cache: true
+          cache-dependency-glob: |
+            examples/part4-connection/python/uv.lock
+
+      # ---------------------------------------------------------------
+      # part4-connection — auth-gated channel, both stacks
+      # ---------------------------------------------------------------
+      - name: part4-connection — docker compose up
+        working-directory: examples/part4-connection
+        run: docker compose up -d --build quarkus python
+
+      - name: part4-connection — wait for both stacks to report healthy
+        run: |
+          set -euo pipefail
+          for svc in quarkus python; do
+            status=""
+            for _ in $(seq 1 40); do
+              status="$(docker inspect -f '{{.State.Health.Status}}' "part4-connection-$svc" 2>/dev/null || true)"
+              [ "$status" = "healthy" ] && break
+              sleep 3
+            done
+            if [ "$status" != "healthy" ]; then
+              echo "::error::part4-connection-$svc never became healthy (last status: $status)"
+              docker logs "part4-connection-$svc" || true
+              exit 1
+            fi
+          done
+
+      - name: part4-connection — mint a shared-secret JWT
+        working-directory: examples/part4-connection/python
+        run: |
+          token="$(WS_JWT_SECRET="$SHARED_JWT_SECRET" uv run python -m app.mint_token)"
+          echo "::add-mask::$token"
+          echo "K6_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: part4-connection — k6 smoke (quarkus, :8080)
+        run: |
+          docker run --rm --network host \
+            -e K6_WS_URL="ws://localhost:8080/ws/v1/bookings/${BOOKING_ID}/handling-events" \
+            -e K6_TOKEN="$K6_TOKEN" \
+            -v "$(pwd)/examples/part4-connection/k6:/scripts" \
+            "$K6_IMAGE" run /scripts/smoke.js
+
+      - name: part4-connection — k6 smoke (python, :8081)
+        run: |
+          docker run --rm --network host \
+            -e K6_WS_URL="ws://localhost:8081/ws/v1/bookings/${BOOKING_ID}/handling-events" \
+            -e K6_TOKEN="$K6_TOKEN" \
+            -v "$(pwd)/examples/part4-connection/k6:/scripts" \
+            "$K6_IMAGE" run /scripts/smoke.js
+
+      - name: part4-connection — docker compose down
+        if: always()
+        working-directory: examples/part4-connection
+        run: docker compose down -v --remove-orphans
+
+      # ---------------------------------------------------------------
+      # part4-backplane — default (stateless) profile only, single
+      # instance per stack (quarkus-a/python-a); no broker, no auth gate
+      # (PROTOCOL.md). The Kafka/Redis-backed replay and fan-out scenarios
+      # stay in verify.sh — this is a fast liveness smoke only.
+      # ---------------------------------------------------------------
+      - name: part4-backplane — docker compose up (default profile, a-instances only)
+        working-directory: examples/part4-backplane
+        run: docker compose up -d --build quarkus-a python-a
+
+      - name: part4-backplane — wait for quarkus-a/python-a to report healthy
+        run: |
+          set -euo pipefail
+          for svc in quarkus-a python-a; do
+            status=""
+            for _ in $(seq 1 40); do
+              status="$(docker inspect -f '{{.State.Health.Status}}' "part4-backplane-$svc" 2>/dev/null || true)"
+              [ "$status" = "healthy" ] && break
+              sleep 3
+            done
+            if [ "$status" != "healthy" ]; then
+              echo "::error::part4-backplane-$svc never became healthy (last status: $status)"
+              docker logs "part4-backplane-$svc" || true
+              exit 1
+            fi
+          done
+
+      - name: part4-backplane — k6 smoke (quarkus-a, :8080)
+        run: |
+          docker run --rm --network host \
+            -e K6_WS_URL="ws://localhost:8080/ws/v1/bookings/${BOOKING_ID}/handling-events" \
+            -v "$(pwd)/examples/part4-backplane/k6:/scripts" \
+            "$K6_IMAGE" run /scripts/smoke.js
+
+      - name: part4-backplane — k6 smoke (python-a, :8081)
+        run: |
+          docker run --rm --network host \
+            -e K6_WS_URL="ws://localhost:8081/ws/v1/bookings/${BOOKING_ID}/handling-events" \
+            -v "$(pwd)/examples/part4-backplane/k6:/scripts" \
+            "$K6_IMAGE" run /scripts/smoke.js
+
+      - name: part4-backplane — docker compose down
+        if: always()
+        working-directory: examples/part4-backplane
+        run: docker compose down -v --remove-orphans
