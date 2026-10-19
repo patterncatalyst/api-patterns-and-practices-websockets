@@ -87,15 +87,26 @@ jobs:
     # DRIFT_APPS is the single place that lists every example whose Python
     # model + Quarkus HandlingEventContractTest must be regenerated/run
     # against build/handling-event.schema.json on every change to
-    # contracts/asyncapi.yaml. All three apps (part3's plain replay, and
-    # part4's connection-concerns and backplane forks — DRQ-020) generate
-    # their model from that SAME extracted schema, so one shared loop over
-    # this list keeps the gate DRY instead of three near-duplicate step
-    # blocks. Add a new app's directory name here when Part 5+ forks again.
+    # contracts/asyncapi.yaml. All four apps (part3's plain replay, part4's
+    # connection-concerns and backplane forks — DRQ-020 — and part5's
+    # JSON/Protobuf dual-encoding fork — DRQ-025) generate their JSON model
+    # from that SAME extracted schema, so one shared loop over this list
+    # keeps the gate DRY instead of four near-duplicate step blocks. Add a
+    # new app's directory name here when Part 6+ forks again.
+    #
+    # part5-performance is the one entry with an EXTRA generation step: its
+    # Python side also needs a Protobuf stub (python/scripts/generate-proto.sh,
+    # contracts/handling-event.proto -> app/handling_event_pb2.py) before
+    # pytest can import it, and its Quarkus side has a second test class
+    # (HandlingEventProtoRoundTripTest) that asserts the proto-decoded shape
+    # against the same schema. Both loops below detect part5 generically
+    # (by the presence of the extra script / test class) rather than
+    # hardcoding the app name, so the pattern already covers a Part 6+ app
+    # that adds its own extra encoding.
     name: Contract-drift gate (extract, regenerate, conformance-test all apps/stacks)
     runs-on: ubuntu-latest
     env:
-      DRIFT_APPS: "part3-handling-events part4-connection part4-backplane"
+      DRIFT_APPS: "part3-handling-events part4-connection part4-backplane part5-performance"
     steps:
       - uses: actions/checkout@v5
 
@@ -114,6 +125,7 @@ jobs:
             examples/part3-handling-events/python/uv.lock
             examples/part4-connection/python/uv.lock
             examples/part4-backplane/python/uv.lock
+            examples/part5-performance/python/uv.lock
 
       - uses: actions/setup-node@v4
         with:
@@ -122,7 +134,7 @@ jobs:
       - name: Extract the contract-derived JSON Schema
         run: python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
 
-      - name: Regenerate Python models + Python conformance tests (every DRIFT_APPS entry)
+      - name: Regenerate Python models (+ proto stub where present) + Python conformance tests (every DRIFT_APPS entry)
         run: |
           set -euo pipefail
           for app in $DRIFT_APPS; do
@@ -130,22 +142,108 @@ jobs:
             (
               cd "examples/$app/python"
               ./scripts/generate-models.sh
+              # part5-performance's Python side carries a SECOND generation
+              # step (the Protobuf stub, DRQ-025) that part3/part4 don't
+              # have — run it only when the app actually has it, so this
+              # loop stays generic across DRIFT_APPS rather than branching
+              # on the app name.
+              if [ -x scripts/generate-proto.sh ]; then
+                ./scripts/generate-proto.sh
+              fi
               uv run pytest tests/test_contract.py -v
             )
             echo "::endgroup::"
           done
 
-      - name: Quarkus conformance tests (HandlingEventContractTest, every DRIFT_APPS entry)
+      - name: Quarkus conformance tests (HandlingEventContractTest + any proto round-trip test, every DRIFT_APPS entry)
         run: |
           set -euo pipefail
           for app in $DRIFT_APPS; do
             echo "::group::quarkus drift — $app"
             (
               cd "examples/$app/quarkus"
-              ./mvnw -B test -Dtest=HandlingEventContractTest
+              # part5-performance also ships HandlingEventProtoRoundTripTest
+              # (DRQ-025) — run it in the SAME `./mvnw test` invocation
+              # alongside HandlingEventContractTest when it exists, instead
+              # of adding a separate step, so this stays one shared loop.
+              if [ -f src/test/java/com/patterncatalyst/shipping/handlingevents/HandlingEventProtoRoundTripTest.java ]; then
+                ./mvnw -B test -Dtest=HandlingEventContractTest,HandlingEventProtoRoundTripTest
+              else
+                ./mvnw -B test -Dtest=HandlingEventContractTest
+              fi
             )
             echo "::endgroup::"
           done
+
+  buf-parity:
+    # DRQ-025 — the Protobuf side of the contract gets the SAME two-layer
+    # treatment the gRPC sibling site's contracts.yml gives its proto module
+    # (buf lint/build/breaking), PLUS a gate buf itself cannot run: buf only
+    # ever looks at contracts/handling-event.proto in isolation, so it can't
+    # catch the proto drifting away from contracts/asyncapi.yaml (a field
+    # renamed or dropped on one side only, an enum member reordered). That's
+    # what scripts/check-proto-parity.py exists for — it diffs the compiled
+    # proto descriptor against the SAME build/handling-event.schema.json the
+    # `drift` job's Python/Quarkus regeneration also consumes.
+    name: buf lint/build/breaking + AsyncAPI<->proto parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # buf breaking needs the main ref available
+
+      - uses: bufbuild/buf-setup-action@v1.50.0   # action version; buf CLI pinned below
+        with:
+          version: "1.74.0"   # contracts/README.md / Ch0 version matrix, DRQ-025 — no floating tag
+          github_token: ${{ github.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: buf lint
+        working-directory: contracts
+        run: buf lint
+
+      - name: buf build (compile; all imports resolve)
+        working-directory: contracts
+        run: buf build -o /dev/null
+
+      - name: buf breaking (vs main)
+        working-directory: contracts
+        run: |
+          # The evolution gate — same first-introduction-skip guard the
+          # `breaking` job above uses for the AsyncAPI side. On the first
+          # introduction main has no baseline proto, so skip; once this
+          # lands on main, every later change is checked against it.
+          if git ls-tree -r origin/main --name-only -- contracts/handling-event.proto 2>/dev/null | grep -q 'handling-event\.proto$'; then
+            buf breaking --against '../.git#branch=main,subdir=contracts'
+          else
+            echo "no baseline proto on main yet — skipping breaking check (first introduction)"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.15"
+
+      - name: Install protoc + Python deps for the parity check
+        # check-proto-parity.py shells out to `protoc --descriptor_set_out` and
+        # imports google.protobuf; extract-message-schema.py needs PyYAML. The
+        # GitHub runner's system Python ships none of these, so install them
+        # into the setup-python interpreter (python3 -I still sees its own
+        # site-packages, just not the user site). protoc comes from apt — it
+        # only compiles one trivial proto to a descriptor set here.
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          python3 -m pip install "protobuf==7.36.2" "PyYAML>=6"
+
+      - name: AsyncAPI <-> proto parity (DRQ-025)
+        # Always runs (not gated behind the breaking-check branch above) —
+        # this is the drift gate between the two contract halves, independent
+        # of whether there's a baseline to diff against yet.
+        run: |
+          python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
+          python3 -I scripts/check-proto-parity.py
 
   discover-examples:
     name: Discover examples
@@ -237,15 +335,18 @@ jobs:
           echo "All example verifications passed (or none to run)."
 
   k6-smoke:
-    # DRQ-023 — k6 is a GATED smoke run, not merely opt-in: a k6 threshold
-    # failure here fails this job, and thus the PR. Deliberately
-    # SMOKE-level (examples/part4-*/k6/smoke.js: 3 VUs, 1 iteration each,
-    # no ramp) so this stays a fast gate — the heavier, multi-stage/broker
-    # scenarios (Ch15/16/18) stay covered by each app's verify.sh in the
-    # `examples` matrix above; this job only proves the live channel itself
-    # (auth-gated on part4-connection, open on part4-backplane's default
-    # profile) still accepts a connection and streams the fixture.
-    name: k6 smoke load (gated) — Part 4
+    # DRQ-023/DRQ-027 — k6 is a GATED smoke run, not merely opt-in: a k6
+    # threshold failure here fails this job, and thus the PR. Deliberately
+    # SMOKE-level (examples/part4-*/ and part5-performance/k6/smoke.js: a
+    # handful of VUs, one iteration each, no ramp) so this stays a fast gate
+    # — the heavier, multi-stage/broker scenarios (Ch15/16/18) and the
+    # comparative JSON-vs-Protobuf throughput benchmark (Ch19/20's
+    # k6/benchmark.js, local-only per DRQ-027) stay out of this job; this
+    # job only proves each live channel itself (auth-gated on
+    # part4-connection, open on part4-backplane's default profile and on
+    # part5-performance) still accepts a connection and streams the fixture
+    # — on part5-performance, over BOTH negotiated wire encodings.
+    name: k6 smoke load (gated) — Part 4 + Part 5
     runs-on: ubuntu-latest
     env:
       # Pin: k6 2.3.0 (contracts/README.md / Ch0 version matrix / DRQ-023)
@@ -363,4 +464,56 @@ jobs:
       - name: part4-backplane — docker compose down
         if: always()
         working-directory: examples/part4-backplane
+        run: docker compose down -v --remove-orphans
+
+      # ---------------------------------------------------------------
+      # part5-performance — JSON-vs-Protobuf dual-encoding channel, no
+      # auth gate (compose.yaml/PROTOCOL.md: Part 5 drops part4's four
+      # connection concerns to isolate the encoding comparison). One
+      # smoke.js run per stack already exercises BOTH subprotocols
+      # (handling-events.v1+json and +protobuf) in a single iteration — see
+      # that script's own header — so there is no separate +json/+protobuf
+      # step pair here the way there is for part4-connection's auth steps.
+      # The comparative JSON-vs-Protobuf-vs-deflate throughput benchmark
+      # (k6/benchmark.js) stays LOCAL-only (DRQ-027) and is deliberately
+      # NOT run here.
+      # ---------------------------------------------------------------
+      - name: part5-performance — docker compose up
+        working-directory: examples/part5-performance
+        run: docker compose up -d --build quarkus python
+
+      - name: part5-performance — wait for both stacks to report healthy
+        run: |
+          set -euo pipefail
+          for svc in quarkus python; do
+            status=""
+            for _ in $(seq 1 40); do
+              status="$(docker inspect -f '{{.State.Health.Status}}' "part5-performance-$svc" 2>/dev/null || true)"
+              [ "$status" = "healthy" ] && break
+              sleep 3
+            done
+            if [ "$status" != "healthy" ]; then
+              echo "::error::part5-performance-$svc never became healthy (last status: $status)"
+              docker logs "part5-performance-$svc" || true
+              exit 1
+            fi
+          done
+
+      - name: part5-performance — k6 smoke (quarkus, :8090, +json and +protobuf)
+        run: |
+          docker run --rm --network host \
+            -e K6_WS_URL="ws://localhost:8090/ws/v1/bookings/${BOOKING_ID}/handling-events" \
+            -v "$(pwd)/examples/part5-performance/k6:/scripts" \
+            "$K6_IMAGE" run /scripts/smoke.js
+
+      - name: part5-performance — k6 smoke (python, :8091, +json and +protobuf)
+        run: |
+          docker run --rm --network host \
+            -e K6_WS_URL="ws://localhost:8091/ws/v1/bookings/${BOOKING_ID}/handling-events" \
+            -v "$(pwd)/examples/part5-performance/k6:/scripts" \
+            "$K6_IMAGE" run /scripts/smoke.js
+
+      - name: part5-performance — docker compose down
+        if: always()
+        working-directory: examples/part5-performance
         run: docker compose down -v --remove-orphans
