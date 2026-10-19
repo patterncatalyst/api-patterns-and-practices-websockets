@@ -223,6 +223,236 @@ ws_first_frame() {
   printf '%s\n' "$out"
 }
 
+# ws_frames_n <ws-url> <n> [timeout_secs]
+#
+# Connects to <ws-url>, reads exactly <n> frames, prints each one on its own
+# line (in arrival order), and closes — for chapters where a single pushed
+# frame isn't enough to prove behavior (e.g. a sequence of fan-out events).
+# Does not send anything itself (stdin is /dev/null). Bounded by an outer
+# `timeout` (default 20s) so a server that sends fewer than <n> frames fails
+# loudly instead of hanging the test run. Uses websocat's
+# `--max-messages-rev` (the "reverse", i.e. server-to-client, direction —
+# confirmed empirically: `--max-messages` alone caps the client-to-server
+# direction and does not close the connection once the server has sent N
+# messages).
+ws_frames_n() {
+  local url="$1"
+  local n="$2"
+  local timeout="${3:-20}"
+  ensure_websocat
+
+  local out rc=0
+  out="$(timeout "$timeout" websocat $WEBSOCAT_OPTS --max-messages-rev "$n" -n -t "$url" </dev/null)" || rc=$?
+  if (( rc != 0 )); then
+    echo "lib.sh: FAIL — ws_frames_n $url: did not receive $n frame(s) within ${timeout}s (exit $rc)" >&2
+    return 1
+  fi
+  local got
+  got="$(printf '%s\n' "$out" | grep -c '^' || true)"
+  if (( got != n )); then
+    echo "lib.sh: FAIL — ws_frames_n $url: expected $n frame(s), got $got" >&2
+    printf '%s\n' "$out" >&2
+    return 1
+  fi
+  printf '%s\n' "$out"
+}
+
+# ws_connect_bg <ws-url> <logfile>
+#
+# Opens a long-lived background websocat connection to <ws-url>, appending
+# each received frame to <logfile> (one per line), and prints its PID to
+# stdout so the caller can `kill` it when done. Sends nothing itself (stdin
+# is /dev/null) and does not close on its own — for proving fan-out /
+# broadcast behavior across instances (Ch18): a client stays connected to
+# instance A in the background while the test injects an event through
+# instance B, then asserts the frame showed up in <logfile>.
+#
+# The caller is responsible for killing the PID (and `wait`ing on it to
+# suppress the shell's "Terminated" job-control message) once done — mirrors
+# the CLIENT_PID pattern in part3-handling-events/verify.sh's Step 4.
+ws_connect_bg() {
+  local url="$1"
+  local logfile="$2"
+  ensure_websocat
+
+  : >"$logfile"
+  websocat $WEBSOCAT_OPTS -n -t "$url" </dev/null >>"$logfile" 2>>"$logfile" &
+  local pid=$!
+  echo "$pid"
+}
+
+# ws_first_frame_auth <ws-url> <token> [timeout_secs]
+#
+# Like ws_first_frame, but appends `?token=<token>` to <ws-url> (merged with
+# `&token=<token>` if the URL already has a query string) — for the Ch17
+# auth checks where the token travels as a query parameter on the upgrade
+# request.
+ws_first_frame_auth() {
+  local url="$1"
+  local token="$2"
+  local timeout="${3:-15}"
+  local sep="?"
+  [[ "$url" == *\?* ]] && sep="&"
+  ws_first_frame "${url}${sep}token=${token}" "$timeout"
+}
+
+# assert_ws_rejected <ws-url> [timeout_secs] [context]
+#
+# Asserts that connecting to <ws-url> is REJECTED — either a non-101 upgrade
+# response (websocat fails to connect at all) OR a 101 upgrade immediately
+# followed by a server-initiated close with no application frame ever sent
+# (a common pattern for servers that can only reject post-upgrade, e.g.
+# Quarkus WebSockets Next's @OnOpen closing the session). Used for the Ch17
+# auth checks: a request with a missing/invalid token must not deliver any
+# data.
+#
+# Checking the exit code alone is NOT enough: a server that completes the
+# 101 handshake and then closes cleanly (policy-violation close frame) makes
+# websocat exit 0, indistinguishable by exit code from "connected and the
+# server intends to stay open". So this instead captures stdout and treats
+# "zero frames received before the connection ended" as rejection — true
+# whether the handshake failed outright (non-101) or the server closed
+# immediately post-upgrade without sending data.
+assert_ws_rejected() {
+  local url="$1"
+  local timeout="${2:-10}"
+  local context="${3:-assert_ws_rejected}"
+  ensure_websocat
+
+  # NOTE: deliberately no -E (--exit-on-eof) here. With stdin already at EOF
+  # (/dev/null), -E tears down BOTH directions as soon as that EOF is seen —
+  # before any server-sent frame has a chance to arrive — which would make
+  # every call look rejected, including an accepted connection that sends
+  # data. -1 (one-message) is the correct bound instead: wait for at most
+  # one frame, then stop.
+  local out
+  out="$(timeout "$timeout" websocat $WEBSOCAT_OPTS -1 -n -t "$url" </dev/null 2>/dev/null)" || true
+  if [[ -n "$out" ]]; then
+    echo "lib.sh: FAIL — ${context}: $url: connection was accepted and sent data, expected rejection" >&2
+    return 1
+  fi
+  echo "lib.sh: ok — ${context}: $url: connection was rejected (no frame received)" >&2
+}
+
+# ws_idle_hold <ws-url> <seconds>
+#
+# Holds a connection to <ws-url> open for <seconds> WITHOUT sending any
+# application data, so ping/pong and idle-timeout behavior (Ch14) can be
+# observed — i.e. does the server keep the connection alive via its own
+# heartbeat, or does it close an idle client? websocat answers WebSocket
+# ping frames with pong automatically at the protocol level (no app data
+# needed), so this purely measures whether the server tears the connection
+# down on its own within <seconds>.
+#
+# Prints "held" to stdout (and returns 0) if the connection was still open
+# when <seconds> elapsed (websocat killed by the outer `timeout`, exit 124).
+# Prints "closed" to stdout (and returns 0) if the server closed the
+# connection before <seconds> elapsed (websocat exits on its own, any other
+# code) — this is a report, not a pass/fail judgment; the caller decides
+# which outcome is expected for its chapter.
+ws_idle_hold() {
+  local url="$1"
+  local seconds="$2"
+  ensure_websocat
+
+  local rc=0
+  timeout "$seconds" websocat $WEBSOCAT_OPTS -n - "$url" </dev/null >/dev/null 2>&1 || rc=$?
+  if (( rc == 124 )); then
+    echo "lib.sh: ws_idle_hold $url: still open after ${seconds}s" >&2
+    echo "held"
+  else
+    echo "lib.sh: ws_idle_hold $url: server closed the connection before ${seconds}s (exit $rc)" >&2
+    echo "closed"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Log-polling helpers (promoted from part3-handling-events/verify.sh so
+# other examples' consuming-client checks can reuse them without
+# redefining — a local redefinition in an existing verify.sh is harmless)
+# ---------------------------------------------------------------------------
+
+# wait_for_log_pattern <file> <grep-pattern> [timeout_secs]
+#
+# Polls <file> for a line matching <grep-pattern> (fixed string, see `grep
+# -F`), or fails loudly after timeout_secs (default 30).
+wait_for_log_pattern() {
+  local file="$1" pattern="$2" timeout="${3:-30}" waited=0 interval=1
+  while (( waited < timeout )); do
+    if grep -qF -- "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+    sleep "$interval"
+    waited=$(( waited + interval ))
+  done
+  echo "lib.sh: FAIL — wait_for_log_pattern: '$pattern' not found in $file within ${timeout}s" >&2
+  echo "lib.sh: --- $file (tail) ---" >&2
+  tail -n 40 "$file" >&2 2>/dev/null || true
+  return 1
+}
+
+# wait_for_log_count <file> <grep-pattern> <min-count> [timeout_secs]
+#
+# Polls <file> until it contains at least <min-count> lines matching
+# <grep-pattern> (fixed string), or fails loudly after timeout_secs (default
+# 30). Unlike wait_for_log_pattern, this distinguishes "already happened
+# once" from "happened again" — e.g. proving a client actually resumed
+# receiving after reconnecting, not just that it received once before a
+# forced disconnect.
+wait_for_log_count() {
+  local file="$1" pattern="$2" min_count="$3" timeout="${4:-30}" waited=0 interval=1 count=0
+  while (( waited < timeout )); do
+    count="$(grep -cF -- "$pattern" "$file" 2>/dev/null || true)"
+    if (( count >= min_count )); then
+      return 0
+    fi
+    sleep "$interval"
+    waited=$(( waited + interval ))
+  done
+  echo "lib.sh: FAIL — wait_for_log_count: '$pattern' seen $count/$min_count times in $file within ${timeout}s" >&2
+  echo "lib.sh: --- $file (tail) ---" >&2
+  tail -n 40 "$file" >&2 2>/dev/null || true
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+# TCP readiness (for broker dependencies — Kafka, Redis — that don't speak
+# HTTP/WebSocket and so can't use wait_for_ws)
+# ---------------------------------------------------------------------------
+
+# wait_for_tcp <host> <port> [timeout_secs]
+#
+# Polls until a TCP connection to <host>:<port> succeeds, or fails loudly
+# after timeout_secs (default 90, to cover broker cold start). Prefers the
+# bash builtin `/dev/tcp` pseudo-device (no extra dependency, but not
+# POSIX — a bash-only feature, which is fine since this whole harness is
+# `#!/usr/bin/env bash`); falls back to `nc -z` if `/dev/tcp` is unavailable
+# (some minimal bash builds are compiled without net redirection support).
+wait_for_tcp() {
+  local host="$1"
+  local port="$2"
+  local timeout="${3:-90}"
+  local waited=0
+  local interval=2
+
+  echo "lib.sh: waiting for TCP $host:$port (timeout ${timeout}s) ..." >&2
+  while (( waited < timeout )); do
+    if (exec 3<>"/dev/tcp/$host/$port") 2>/dev/null; then
+      exec 3>&- 3<&- 2>/dev/null || true
+      echo "lib.sh: TCP $host:$port is up after ${waited}s" >&2
+      return 0
+    elif command -v nc >/dev/null 2>&1 && nc -z -w 2 "$host" "$port" 2>/dev/null; then
+      echo "lib.sh: TCP $host:$port is up after ${waited}s (via nc)" >&2
+      return 0
+    fi
+    sleep "$interval"
+    waited=$(( waited + interval ))
+  done
+
+  echo "lib.sh: FAIL — TCP $host:$port did not accept a connection within ${timeout}s" >&2
+  return 1
+}
+
 # ---------------------------------------------------------------------------
 # Assertions (stdlib-python JSON field extraction; no extra deps)
 # ---------------------------------------------------------------------------
