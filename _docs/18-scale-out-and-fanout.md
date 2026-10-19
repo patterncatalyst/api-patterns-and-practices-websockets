@@ -82,7 +82,7 @@ private void ensureSubscribed(String bookingId) {
 ```
 ```python
 async def subscribe(self, booking_id: str, after_event_id: str | None) -> AsyncIterator[HandlingEvent]:
-    del after_event_id  # unused -- no history in Pub/Sub
+    del after_event_id  # unused — see module docstring: no history in Pub/Sub
     pubsub = self._client.pubsub()
     channel = _channel(booking_id)
     await pubsub.subscribe(channel)

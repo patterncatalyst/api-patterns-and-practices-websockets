@@ -48,7 +48,7 @@ async def publish(self, booking_id: str, event: HandlingEvent) -> None:
         queue.put_nowait(event)
 
 async def subscribe(self, booking_id: str, after_event_id: str | None) -> AsyncIterator[HandlingEvent]:
-    del after_event_id  # unused — no history to replay
+    del after_event_id  # unused — see class docstring: no history to replay
     queue: asyncio.Queue[HandlingEvent] = asyncio.Queue()
     self._subscribers[booking_id].add(queue)
     try:
