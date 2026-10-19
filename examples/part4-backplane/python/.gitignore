@@ -1,0 +1,3 @@
+# Build-time generated Pydantic model — regenerate with
+# ./scripts/generate-models.sh (see README.md). Never hand-edit or commit.
+app/models_generated.py
