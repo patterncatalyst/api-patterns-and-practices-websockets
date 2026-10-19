@@ -32,7 +32,7 @@ table is authoritative yet, except the rows marked below as reconciled.
 | Redis | 8.10.2-alpine — current stable |
 | PyJWT | 2.15.1 — current stable; Ch17 JWT auth |
 | k6 | 2.3.0 — current stable; load-testing tool, enters in **Part 4** (not Part 5 — DRQ-023) |
-| Newman | TBD — confirm latest stable |
+| Newman | 6.2.3 — current stable (npm); no `docker.io/postman/newman` image tag newer than `6.1.3` exists yet, so `examples/part6-testing/verify.sh` pins it via `npx newman@6.2.3` instead (DRQ-030, surveyed 2026-10-19) |
 | JDK | 25.0.4 (Temurin) — current LTS line patch (Ch0 pin, `_docs/00-setup-and-the-lab.md`) |
 | Node | TBD — confirm latest stable |
 | **Protobuf / buf (DRQ-025, Part 5)** | |
