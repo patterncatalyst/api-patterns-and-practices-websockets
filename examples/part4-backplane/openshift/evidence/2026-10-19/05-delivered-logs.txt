@@ -1,0 +1,24 @@
+--- deploy/quarkus-a (container quarkus): delivered eventId lines ---
+2026-10-19 20:27:03,748 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-1) delivered eventId=evt_01HZY3M1V8X4D7Q6B2N9C0T5E8 bookingId=bkg_7ec9469f8b46489197c982bc30 instance=quarkus-a
+2026-10-19 20:27:03,832 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-1) delivered eventId=evt_01HZY3M2W9Y5E8R7C3P0D1U6F9 bookingId=bkg_7ec9469f8b46489197c982bc30 instance=quarkus-a
+2026-10-19 20:27:03,833 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-1) delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_7ec9469f8b46489197c982bc30 instance=quarkus-a
+2026-10-19 20:27:04,085 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-0) delivered eventId=evt_01HZY3M1V8X4D7Q6B2N9C0T5E8 bookingId=bkg_8deca057a83c4f439171ab8f31 instance=quarkus-a
+2026-10-19 20:27:04,086 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-0) delivered eventId=evt_01HZY3M2W9Y5E8R7C3P0D1U6F9 bookingId=bkg_8deca057a83c4f439171ab8f31 instance=quarkus-a
+2026-10-19 20:27:04,086 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-0) delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_8deca057a83c4f439171ab8f31 instance=quarkus-a
+2026-10-19 20:28:10,329 INFO  [com.patterncatalyst.shipping.backplane.LocalDelivery] (vert.x-eventloop-thread-0) delivered eventId=evt_9da197bc27e24df7b20b5d38a0 bookingId=bkg_8deca057a83c4f439171ab8f31 instance=quarkus-a
+2026-10-19 20:28:10,371 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-0) delivered eventId=evt_01HZY3M1V8X4D7Q6B2N9C0T5E8 bookingId=bkg_1aa9ad91853b4e119a8c64ed8f instance=quarkus-a
+2026-10-19 20:28:10,371 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-0) delivered eventId=evt_01HZY3M2W9Y5E8R7C3P0D1U6F9 bookingId=bkg_1aa9ad91853b4e119a8c64ed8f instance=quarkus-a
+2026-10-19 20:28:10,372 INFO  [com.patterncatalyst.shipping.backplane.HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-0) delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_1aa9ad91853b4e119a8c64ed8f instance=quarkus-a
+2026-10-19 20:28:14,134 INFO  [com.patterncatalyst.shipping.backplane.LocalDelivery] (vert.x-eventloop-thread-0) delivered eventId=evt_f117514c222941dbaa91eccf42 bookingId=bkg_1aa9ad91853b4e119a8c64ed8f instance=quarkus-a
+--- deploy/python-a (container python): delivered eventId lines ---
+2026-10-19 20:28:15,156 INFO handling-events-python: delivered eventId=evt_01HZY3M1V8X4D7Q6B2N9C0T5E8 bookingId=bkg_2d607733d36e4762ba81617112 instance=python-a
+2026-10-19 20:28:15,156 INFO handling-events-python: delivered eventId=evt_01HZY3M2W9Y5E8R7C3P0D1U6F9 bookingId=bkg_2d607733d36e4762ba81617112 instance=python-a
+2026-10-19 20:28:15,156 INFO handling-events-python: delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_2d607733d36e4762ba81617112 instance=python-a
+2026-10-19 20:28:15,403 INFO handling-events-python: delivered eventId=evt_01HZY3M1V8X4D7Q6B2N9C0T5E8 bookingId=bkg_f4f1b922d4c748d08ed440d355 instance=python-a
+2026-10-19 20:28:15,403 INFO handling-events-python: delivered eventId=evt_01HZY3M2W9Y5E8R7C3P0D1U6F9 bookingId=bkg_f4f1b922d4c748d08ed440d355 instance=python-a
+2026-10-19 20:28:15,403 INFO handling-events-python: delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_f4f1b922d4c748d08ed440d355 instance=python-a
+2026-10-19 20:29:21,516 INFO handling-events-python: delivered eventId=evt_167584dfa04c4eb5b1bc3b654a bookingId=bkg_f4f1b922d4c748d08ed440d355 instance=python-a
+2026-10-19 20:29:21,557 INFO handling-events-python: delivered eventId=evt_01HZY3M1V8X4D7Q6B2N9C0T5E8 bookingId=bkg_6b20ad71f57141b594ba49916d instance=python-a
+2026-10-19 20:29:21,557 INFO handling-events-python: delivered eventId=evt_01HZY3M2W9Y5E8R7C3P0D1U6F9 bookingId=bkg_6b20ad71f57141b594ba49916d instance=python-a
+2026-10-19 20:29:21,557 INFO handling-events-python: delivered eventId=evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0 bookingId=bkg_6b20ad71f57141b594ba49916d instance=python-a
+2026-10-19 20:29:24,675 INFO handling-events-python: delivered eventId=evt_ef052849a8684372a2b38a7cb4 bookingId=bkg_6b20ad71f57141b594ba49916d instance=python-a

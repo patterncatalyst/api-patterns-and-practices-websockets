@@ -26,13 +26,17 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-# Newest UBI with the newest JDK, exact tag. quarkus.openshift.base-jvm-image
-# is the RUNTIME base layered under the fast-jar, so it is the `-runtime`
-# variant (matching ../quarkus/Containerfile's runtime stage), NOT the full
-# openjdk-25 builder image. Re-check with
-# `skopeo list-tags docker://registry.access.redhat.com/ubi10/openjdk-25-runtime`;
+# Newest UBI with the newest JDK, exact tag. With the OpenShift S2I build
+# strategy, quarkus.openshift.base-jvm-image is the S2I BUILDER image — the
+# build runs its `/usr/libexec/s2i/assemble` to lay the fast-jar in — so it
+# MUST be the full `ubi10/openjdk-25` image, which ships the s2i scripts AND
+# run-java.sh. The `-runtime` variant has no s2i scripts (the S2I step fails
+# with `assemble: No such file or directory` — confirmed live on CRC
+# 2026-10-19), so it works only for a Docker/Containerfile multistage FROM,
+# not here. Re-check with
+# `skopeo list-tags docker://registry.access.redhat.com/ubi10/openjdk-25`;
 # bump deliberately, never silently.
-BASE_JVM_IMAGE="${BASE_JVM_IMAGE:-registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16}"
+BASE_JVM_IMAGE="${BASE_JVM_IMAGE:-registry.access.redhat.com/ubi10/openjdk-25:1.24-16}"
 
 require_crc
 oc get project "$NS" >/dev/null 2>&1 || fail "project $NS missing: run ./openshift/install-infra.sh first"

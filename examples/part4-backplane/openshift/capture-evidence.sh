@@ -63,7 +63,10 @@ oc get pods -n "$NS" --field-selector=status.phase=Running \
     -o custom-columns='POD:.metadata.name,READY:.status.containerStatuses[*].ready,RESTARTS:.status.containerStatuses[*].restartCount,SCC:.metadata.annotations.openshift\.io/scc,UID:.spec.containers[0].securityContext.runAsUser' \
     > "$OUT/02-pods.txt"
 oc get namespace "$NS" -o jsonpath='namespace uid-range: {.metadata.annotations.openshift\.io/sa\.scc\.uid-range}{"\n"}' >> "$OUT/02-pods.txt"
-bad=$(awk 'NR>1 && ($2 ~ /false/ || $4 != "restricted-v2")' "$OUT/02-pods.txt" | grep -c . || true)
+# Only pod rows — skip the header (NR>1) AND the trailing "namespace
+# uid-range: ..." line appended below (its $1 is "namespace", which would
+# otherwise be miscounted as a non-restricted-v2 pod).
+bad=$(awk 'NR>1 && $1 != "namespace" && ($2 ~ /false/ || $4 != "restricted-v2")' "$OUT/02-pods.txt" | grep -c . || true)
 (( bad == 0 )) || fail "$bad pod(s) not Ready or not restricted-v2 (see $OUT/02-pods.txt)"
 ok "all pods Ready, restricted-v2, no anyuid exception"
 

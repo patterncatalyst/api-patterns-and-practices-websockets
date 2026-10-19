@@ -13,30 +13,22 @@
 # bumped.
 #
 # ---------------------------------------------------------------------------
-# PIN STATUS: DATED DRAFT — channel/CSV below were last directly confirmed
-# 2026-10-09 (the lgtm-crc skill's live CRC survey, references/versions.md),
-# NOT surveyed against this specific OpenShift Local instance or on the date
-# this appendix was scaffolded (2026-10-19).
-#
-# That channel (amq-streams-3.2.x) is KNOWN, from the SAME 2026-10-09 survey
-# (see the skill's infra/kafka.yaml comment and references/versions.md's
-# Operands table), to ship Kafka 4.1.x/4.2.x ONLY. ../infra/kafka.yaml in
-# THIS directory pins Kafka 4.3.1 (to match compose.yaml's apache/kafka:4.3.1
-# and the minikube/Strimzi-1.3.0 path at ../../k8s/strimzi/kafka.yaml) — that
-# version is NOT confirmed to be one this CSV's AMQ Streams build supports.
-#
-# TODO(pin survey D0): before the first live CRC run, re-survey on the actual
-# cluster and pick the newest stable channel/CSV that ships a Kafka 4.3.x
-# line (or step kafka.yaml's version back to match whatever this channel
-# supports — check with `oc get csv <csv> -n openshift-operators -o yaml`
-# once installed, or AMQ Streams' own release notes for the channel):
+# PIN STATUS: SURVEYED LIVE on CRC 2026-10-19. The channel/CSV below are the
+# current newest AMQ Streams (the `stable` and `amq-streams-3.2.x` channels
+# both point at amqstreams.v3.2.1-14):
 #
 #   oc get packagemanifest amq-streams -n openshift-marketplace \
 #     -o jsonpath='{range .status.channels[*]}{.name}  {.currentCSV}{"\n"}{end}'
 #
-# Update THIS file's channel/startingCSV, ../install-infra.sh's CSV variable,
-# AND ../infra/kafka.yaml's spec.kafka.version/metadataVersion together —
-# never let the three drift out of step with each other.
+# This CSV supports Kafka 4.1.0 and 4.2.0 ONLY (verified live from the
+# cluster-operator pod's `kafka-images` annotation). ../infra/kafka.yaml
+# therefore pins Kafka 4.2.0 — the newest this operator supports — a recorded
+# step-back from the compose/minikube paths' 4.3.1 (upstream Strimzi 1.3.0
+# leads the Red Hat operator); the wire behavior Ch16/Ch18 exercise is
+# identical on 4.2 and 4.3. When a newer AMQ Streams CSV ships, bump THIS
+# file's channel/startingCSV, ../install-infra.sh's CSV variable, AND
+# ../infra/kafka.yaml's spec.kafka.version/metadataVersion together — never
+# let the three drift out of step with each other.
 # ---------------------------------------------------------------------------
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription

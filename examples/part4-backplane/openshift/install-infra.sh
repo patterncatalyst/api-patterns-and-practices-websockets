@@ -13,10 +13,12 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-# Dated draft pin — see infra/amq-streams-subscription.yaml's header and its
-# TODO(pin survey D0) for the exact survey command and why this needs
-# re-checking (Kafka 4.3.1 is NOT confirmed to be a version this CSV's AMQ
-# Streams build supports) before a live run.
+# Surveyed live on CRC 2026-10-19: this is the current newest AMQ Streams CSV
+# (stable / amq-streams-3.2.x). It supports Kafka 4.1.0/4.2.0 only, so
+# infra/kafka.yaml pins 4.2.0 (recorded step-back from the 4.3.1 used on
+# compose/minikube) — see that file and infra/amq-streams-subscription.yaml.
+# Keep this var, the Subscription's startingCSV, and kafka.yaml's version in
+# step whenever a newer AMQ Streams ships.
 CSV="amqstreams.v3.2.1-14"
 
 require_crc

@@ -164,6 +164,7 @@ wait_for_oc_log_pattern() {
 # ---------------------------------------------------------------------------
 BG_PIDS=()
 CA_FILE=""
+COMBINED_CA=""
 cleanup() {
   local pid
   for pid in "${BG_PIDS[@]:-}"; do
@@ -174,6 +175,7 @@ cleanup() {
   done
   BG_PIDS=()
   [[ -n "$CA_FILE" ]] && rm -f "$CA_FILE"
+  [[ -n "$COMBINED_CA" ]] && rm -f "$COMBINED_CA"
 }
 trap cleanup EXIT
 
@@ -227,11 +229,23 @@ oc get configmap default-ingress-cert -n openshift-config-managed \
   || { echo "verify-crc.sh: FAIL — could not read the ingress CA (configmap/default-ingress-cert -n openshift-config-managed)" >&2; exit 1; }
 [[ -s "$CA_FILE" ]] || { echo "verify-crc.sh: FAIL — ingress CA bundle at $CA_FILE is empty" >&2; exit 1; }
 # websocat's TLS stack (native-tls/openssl) reads SSL_CERT_FILE as the
-# default trusted-CA bundle — this is how a `wss://` connection to the
-# Route's edge-TLS endpoint gets verified against the cluster's OWN CA
-# without ever passing -k/--insecure.
-export SSL_CERT_FILE="$CA_FILE"
-echo "verify-crc.sh: ingress CA extracted to $CA_FILE (exported as SSL_CERT_FILE for websocat)"
+# trusted-CA bundle — this is how a `wss://` connection to the Route's
+# edge-TLS endpoint gets verified against the cluster's OWN CA without ever
+# passing -k/--insecure. SSL_CERT_FILE is exported, so it is inherited by
+# EVERY child process in this script — including schema_validate's jsonschema
+# fetch. If it pointed at the ingress CA ALONE, that fetch (and anything else
+# reaching a public TLS endpoint) would fail with "UnknownIssuer". So the
+# exported bundle is the SYSTEM trust store PLUS the ingress CA appended —
+# the cluster edge cert verifies AND public endpoints still verify.
+SYS_CA=""
+for c in /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt \
+         /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem; do
+  [[ -r "$c" ]] && { SYS_CA="$c"; break; }
+done
+COMBINED_CA="$(mktemp -t part4-backplane-crc-combined-ca.XXXXXX.crt)"
+{ [[ -n "$SYS_CA" ]] && cat "$SYS_CA"; echo; cat "$CA_FILE"; } > "$COMBINED_CA"
+export SSL_CERT_FILE="$COMBINED_CA"
+echo "verify-crc.sh: ingress CA ($CA_FILE) appended to the system trust store ($SYS_CA) -> $COMBINED_CA (SSL_CERT_FILE)"
 
 step "Step 1c: resolve the Route hosts"
 QUARKUS_HOST="$(oc get route quarkus-a -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || true)"
@@ -240,6 +254,35 @@ PYTHON_HOST="$(oc get route python-a -n "$NAMESPACE" -o jsonpath='{.spec.host}' 
   || { echo "verify-crc.sh: FAIL — could not resolve Route hosts (routes/quarkus-a, routes/python-a). Run ./openshift/deploy.sh first." >&2; exit 1; }
 echo "verify-crc.sh: quarkus Route = https://$QUARKUS_HOST/"
 echo "verify-crc.sh: python  Route = https://$PYTHON_HOST/"
+
+# wait_route_serving <host> — block until the HAProxy router actually has a
+# ready backend for this Route. `oc rollout status` returns on pod-Ready,
+# which is BEFORE the router finishes swapping endpoints after a rollout, so a
+# WS connect in that window gets a router 503 (confirmed live on CRC
+# 2026-10-19: the Redis-toggle rollout 503'd the first connect). A plain GET
+# on the WS root returns 426/404/400/200 once a backend is reachable and 503
+# (or curl's 000) while it is not — so poll for any non-503, non-000 status.
+# CA-verified via the exported SSL_CERT_FILE combined bundle; never -k.
+wait_route_serving() {
+  local host="$1" waited=0 code
+  while (( waited < 90 )); do
+    # On a connect failure curl's -w still prints "000"; capture it cleanly
+    # (no `|| echo 000`, which would concatenate to "000000" and defeat the
+    # guard below) and default an empty result to 000.
+    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
+            --cacert "$SSL_CERT_FILE" "https://$host/" 2>/dev/null)" || true
+    [[ -z "$code" ]] && code=000
+    [[ "$code" != "503" && "$code" != "000" ]] && {
+      echo "verify-crc.sh: Route https://$host/ is serving (HTTP $code) after ${waited}s"; return 0; }
+    sleep 3; waited=$(( waited + 3 ))
+  done
+  echo "verify-crc.sh: FAIL — Route https://$host/ still 503/unreachable after ${waited}s (router has no ready backend)" >&2
+  return 1
+}
+
+step "Step 1d: wait for both Routes to serve a backend (router endpoint reconcile)"
+wait_route_serving "$QUARKUS_HOST" || exit 1
+wait_route_serving "$PYTHON_HOST" || exit 1
 
 # ===========================================================================
 # run_stack_checks — one stack's full proof set over whichever backplane
@@ -368,6 +411,11 @@ done
 for d in quarkus-a quarkus-b python-a python-b; do
   oc rollout status "deployment/$d" -n "$NAMESPACE" --timeout=180s
 done
+# The rollout restart cycles the Route-facing pods, so the router briefly 503s
+# until it re-adds the new endpoints — wait for it before the WS connect (same
+# "serving, not just Ready" gate as Step 1d).
+wait_route_serving "$QUARKUS_HOST" || exit 1
+wait_route_serving "$PYTHON_HOST" || exit 1
 
 run_stack_checks "quarkus" "redis" "$QUARKUS_HOST" \
   "http://localhost:8080" "http://quarkus-b:8080" \

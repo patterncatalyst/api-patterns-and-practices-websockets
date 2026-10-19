@@ -61,6 +61,15 @@ are necessary (they catch a broken chart or script before anyone wastes an
 hour on a live run) but they are not sufficient: they never deploy to or
 read from a real cluster.
 
+**Status: VERIFIED LIVE HEADLESS on CRC 2.64.0 / OpenShift 4.22.14,
+2026-10-19.** `verify-crc.sh` printed `PASS` — seed frame, 65s idle-hold, and
+Ch18 cross-pod fan-out, on both stacks over both the AMQ Streams Kafka
+backplane and the Helm-toggled Redis backplane, all through edge-TLS Routes
+over `wss://` verified against the cluster's ingress CA. Evidence (cluster
+state, in-cluster build provenance, restricted-v2 pod UIDs, Route edge-TLS
+handshakes, per-stack `delivered` logs, the full PASS log, secret-scrubbed)
+is under `evidence/2026-10-19/`.
+
 ## DRQ-031 headline: WebSocket upgrade over edge-TLS
 
 The same claim the minikube/nginx path makes, carried to OpenShift's router:
@@ -76,14 +85,33 @@ annotations on the minikube path.
 
 ## What broke / watch for
 
-- **websocat + the cluster's own CA, not a public one.** OpenShift Local's
-  router certificate is signed by the cluster's own ingress CA
-  (`configmap/default-ingress-cert -n openshift-config-managed`), which is
-  not in any public trust store. `verify-crc.sh` extracts that CA to a temp
-  file and exports it as `SSL_CERT_FILE` before calling websocat — NEVER
-  `-k`/`--insecure`. If websocat ever starts failing TLS verification after
-  an OpenShift Local upgrade, check that this ConfigMap's key/shape hasn't
-  changed, not that it's safe to add `-k`.
+- **websocat + the cluster's own CA — but a COMBINED bundle, not the ingress
+  CA alone.** OpenShift Local's router certificate is signed by the cluster's
+  own ingress CA (`configmap/default-ingress-cert -n openshift-config-managed`),
+  not in any public trust store. `verify-crc.sh` extracts it and exports
+  `SSL_CERT_FILE` for websocat — NEVER `-k`/`--insecure`. The live-run catch
+  (2026-10-19): `SSL_CERT_FILE` is inherited by EVERY child, including
+  `schema_validate`, which fetches `jsonschema` from pypi.org — so pointing
+  it at the ingress CA *alone* made that fetch fail with `UnknownIssuer`. The
+  fix is to export the SYSTEM trust store with the ingress CA APPENDED, so the
+  edge cert and public endpoints both verify. If websocat starts failing TLS
+  after an OpenShift Local upgrade, check this ConfigMap's shape — don't add
+  `-k`.
+- **The router 503s briefly after a rollout — wait for it to serve, not just
+  for pods to be Ready.** `oc rollout status` returns on pod-Ready, which is
+  BEFORE HAProxy finishes swapping the Route's backend endpoints; a `wss://`
+  connect in that window gets a router `503`. Live-run catch (2026-10-19): the
+  Redis-toggle rollout's first connect 503'd. `verify-crc.sh` now has a
+  `wait_route_serving` gate (poll the Route with a CA-verified curl until it
+  returns any non-503/non-000 status — a WS path answers 404/426 once a
+  backend is reachable) after both the initial resolve and the Redis rollout.
+- **Quarkus S2I base-jvm-image must be the FULL `openjdk-25`, not `-runtime`.**
+  The OpenShift S2I strategy runs the base image's `/usr/libexec/s2i/assemble`
+  to lay the fast-jar in; the `-runtime` UBI variant has no s2i scripts, so
+  the build dies with `assemble: No such file or directory` (live-run catch
+  2026-10-19). Use `ubi10/openjdk-25` (it ships both the s2i scripts and
+  run-java.sh); the `-runtime` variant is only for a Docker/Containerfile
+  multistage `FROM`.
 - **HAProxy's idle-timeout nuance.** HAProxy's own default tunnel timeout is
   already much longer than nginx's 60s default, so the 65s-idle-hold-then-
   late-frame check in `verify-crc.sh` is a WEAKER proof here than the same
@@ -91,18 +119,20 @@ annotations on the minikube path.
   `haproxy.router.openshift.io/timeout: "3600s"` annotation is present, not
   that the annotation moved the timeout close to an edge a real client would
   hit. Don't over-claim this one in the prose.
-- **AMQ Streams / Kafka version pin is a DATED DRAFT, not yet live-surveyed.**
-  `infra/amq-streams-subscription.yaml` pins `amq-streams-3.2.x` /
-  `amqstreams.v3.2.1-14` (sourced from a 2026-10-09 survey, not this
-  appendix's own authoring date) — that channel is only confirmed to ship
-  Kafka 4.1.x/4.2.x, while `infra/kafka.yaml` pins Kafka 4.3.1 (to match
-  `../compose.yaml` / `../k8s/strimzi/kafka.yaml`). Both files carry a
-  `TODO(pin survey D0)` with the exact survey command
-  (`oc get packagemanifest amq-streams -n openshift-marketplace -o jsonpath=...`).
-  **Run that survey before the first live `install-infra.sh`**, and update
-  the Subscription's `channel`/`startingCSV`, `install-infra.sh`'s `CSV`
-  variable, and `kafka.yaml`'s `spec.kafka.version`/`metadataVersion`
-  together — never let the three drift apart.
+- **AMQ Streams lags upstream Strimzi — Kafka is pinned 4.2.0 on CRC, a
+  recorded step-back from 4.3.1 on compose/minikube.** Surveyed live
+  2026-10-19: the current newest AMQ Streams is `amqstreams.v3.2.1-14`
+  (`stable` / `amq-streams-3.2.x`), and it supports Kafka **4.1.0 / 4.2.0
+  only** (read from the cluster-operator pod's `kafka-images` annotation). So
+  `infra/kafka.yaml` pins Kafka 4.2.0, not the 4.3.1 that `../compose.yaml` /
+  `../k8s/strimzi/kafka.yaml` run on upstream Strimzi 1.3.0 — the Ch16/Ch18
+  pub/sub replay + fan-out behavior is identical across 4.2 and 4.3, so the
+  proof is unaffected. Re-survey when a newer AMQ Streams ships
+  (`oc get packagemanifest amq-streams -n openshift-marketplace -o jsonpath=...`)
+  and move the Subscription's `channel`/`startingCSV`, `install-infra.sh`'s
+  `CSV` variable, and `kafka.yaml`'s `version`/`metadataVersion` together —
+  never let the three drift apart. Lift back to 4.3.x once the operator
+  supports it.
 - **The Python build is heavy for an in-cluster Docker-strategy build.**
   `../python/Containerfile` compiles `aiokafka`'s C extension from source
   (gcc/make/zlib-devel, discarded after the build stage) and runs
