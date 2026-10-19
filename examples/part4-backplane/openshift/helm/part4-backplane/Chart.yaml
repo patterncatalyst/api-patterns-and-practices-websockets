@@ -1,0 +1,11 @@
+apiVersion: v2
+name: part4-backplane
+description: >-
+  part4-backplane on OpenShift Local (CRC): the four app instances (images
+  from ../../build-images.sh), Redis, edge-TLS Routes for instance A of each
+  stack, and the BACKPLANE_MODE toggle (kafka/redis) driven by a single
+  values.backplane field. Kafka comes from the AMQ Streams operator
+  (../../install-infra.sh), not this chart.
+type: application
+version: 0.1.0
+appVersion: "v1"

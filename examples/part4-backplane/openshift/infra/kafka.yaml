@@ -1,0 +1,80 @@
+# Kafka for part4-backplane on OpenShift Local: one KRaft dual-role node
+# (controller+broker combined), a plain (non-TLS) internal listener on 9092,
+# and a small persistent-claim volume sized to fit comfortably inside a
+# 6 vCPU / 20 GiB CRC VM alongside the four app pods and Redis. Strimzi/AMQ
+# Streams serves ONLY the `kafka.strimzi.io/v1` CRD API (v1beta2/v1beta1/
+# v1alpha1 are gone).
+#
+# Bootstrap Service AMQ Streams creates (this CR's `metadata.name` +
+# `-kafka-bootstrap`): `part4-backplane-kafka-bootstrap:9092`, reachable
+# in-namespace by short DNS name — see
+# ../helm/part4-backplane/templates/config.yaml's KAFKA_BOOTSTRAP_SERVERS.
+#
+# Kafka version 4.3.1 / metadataVersion 4.3-IV0 is pinned to match
+# compose.yaml's `apache/kafka:4.3.1` and the minikube/Strimzi-1.3.0 path
+# (../../k8s/strimzi/kafka.yaml) — the same Kafka release across every
+# environment this example runs on.
+#
+# TODO(pin survey D0): the AMQ Streams channel/CSV drafted in
+# ../infra/amq-streams-subscription.yaml (amq-streams-3.2.x, surveyed
+# 2026-10-09) is only confirmed to ship Kafka 4.1.x/4.2.x. Before applying
+# this CR on a live cluster, confirm the installed CSV's supported Kafka
+# versions actually include 4.3.1 (its release notes, or
+# `oc get kafka part4-backplane -n part4-backplane -o yaml` will itself
+# report a clear "unsupported Kafka version" condition if not) — if it
+# doesn't, either pick a newer AMQ Streams channel (see the Subscription's
+# survey command) or step `kafka.version`/`metadataVersion` below back to a
+# version the pinned CSV actually supports. Keep the Subscription's CSV and
+# this file's Kafka version in step with each other.
+#
+# Replication factors are 1 (single broker, no redundancy) — this proves the
+# WIRE behavior (replay, fan-out), not durability.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  namespace: part4-backplane
+  labels:
+    strimzi.io/cluster: part4-backplane
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 1536Mi
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 2Gi
+        deleteClaim: true
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: part4-backplane
+  namespace: part4-backplane
+spec:
+  kafka:
+    version: 4.3.1
+    metadataVersion: 4.3-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
