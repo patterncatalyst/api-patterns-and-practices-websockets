@@ -1,0 +1,127 @@
+# Part 4 example — Python, UBI 10, uv-managed. Forked from
+# examples/part3-handling-events/python/Containerfile. The WS endpoint is
+# driven by the native `websockets` library with backpressure, error
+# handling, heartbeats, and JWT auth layered on top; FastAPI/uvicorn serves
+# HTTP/app lifecycle on a separate port. See README.md.
+#
+# Build (from the REPO ROOT, so this context can reach contracts/ + the
+# shared fixtures/ dir under examples/part3-handling-events/):
+#   docker build -f examples/part4-connection/python/Containerfile \
+#     -t ch12-connection-concerns-python .
+#
+# This build runs the SAME two build-time steps as local dev (see
+# scripts/generate-models.sh and ../../../scripts/extract-message-schema.py):
+# extract contracts/asyncapi.yaml's HandlingEvent schema to a self-contained
+# JSON Schema, then generate app/models_generated.py from it with
+# datamodel-code-generator. Both are build-time only — neither the extracted
+# schema nor the generated model is committed (see ../../../.gitignore and
+# ./.gitignore).
+#
+# UBI 10 publishes only the -minimal Python image (no ubi10/python-314).
+# Pin: registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+# Re-check with:
+#   skopeo list-tags docker://registry.access.redhat.com/ubi10/python-314-minimal
+# and confirm with `skopeo inspect`. Bump deliberately.
+#
+# requires-python is 3.15, but as of this survey (2026-10-18) Red Hat has
+# not published a ubi10/python-315-minimal image yet (confirmed via
+# `skopeo list-tags docker://registry.access.redhat.com/ubi10/python-315-minimal`
+# — repo not found — and the Red Hat Catalog API returning zero results).
+# The base image below still only ships a 3.14 system interpreter, which
+# doesn't satisfy pyproject.toml's floor, so `uv sync` would otherwise fall
+# back to silently downloading an unpinned CPython build. `uv python install
+# 3.15.0` below pins that fallback to an exact, intentional version instead
+# of leaving it implicit, and `UV_PYTHON_INSTALL_DIR` puts it under /app so
+# the runtime stage's COPY picks it up alongside the venv. Re-evaluate once
+# Red Hat ships a ubi10/python-315-minimal image and switch back to the
+# UBI-provided interpreter for both stages.
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506 AS build
+
+# The image runs as UID 1001; the build stage needs root to write /app.
+# Build at the same path the runtime uses: a venv is not relocatable, its
+# console scripts carry the absolute interpreter path.
+USER 0
+WORKDIR /app
+
+ENV UV_PYTHON_INSTALL_DIR=/app/.uv-python
+
+RUN pip install --no-cache-dir uv==0.13.1 && \
+    uv python install 3.15.0
+
+COPY examples/part4-connection/python/pyproject.toml ./
+COPY examples/part4-connection/python/uv.lock ./
+COPY examples/part4-connection/python/app ./app
+
+# `--group dev` pulls in datamodel-code-generator + jsonschema (needed below
+# to generate the model and, for CI, to run tests — not needed at runtime).
+RUN uv sync --locked --group dev
+
+# Stage the one contract file and the shared fixture this service needs,
+# extract HandlingEvent to a self-contained JSON Schema, then generate the
+# Pydantic v2 model from it. Mirrors scripts/generate-models.sh exactly
+# (datamodel-code-generator's AsyncAPI input is unreliable; the extracted
+# JSON Schema is the reliable generator input — see contracts/README.md).
+COPY contracts/asyncapi.yaml ./contracts/asyncapi.yaml
+COPY scripts/extract-message-schema.py ./scripts/extract-message-schema.py
+RUN .venv/bin/python3 -I scripts/extract-message-schema.py build/handling-event.schema.json && \
+    .venv/bin/datamodel-codegen \
+      --input build/handling-event.schema.json \
+      --input-file-type jsonschema \
+      --output app/models_generated.py \
+      --output-model-type pydantic_v2.BaseModel \
+      --target-python-version 3.15 \
+      --use-schema-description \
+      --disable-timestamp \
+      --formatters black isort
+
+# The shared fixture, reused from the Part 3 example (Part 4 is about
+# connection concerns, not new message content — see app/feed.py).
+COPY examples/part3-handling-events/fixtures/handling-events.json \
+     ./fixtures/handling-events.json
+
+# Rebuild the venv without the dev group (datamodel-code-generator and
+# jsonschema are not needed to run the server).
+RUN rm -rf .venv && uv sync --locked --no-dev
+
+# ── Stage 2: Runtime ────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+
+WORKDIR /app
+
+# .uv-python is the pinned, uv-managed CPython 3.15.0 the build stage
+# installed (see the note above the build stage's FROM) — the venv's
+# interpreter symlinks resolve into it, so it has to travel with .venv.
+COPY --from=build --chown=1001:0 /app/.uv-python /app/.uv-python
+COPY --from=build --chown=1001:0 /app/.venv /app/.venv
+COPY --from=build --chown=1001:0 /app/app /app/app
+COPY --from=build --chown=1001:0 /app/fixtures /app/fixtures
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app" \
+    PYTHONUNBUFFERED=1 \
+    WS_HOST=0.0.0.0 \
+    WS_PORT=8081 \
+    HTTP_HOST=0.0.0.0 \
+    HTTP_PORT=8082 \
+    HANDLING_EVENTS_FIXTURE=/app/fixtures/handling-events.json \
+    WS_PING_INTERVAL_S=20 \
+    WS_PING_TIMEOUT_S=20 \
+    OUTBOUND_QUEUE_MAXSIZE=32 \
+    OUTBOUND_SEND_TIMEOUT_S=5.0 \
+    OUTBOUND_BACKPRESSURE_POLICY=close
+
+EXPOSE 8081 8082
+USER 1001
+
+# WS_JWT_SECRET is deliberately NOT set here: app/auth.py already falls back
+# to the same "dev-secret-change-me" dev default when the env var is unset,
+# so baking it into the image as an ENV would add nothing except tripping
+# container-linter secret-detection heuristics on the variable NAME. Set it
+# at `docker run -e WS_JWT_SECRET=...` (or via your orchestrator's secret
+# injection) for anything beyond local dev.
+
+# app.main starts both listeners (the native-websockets WS feed and the
+# FastAPI/uvicorn HTTP side) on the same event loop — see app/main.py.
+ENTRYPOINT ["python3", "-m", "app.main"]

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 460" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="1040" height="190" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">Stateless reconnect is FINE when...</text>
+<rect x="20" y="230" width="1040" height="210" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="250" font-size="12" font-weight="700" fill="#1d1d1d">Stateless reconnect is NOT ENOUGH when...</text>
+<rect x="50" y="65" width="290" height="75" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="195.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">A full resync is cheap</text>
+<text x="195.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">GET the current state on reconnect;</text>
+<text x="195.0" y="125.0" font-size="11.5" fill="#555555" text-anchor="middle">the feed is a notification, not the record of truth</text>
+<rect x="370" y="65" width="280" height="75" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="510.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Only the latest value matters</text>
+<text x="510.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">a position indicator, a live price —</text>
+<text x="510.0" y="125.0" font-size="11.5" fill="#555555" text-anchor="middle">an old value is stale, not missing</text>
+<rect x="680" y="65" width="340" height="75" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="850.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Gaps are self-correcting</text>
+<text x="850.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">the next push supersedes</text>
+<text x="850.0" y="125.0" font-size="11.5" fill="#555555" text-anchor="middle">whatever the gap cost</text>
+<rect x="50" y="275" width="290" height="85" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="195.0" y="308.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Every event is a discrete fact</text>
+<text x="195.0" y="325.0" font-size="11.5" fill="#555555" text-anchor="middle">billing, customs, an audit trail —</text>
+<text x="195.0" y="340.0" font-size="11.5" fill="#555555" text-anchor="middle">a missed HandlingEvent is a missed charge</text>
+<rect x="370" y="275" width="280" height="85" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="510.0" y="308.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">No cheap full resync exists</text>
+<text x="510.0" y="325.0" font-size="11.5" fill="#555555" text-anchor="middle">the feed IS the record;</text>
+<text x="510.0" y="340.0" font-size="11.5" fill="#555555" text-anchor="middle">no REST endpoint to re-GET the gap from</text>
+<rect x="680" y="275" width="340" height="85" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="850.0" y="308.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">At-least-once delivery is required</text>
+<text x="850.0" y="325.0" font-size="11.5" fill="#555555" text-anchor="middle">a consumer needs every eventId</text>
+<text x="850.0" y="340.0" font-size="11.5" fill="#555555" text-anchor="middle">accounted for, not only the newest one</text>
+<text x="540" y="190" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">=&gt; default/stateless mode (this chapter) is the right tool</text>
+<text x="540" y="425" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">=&gt; needs a durable, replayable log a client can resume from an offset — Chapter 16&#x27;s Kafka-backed backplane</text>
+</svg>

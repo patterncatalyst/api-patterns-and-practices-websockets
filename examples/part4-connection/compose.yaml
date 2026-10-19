@@ -1,0 +1,101 @@
+# Part 4 "Connection Concerns" example — compose topology for the SAME
+# `handlingEvents` channel as part3 (contracts/asyncapi.yaml
+# `operations.receiveHandlingEvent`), now hardened with the four connection
+# concerns this part covers: Ch17 JWT auth, Ch13 error taxonomy (in-band
+# envelope + 4400 close), Ch12 outbound backpressure (4290 close), and Ch14
+# heartbeats/idle-timeout. See ./README.md for the close-code table and
+# each stack's own README for the per-concern implementation notes.
+#
+# Default `docker compose up` brings up: quarkus, python. Both independently
+# implement the SAME channel + SAME four connection concerns against the
+# SAME contract, sharing the SAME JWT secret below (WS_JWT_SECRET) so a
+# token minted once against that secret is accepted by either stack —
+# verify.sh exploits exactly that to assert the two stacks behave
+# identically with ONE shared-secret token-minting path instead of two.
+#
+# WS_JWT_SECRET below is a dedicated test-only value (NOT the
+# "dev-secret-change-me" baked into each image's own default) set
+# explicitly and identically on both services, so it's unambiguous that the
+# sharing is deliberate, not a coincidence of matching defaults. >= 32
+# bytes to avoid PyJWT's InsecureKeyLengthWarning (RFC 7518 §3.2) when
+# verify.sh mints tokens with it.
+#
+# Ports: quarkus host 8080 -> container 8080 (WS + HTTP upgrade on the same
+# port); python host 8081 -> container 8081 (WS) and host 8082 -> container
+# 8082 (HTTP: /healthz, / — see python/app/http_app.py). Same port map as
+# part3 (these two examples are never run against each other, and each
+# uses its own compose project name for isolation).
+#
+# The Grafana LGTM observability stack is opt-in (`--profile observability`)
+# so CI and a first boot stay fast — same convention as part3. Both apps'
+# OTel wiring is unchanged from part3 (SDK disabled by default on Quarkus;
+# not yet wrapped around the Python entrypoint).
+#
+# Usage:
+#   docker compose up --build                          # app stack only
+#   docker compose --profile observability up --build  # + Grafana LGTM
+
+services:
+  quarkus:
+    build:
+      context: ../..
+      dockerfile: examples/part4-connection/quarkus/Containerfile
+    container_name: part4-connection-quarkus
+    ports:
+      - "8080:8080"
+    environment:
+      - WS_JWT_SECRET=part4-verify-harness-shared-secret-value
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    healthcheck:
+      # No dedicated health endpoint on this chapter's example (just the WS
+      # upgrade path) — curl without -f treats any HTTP response (including
+      # the 404/426 a plain GET gets back) as "the server is up and
+      # answering", which is all a healthcheck needs here.
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  python:
+    build:
+      context: ../..
+      dockerfile: examples/part4-connection/python/Containerfile
+    container_name: part4-connection-python
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+    environment:
+      - WS_JWT_SECRET=part4-verify-harness-shared-secret-value
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8082/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  # ─── Observability (opt-in) ────────────────────────────────────────────
+  # `docker compose --profile observability up` to include. Off by default
+  # so CI's examples job (and a first boot) stay fast.
+  lgtm:
+    image: docker.io/grafana/otel-lgtm:0.36.0
+    container_name: part4-connection-lgtm
+    profiles: ["observability"]
+    ports:
+      - "3000:3000" # Grafana UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "9090:9090" # Prometheus / Mimir query
+      - "3100:3100" # Loki
+      - "3200:3200" # Tempo
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s

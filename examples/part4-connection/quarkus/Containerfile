@@ -1,0 +1,68 @@
+# Part 4 "Connection Concerns" example — Quarkus, UBI 10, JVM mode
+# (fast-jar), no native. Forked from
+# examples/part3-handling-events/quarkus/Containerfile.
+#
+# Build (from the REPO ROOT, so this context can reach the shared fixture):
+#   docker build -f examples/part4-connection/quarkus/Containerfile \
+#     -t part4-connection-quarkus .
+#
+# This module does NOT duplicate the fixture: it reuses
+# examples/part3-handling-events/fixtures/handling-events.json (the SAME
+# fixture the Python/FastAPI sibling app and part3 both replay) via
+# pom.xml's copy-handling-events-fixture execution, which resolves
+# `${project.basedir}/../../part3-handling-events/fixtures` relative to this
+# module's basedir. To make that same relative Maven resource path resolve
+# identically inside a container build (where there is no real repo root
+# above /build), this stage recreates the two directories' real sibling
+# relationship under /build: pom.xml/src land at
+# /build/examples/part4-connection/quarkus (this module's basedir) and the
+# fixture lands at /build/examples/part3-handling-events/fixtures — the
+# identical two-levels-up path a local, non-container build already uses.
+#
+# contracts/asyncapi.yaml is NOT copied in: it is only needed by
+# scripts/extract-message-schema.py and the conformance test on the
+# host/CI side, never by the running service.
+#
+# Base image pins (re-check with `skopeo list-tags
+# docker://registry.access.redhat.com/ubi10/openjdk-25`, confirm with
+# `skopeo inspect`; bump deliberately) — matches part3's pin:
+#   registry.access.redhat.com/ubi10/openjdk-25:1.24-16
+#   registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25:1.24-16 AS build
+
+WORKDIR /build/examples/part4-connection/quarkus
+COPY examples/part4-connection/quarkus/pom.xml .
+COPY examples/part4-connection/quarkus/src ./src
+
+COPY examples/part3-handling-events/fixtures /build/examples/part3-handling-events/fixtures
+
+# The extra -Daether.* / -Dmaven.wagon.* flags give the resolver more room
+# under CI's shared Maven local-repo lock and more retries against a flaky
+# mirror — see part3's Containerfile / the gRPC sibling site's Ch8
+# Containerfile for the same note.
+RUN mvn -B package -DskipTests -Dmaven.javadoc.skip=true \
+      -Daether.syncContext.named.time=300 -Daether.syncContext.named.time.unit=SECONDS \
+      -Dmaven.wagon.http.retryHandler.count=3 -Daether.connector.http.retryHandler.count=3
+
+# ── Stage 2: Runtime (fast-jar) ─────────────────────────────
+FROM registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16
+
+ENV LANGUAGE='en_US:en'
+
+COPY --from=build --chown=185 /build/examples/part4-connection/quarkus/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build --chown=185 /build/examples/part4-connection/quarkus/target/quarkus-app/*.jar /deployments/
+COPY --from=build --chown=185 /build/examples/part4-connection/quarkus/target/quarkus-app/app/ /deployments/app/
+COPY --from=build --chown=185 /build/examples/part4-connection/quarkus/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+USER 185
+
+ENV JAVA_OPTS_APPEND="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+# Dev-only default (see application.properties) — override in any
+# shared/deployed environment.
+ENV WS_JWT_SECRET="dev-secret-change-me"
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]
