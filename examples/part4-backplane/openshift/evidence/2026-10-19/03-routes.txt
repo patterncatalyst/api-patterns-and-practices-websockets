@@ -1,0 +1,2 @@
+GET https://quarkus-a-part4-backplane.apps-crc.testing/ -> HTTP 404 (edge-TLS handshake verified against the ingress CA; a non-200 here is expected on a WS-only path)
+GET https://python-a-part4-backplane.apps-crc.testing/ -> HTTP 426 (edge-TLS handshake verified against the ingress CA; a non-200 here is expected on a WS-only path)

@@ -1,0 +1,25 @@
+# Shared, non-secret config for all four app instances (PROTOCOL.md
+# "Backplane modes" / "Ports / instances"). INSTANCE_ID is NOT here — it is
+# distinct per Deployment (see quarkus-a/b, python-a/b) and set as a
+# per-container env var so this ConfigMap stays identical across instances.
+#
+# BACKPLANE_MODE=kafka is the primary mode for this deploy (Ch16 replay +
+# Ch18 fan-out over Kafka) — redis is a toggle, flipped by the
+# components/redis-mode kustomize component (see overlays/minikube-redis),
+# not a second copy of this file.
+#
+# KAFKA_BOOTSTRAP_SERVERS points at the Strimzi-managed Kafka's bootstrap
+# Service — Strimzi names it `<Kafka CR name>-kafka-bootstrap`
+# (strimzi/kafka.yaml's Kafka CR is named `my-cluster`), reachable in-cluster
+# on the plain (non-TLS) internal listener port 9092 by short DNS name
+# within this namespace.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backplane-config
+  namespace: part4-backplane
+data:
+  BACKPLANE_MODE: "kafka"
+  KAFKA_BOOTSTRAP_SERVERS: "my-cluster-kafka-bootstrap:9092"
+  KAFKA_TOPIC: "handling-events"
+  REDIS_URL: "redis://redis:6379/0"

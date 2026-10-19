@@ -1,0 +1,56 @@
+# ingress-nginx Ingress — the only externally-reachable path into the
+# cluster for this example. Routes to instance A ONLY for both stacks
+# (quarkus-a:8080, python-a's ws port 8081); instance B is reached in-cluster
+# only (see quarkus-b.yaml / python-b.yaml) — DRQ-031's "app+backplane core"
+# split between a public edge and an internal-only second instance.
+#
+# WS-specific annotations (DRQ-031):
+#   - proxy-read-timeout / proxy-send-timeout raised from nginx's 60s default
+#     to 3600s — ingress-nginx's proxy-read-timeout, not its own idle timer,
+#     is what would otherwise kill a long-lived upgraded WebSocket
+#     connection that goes quiet for 60s. verify-minikube.sh's idle-hold
+#     step (hold past 60s, assert a late frame still arrives) is the live
+#     proof that this annotation does what it says.
+#   - affinity: cookie — sticky session so a reconnecting client (Ch15/Ch16
+#     resume) keeps landing on the same pod; moot with one replica per
+#     instance here, but documents the production-shape intent (DRQ-031).
+#
+# No special "websocket" annotation exists for ingress-nginx: it detects the
+# `Connection: Upgrade` / `Upgrade: websocket` request headers and proxies
+# the upgrade through automatically — only the timeouts need raising.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: part4-backplane
+  namespace: part4-backplane
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "part4-backplane-affinity"
+spec:
+  ingressClassName: nginx
+  rules:
+    # overlays/minikube patches these two `host` values to the project's
+    # actual hostnames (see that kustomization.yaml) — kept generic here so
+    # base/ stays deployable on any ingress-nginx cluster, not just minikube.
+    - host: quarkus.part4-backplane.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: quarkus-a
+                port:
+                  number: 8080
+    - host: python.part4-backplane.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: python-a
+                port:
+                  number: 8081

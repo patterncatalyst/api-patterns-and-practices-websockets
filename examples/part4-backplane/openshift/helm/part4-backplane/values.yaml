@@ -1,0 +1,121 @@
+# values.yaml — part4-backplane on OpenShift Local.
+#
+# Keeps the same env contract (ConfigMap keys, Service names) as the
+# minikube/compose runtimes (../../k8s/base/configmap.yaml,
+# ../../compose.yaml) so the apps' own %prod-equivalent config is unchanged —
+# only KAFKA_BOOTSTRAP_SERVERS differs (AMQ Streams names the bootstrap
+# Service `<cluster>-kafka-bootstrap`, same convention, different cluster
+# name: `part4-backplane` here vs `my-cluster` on minikube).
+
+# Images come from the internal registry: ../../build-images.sh pushes
+# ImageStream tags <image>:<imageTag> into the release namespace (binary S2I
+# for Quarkus, a Docker-strategy BuildConfig for Python — see that script).
+registry: image-registry.openshift-image-registry.svc:5000
+imageTag: v1
+
+# ubi10/openjdk-25's run-java.sh sets -XX:MaxRAMPercentage from
+# JAVA_MAX_MEM_RATIO (default 80; the image ignores JAVA_MAX_RAM_RATIO). 50
+# leaves room for metaspace/threads/buffers inside the Deployment's resource
+# limits.
+javaMaxMemRatio: "50"
+
+# PROTOCOL.md "Backplane modes" (Ch18, DRQ-005): kafka (primary, durable +
+# replay) | redis (live fan-out only, no replay). Drives BACKPLANE_MODE on
+# ALL FOUR app instances via the shared ConfigMap (templates/config.yaml) —
+# toggle with `--set backplane=redis` (../../verify-crc.sh does exactly
+# this, then `oc rollout restart` on all four Deployments, since envFrom
+# does not hot-reload into already-running pods).
+backplane: kafka
+
+kafka:
+  # Kafka CR name (../../infra/kafka.yaml); bootstrap
+  # <cluster>-kafka-bootstrap:9092.
+  cluster: part4-backplane
+
+redis:
+  enabled: true
+  # Matches compose.yaml / ../../k8s/strimzi/redis.yaml exactly, so the
+  # redis leg of Ch18 runs the identical Redis release in every environment.
+  image: redis:8.10.2-alpine
+
+# One Deployment + Service per entry (templates/services.yaml). Keys are the
+# instance names (also the Deployment/Service names); must match the
+# container-name convention verify-crc.sh/capture-evidence.sh `oc exec`
+# into (the part before the first "-": quarkus-a/b -> container "quarkus",
+# python-a/b -> container "python").
+#
+#   image:           the ImageStream name build-images.sh pushes
+#                     (part4-backplane-quarkus | part4-backplane-python)
+#   ports:            containerPort(s) this instance listens on
+#   instanceId:       INSTANCE_ID env var (PROTOCOL.md "Instance identity")
+#   probe:            {type: tcpSocket, port: <name>} or
+#                     {type: httpGet, port: <name>, path: <path>}
+#   route:            true only for the externally-reachable instance of
+#                      each stack (quarkus-a, python-a — PROTOCOL.md's
+#                      "A is the externally reachable one" split)
+#   routeTargetPort:  which named port the Route forwards to (only read
+#                      when route: true)
+services:
+  quarkus-a:
+    image: part4-backplane-quarkus
+    instanceId: quarkus-a
+    route: true
+    routeTargetPort: http
+    ports:
+      - name: http
+        containerPort: 8080
+    probe:
+      type: tcpSocket
+      port: http
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+
+  quarkus-b:
+    image: part4-backplane-quarkus
+    instanceId: quarkus-b
+    route: false
+    ports:
+      - name: http
+        containerPort: 8080
+    probe:
+      type: tcpSocket
+      port: http
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {cpu: 500m, memory: 512Mi}
+
+  python-a:
+    image: part4-backplane-python
+    instanceId: python-a
+    route: true
+    routeTargetPort: ws
+    ports:
+      - name: ws
+        containerPort: 8081
+      - name: http
+        containerPort: 8082
+    probe:
+      type: httpGet
+      port: http
+      path: /healthz
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 384Mi}
+
+  python-b:
+    image: part4-backplane-python
+    instanceId: python-b
+    route: false
+    ports:
+      - name: ws
+        containerPort: 8081
+      - name: http
+        containerPort: 8082
+    probe:
+      type: httpGet
+      port: http
+      path: /healthz
+    resources:
+      requests: {cpu: 100m, memory: 128Mi}
+      limits: {cpu: 500m, memory: 384Mi}

@@ -1,0 +1,77 @@
+# Kafka for part4-backplane on OpenShift Local: one KRaft dual-role node
+# (controller+broker combined), a plain (non-TLS) internal listener on 9092,
+# and a small persistent-claim volume sized to fit comfortably inside a
+# 6 vCPU / 20 GiB CRC VM alongside the four app pods and Redis. Strimzi/AMQ
+# Streams serves ONLY the `kafka.strimzi.io/v1` CRD API (v1beta2/v1beta1/
+# v1alpha1 are gone).
+#
+# Bootstrap Service AMQ Streams creates (this CR's `metadata.name` +
+# `-kafka-bootstrap`): `part4-backplane-kafka-bootstrap:9092`, reachable
+# in-namespace by short DNS name — see
+# ../helm/part4-backplane/templates/config.yaml's KAFKA_BOOTSTRAP_SERVERS.
+#
+# Kafka version 4.2.0 / metadataVersion 4.2-IV0. RECORDED STEP-BACK vs the
+# compose/minikube paths (which pin Kafka 4.3.1 via apache/kafka:4.3.1 and
+# upstream Strimzi 1.3.0): the Red Hat AMQ Streams operator lags upstream
+# Strimzi, and the current newest AMQ Streams CSV (amqstreams.v3.2.1-14, the
+# `stable`/`amq-streams-3.2.x` channel) supports ONLY Kafka 4.1.0 and 4.2.0
+# — verified live on CRC 2026-10-19 from the cluster-operator pod's
+# `kafka-images` annotation (STRIMZI_KAFKA_IMAGES). 4.2.0 is the newest it
+# supports, so it is pinned here. This is an operator-version floor, not a
+# behavior difference: the pub/sub replay + cross-pod fan-out this example
+# exercises (Ch16/Ch18) is identical on 4.2 and 4.3. Re-survey when a newer
+# AMQ Streams CSV ships (see ../infra/amq-streams-subscription.yaml); move
+# that CSV and this version together, and lift back to 4.3.x once supported.
+# Strimzi/AMQ Streams serves ONLY the `kafka.strimzi.io/v1` CRD API.
+#
+# Replication factors are 1 (single broker, no redundancy) — this proves the
+# WIRE behavior (replay, fan-out), not durability.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  namespace: part4-backplane
+  labels:
+    strimzi.io/cluster: part4-backplane
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      memory: 1536Mi
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 2Gi
+        deleteClaim: true
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: part4-backplane
+  namespace: part4-backplane
+spec:
+  kafka:
+    version: 4.2.0
+    metadataVersion: 4.2-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}

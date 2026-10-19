@@ -1,0 +1,110 @@
+
+=== Step 0: tool checks + crc-admin context + regenerate the contract-derived JSON Schema ===
+Wrote /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-crc.sh: crc-admin context OK (https://api.crc.testing:6443); schema regenerated at /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+
+=== Step 1: preflight — the four Deployments must already be rolled out (run ./openshift/deploy.sh first) ===
+verify-crc.sh: all four app Deployments are already rolled out
+
+=== Step 1b: extract the cluster's ingress CA for CA-verified wss:// (NEVER -k/--insecure) ===
+verify-crc.sh: ingress CA (/tmp/part4-backplane-crc-ingress-ca.L1kiWh.crt) appended to the system trust store (/etc/ssl/certs/ca-certificates.crt) -> /tmp/part4-backplane-crc-combined-ca.FTE7HW.crt (SSL_CERT_FILE)
+
+=== Step 1c: resolve the Route hosts ===
+verify-crc.sh: quarkus Route = https://quarkus-a-part4-backplane.apps-crc.testing/
+verify-crc.sh: python  Route = https://python-a-part4-backplane.apps-crc.testing/
+
+=== Step 1d: wait for both Routes to serve a backend (router endpoint reconcile) ===
+verify-crc.sh: Route https://quarkus-a-part4-backplane.apps-crc.testing/ is serving (HTTP 404) after 0s
+verify-crc.sh: Route https://python-a-part4-backplane.apps-crc.testing/ is serving (HTTP 426) after 0s
+
+=== Step 2: live proof over the KAFKA backplane (primary mode, as deployed) — both stacks ===
+
+--- quarkus/kafka: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
+lib.sh: ok — quarkus/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-crc.sh: ok — quarkus/kafka: seed frame received through the edge-TLS Route and is schema-valid
+
+--- quarkus/kafka: idle-hold, then a late frame must still arrive ---
+lib.sh: ok — quarkus/kafka: Route quarkus-a carries haproxy.router.openshift.io/timeout: 3600s: '3600s'
+verify-crc.sh: quarkus/kafka: connected, received the 3 seed frames; holding idle for 65s ...
+verify-crc.sh: inject eventId=evt_5f145ef4d54c4dd79368618e27 bookingId=bkg_90c618e7a9ac47e0a97c1f3c43 via exec(quarkus-a)->http://localhost:8080 -> HTTP 202
+lib.sh: ok — inject evt_5f145ef4d54c4dd79368618e27 via exec(quarkus-a)->http://localhost:8080 accepted: '202'
+verify-crc.sh: ok — quarkus/kafka: late frame arrived after a 65s idle hold over the edge-TLS Route (haproxy.router.openshift.io/timeout: 3600s present)
+
+--- quarkus/kafka: Ch18 cross-pod fan-out — instance A (Route) <- instance B (oc exec into B's Service) ---
+verify-crc.sh: inject eventId=evt_1dc346ecd0ed4fe48c26c5601d bookingId=bkg_41528a71380b48c89f27ddaebd via exec(quarkus-a)->http://quarkus-b:8080 -> HTTP 202
+lib.sh: ok — inject evt_1dc346ecd0ed4fe48c26c5601d via exec(quarkus-a)->http://quarkus-b:8080 accepted: '202'
+verify-crc.sh: ok — quarkus/kafka: instance A's CLIENT (through the Route) received instance B's injected event evt_1dc346ecd0ed4fe48c26c5601d
+verify-crc.sh: ok — quarkus/kafka: instance A's own POD LOG shows it delivering
+
+--- python/kafka: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
+lib.sh: ok — python/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-crc.sh: ok — python/kafka: seed frame received through the edge-TLS Route and is schema-valid
+
+--- python/kafka: idle-hold, then a late frame must still arrive ---
+lib.sh: ok — python/kafka: Route python-a carries haproxy.router.openshift.io/timeout: 3600s: '3600s'
+verify-crc.sh: python/kafka: connected, received the 3 seed frames; holding idle for 65s ...
+verify-crc.sh: inject eventId=evt_a39c514d58594e9583aa117342 bookingId=bkg_f4e35702512e46678ac628484d via exec(python-a)->http://localhost:8082 -> HTTP 202
+lib.sh: ok — inject evt_a39c514d58594e9583aa117342 via exec(python-a)->http://localhost:8082 accepted: '202'
+verify-crc.sh: ok — python/kafka: late frame arrived after a 65s idle hold over the edge-TLS Route (haproxy.router.openshift.io/timeout: 3600s present)
+
+--- python/kafka: Ch18 cross-pod fan-out — instance A (Route) <- instance B (oc exec into B's Service) ---
+verify-crc.sh: inject eventId=evt_d18ba768c80640939c1a52842a bookingId=bkg_e82f895c15fb425c89a4265874 via exec(python-a)->http://python-b:8082 -> HTTP 202
+lib.sh: ok — inject evt_d18ba768c80640939c1a52842a via exec(python-a)->http://python-b:8082 accepted: '202'
+verify-crc.sh: ok — python/kafka: instance A's CLIENT (through the Route) received instance B's injected event evt_d18ba768c80640939c1a52842a
+verify-crc.sh: ok — python/kafka: instance A's own POD LOG shows it delivering
+
+=== Step 2 complete: seed + idle-hold + Ch18 Kafka fan-out PROVEN LIVE on both stacks ===
+
+=== Step 3: switch to the REDIS backplane (helm upgrade --set backplane=redis) and re-prove Ch18 fan-out ===
+Waiting for deployment "quarkus-a" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "quarkus-a" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "quarkus-a" rollout to finish: 1 old replicas are pending termination...
+deployment "quarkus-a" successfully rolled out
+deployment "quarkus-b" successfully rolled out
+deployment "python-a" successfully rolled out
+deployment "python-b" successfully rolled out
+verify-crc.sh: Route https://quarkus-a-part4-backplane.apps-crc.testing/ is serving (HTTP 404) after 0s
+verify-crc.sh: Route https://python-a-part4-backplane.apps-crc.testing/ is serving (HTTP 426) after 0s
+
+--- quarkus/redis: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
+lib.sh: ok — quarkus/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-crc.sh: ok — quarkus/redis: seed frame received through the edge-TLS Route and is schema-valid
+
+--- quarkus/redis: idle-hold, then a late frame must still arrive ---
+lib.sh: ok — quarkus/redis: Route quarkus-a carries haproxy.router.openshift.io/timeout: 3600s: '3600s'
+verify-crc.sh: quarkus/redis: connected, received the 3 seed frames; holding idle for 65s ...
+verify-crc.sh: inject eventId=evt_9da197bc27e24df7b20b5d38a0 bookingId=bkg_8deca057a83c4f439171ab8f31 via exec(quarkus-a)->http://localhost:8080 -> HTTP 202
+lib.sh: ok — inject evt_9da197bc27e24df7b20b5d38a0 via exec(quarkus-a)->http://localhost:8080 accepted: '202'
+verify-crc.sh: ok — quarkus/redis: late frame arrived after a 65s idle hold over the edge-TLS Route (haproxy.router.openshift.io/timeout: 3600s present)
+
+--- quarkus/redis: Ch18 cross-pod fan-out — instance A (Route) <- instance B (oc exec into B's Service) ---
+verify-crc.sh: inject eventId=evt_f117514c222941dbaa91eccf42 bookingId=bkg_1aa9ad91853b4e119a8c64ed8f via exec(quarkus-a)->http://quarkus-b:8080 -> HTTP 202
+lib.sh: ok — inject evt_f117514c222941dbaa91eccf42 via exec(quarkus-a)->http://quarkus-b:8080 accepted: '202'
+verify-crc.sh: ok — quarkus/redis: instance A's CLIENT (through the Route) received instance B's injected event evt_f117514c222941dbaa91eccf42
+verify-crc.sh: ok — quarkus/redis: instance A's own POD LOG shows it delivering
+
+--- python/redis: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
+lib.sh: ok — python/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
+lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+verify-crc.sh: ok — python/redis: seed frame received through the edge-TLS Route and is schema-valid
+
+--- python/redis: idle-hold, then a late frame must still arrive ---
+lib.sh: ok — python/redis: Route python-a carries haproxy.router.openshift.io/timeout: 3600s: '3600s'
+verify-crc.sh: python/redis: connected, received the 3 seed frames; holding idle for 65s ...
+verify-crc.sh: inject eventId=evt_167584dfa04c4eb5b1bc3b654a bookingId=bkg_f4f1b922d4c748d08ed440d355 via exec(python-a)->http://localhost:8082 -> HTTP 202
+lib.sh: ok — inject evt_167584dfa04c4eb5b1bc3b654a via exec(python-a)->http://localhost:8082 accepted: '202'
+verify-crc.sh: ok — python/redis: late frame arrived after a 65s idle hold over the edge-TLS Route (haproxy.router.openshift.io/timeout: 3600s present)
+
+--- python/redis: Ch18 cross-pod fan-out — instance A (Route) <- instance B (oc exec into B's Service) ---
+verify-crc.sh: inject eventId=evt_ef052849a8684372a2b38a7cb4 bookingId=bkg_6b20ad71f57141b594ba49916d via exec(python-a)->http://python-b:8082 -> HTTP 202
+lib.sh: ok — inject evt_ef052849a8684372a2b38a7cb4 via exec(python-a)->http://python-b:8082 accepted: '202'
+verify-crc.sh: ok — python/redis: instance A's CLIENT (through the Route) received instance B's injected event evt_ef052849a8684372a2b38a7cb4
+verify-crc.sh: ok — python/redis: instance A's own POD LOG shows it delivering
+
+=== Step 3 complete: Ch18 Redis fan-out PROVEN LIVE on both stacks (the helm backplane toggle works) ===
+
+PASS — part4-backplane on OpenShift Local (CRC, crc-admin context): edge-TLS Routes (CA-verified against the cluster's own ingress CA, never -k/--insecure) deliver a schema-valid seed frame on both stacks; a 65s idle hold still gets a late frame back with the haproxy.router.openshift.io/timeout: 3600s annotation present on both Routes; and the Ch18 cross-pod fan-out proof holds over BOTH the AMQ-Streams-managed Kafka backplane and the Helm-toggled Redis backplane, with instance A's own pod log confirming every delivery. verify-crc.sh did not start, stop, or build the cluster; it toggled the backplane to Redis (helm upgrade --set + rollout restart) as part of the proof, same as verify-minikube.sh.
+exit 0

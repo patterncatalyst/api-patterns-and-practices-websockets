@@ -1,0 +1,46 @@
+# AMQ Streams (Red Hat's build of Strimzi) — the Kafka operator for
+# part4-backplane's Kafka backplane mode (Ch16 replay + Ch18 fan-out) on
+# OpenShift Local. Installed into openshift-operators, which already exists
+# on a fresh CRC instance and carries the default "global-operators"
+# OperatorGroup, so no separate Namespace/OperatorGroup is needed here (see
+# ../lib.sh's install_operator and ../../../../../.claude skill's
+# references/operators.md for the pinning pattern this follows).
+#
+# installPlanApproval: Manual + startingCSV pins the exact version: OLM
+# proposes only this CSV's InstallPlan, and install_operator (../lib.sh)
+# approves only the InstallPlan naming it. A later InstallPlan (an upgrade
+# OLM proposes on its own) stays unapproved until this file is deliberately
+# bumped.
+#
+# ---------------------------------------------------------------------------
+# PIN STATUS: SURVEYED LIVE on CRC 2026-10-19. The channel/CSV below are the
+# current newest AMQ Streams (the `stable` and `amq-streams-3.2.x` channels
+# both point at amqstreams.v3.2.1-14):
+#
+#   oc get packagemanifest amq-streams -n openshift-marketplace \
+#     -o jsonpath='{range .status.channels[*]}{.name}  {.currentCSV}{"\n"}{end}'
+#
+# This CSV supports Kafka 4.1.0 and 4.2.0 ONLY (verified live from the
+# cluster-operator pod's `kafka-images` annotation). ../infra/kafka.yaml
+# therefore pins Kafka 4.2.0 — the newest this operator supports — a recorded
+# step-back from the compose/minikube paths' 4.3.1 (upstream Strimzi 1.3.0
+# leads the Red Hat operator); the wire behavior Ch16/Ch18 exercise is
+# identical on 4.2 and 4.3. When a newer AMQ Streams CSV ships, bump THIS
+# file's channel/startingCSV, ../install-infra.sh's CSV variable, AND
+# ../infra/kafka.yaml's spec.kafka.version/metadataVersion together — never
+# let the three drift out of step with each other.
+# ---------------------------------------------------------------------------
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: amq-streams
+  namespace: openshift-operators
+  labels:
+    app.kubernetes.io/part-of: part4-backplane
+spec:
+  name: amq-streams
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  channel: amq-streams-3.2.x
+  startingCSV: amqstreams.v3.2.1-14
+  installPlanApproval: Manual

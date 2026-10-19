@@ -312,3 +312,28 @@ health endpoints and the part4-backplane `POST /internal/.../handling-events`
 inject endpoint (202 + schema-valid body) — run via a pinned Newman in a CI step
 and cited by Ch21 as the functional-testing layer alongside the WS verify.sh/k6
 corpus. (The contract itself is WS-only; Newman covers the HTTP seam around it.)
+
+## DRQ-031 — Part 7 runtime progression (r07)
+
+Deploy **part4-backplane, both stacks** (the only example with a real cluster
+story: sticky long-lived WS + in-cluster Kafka/Redis backplane proving cross-pod
+fan-out) to both runtimes. **minikube** (docker driver + containerd, DRQ-007):
+kustomize base + minikube overlay, **ingress-nginx** addon for the WS upgrade
+(Upgrade native + cookie affinity + raised proxy-read/send timeouts so idle
+sockets aren't dropped). **CRC/OpenShift Local**: a restricted-v2 **Helm** chart
+with **edge-TLS Routes** + AMQ Streams (pinned CSV) — WS-specific headline: an
+edge-TLS Route carries the HTTP/1.1 Upgrade fine (the positive contrast to the
+gRPC appendix, where edge broke ALPN-negotiated h2). Deploy artifacts co-located:
+`examples/part4-backplane/{k8s,openshift}/`. Python-on-CRC built in-cluster via a
+Docker-strategy BuildConfig (fallback: pre-pushed image). Platform = app + ingress
++ in-cluster Kafka/Redis; Istio/KEDA/full-LGTM named as opt-in, not core.
+
+**Verification: BOTH clusters verified live headless** (CRC is installed; headless
+CRC precedent from the REST/gRPC/GraphQL sibling sites), equal weight, never
+faked, one cluster at a time (stop minikube before `crc start`). **No cluster
+bring-up in CI** (too heavy/flaky for GitHub runners) — CI adds only a static
+`k8s-manifests` job (`kustomize build`/`helm template` → `kubeconform`). Cluster
+verify scripts live in SUBDIRS (`.../k8s/verify-minikube.sh`,
+`.../openshift/verify-crc.sh`) so the `examples/*/verify.sh` matrix glob never
+runs them clusterless. Chapter footers flip to verified only when the live
+headless run passes.

@@ -1,0 +1,41 @@
+CRC version: 2.64.0+458092
+OpenShift version: 4.22.14
+MicroShift version: 4.22.13
+Server Version: 4.22.14
+Kubernetes Version: v1.35.6
+default                                            amqstreams.v3.2.1-14   Succeeded
+openshift                                          amqstreams.v3.2.1-14   Succeeded
+kube-public                                        amqstreams.v3.2.1-14   Succeeded
+openshift-dns                                      amqstreams.v3.2.1-14   Succeeded
+openshift-etcd                                     amqstreams.v3.2.1-14   Succeeded
+kube-node-lease                                    amqstreams.v3.2.1-14   Succeeded
+openshift-config                                   amqstreams.v3.2.1-14   Succeeded
+openshift-console                                  amqstreams.v3.2.1-14   Succeeded
+openshift-apiserver                                amqstreams.v3.2.1-14   Succeeded
+hostpath-provisioner                               amqstreams.v3.2.1-14   Succeeded
+openshift-machine-api                              amqstreams.v3.2.1-14   Succeeded
+openshift-dns-operator                             amqstreams.v3.2.1-14   Succeeded
+openshift-etcd-operator                            amqstreams.v3.2.1-14   Succeeded
+openshift-authentication                           amqstreams.v3.2.1-14   Succeeded
+openshift-cluster-version                          amqstreams.v3.2.1-14   Succeeded
+openshift-console-operator                         amqstreams.v3.2.1-14   Succeeded
+openshift-apiserver-operator                       amqstreams.v3.2.1-14   Succeeded
+openshift-network-diagnostics                      amqstreams.v3.2.1-14   Succeeded
+openshift-cloud-platform-infra                     amqstreams.v3.2.1-14   Succeeded
+openshift-console-user-settings                    amqstreams.v3.2.1-14   Succeeded
+openshift-authentication-operator                  amqstreams.v3.2.1-14   Succeeded
+openshift-cluster-machine-approver                 amqstreams.v3.2.1-14   Succeeded
+openshift-controller-manager-operator              amqstreams.v3.2.1-14   Succeeded
+openshift-kube-storage-version-migrator            amqstreams.v3.2.1-14   Succeeded
+openshift-cloud-network-config-controller          amqstreams.v3.2.1-14   Succeeded
+openshift-kube-controller-manager-operator         amqstreams.v3.2.1-14   Succeeded
+openshift-kube-storage-version-migrator-operator   amqstreams.v3.2.1-14   Succeeded
+NS                                                 CSV                    PHASE
+kafka part4-backplane: version 4.2.0, Ready=True
+--- BuildConfig part4-backplane-python (dockerStrategy) ---
+examples/part4-backplane/python/Containerfile
+--- latest build(s) ---
+BUILD                      STATUS     DURATION
+part4-backplane-python-1   Complete   142000000000
+part4-backplane-quarkus:v1 image-registry.openshift-image-registry.svc:5000/part4-backplane/part4-backplane-quarkus@sha256:e40f8e3a5a43a15f80a92235e8f00fa4f4a2bd741d7dd35fc01003db45201c9a
+part4-backplane-python:v1 image-registry.openshift-image-registry.svc:5000/part4-backplane/part4-backplane-python@sha256:8dbd220f05a77f1c1117bb78f67733526a0065467fc17621e9ea001e04352234
