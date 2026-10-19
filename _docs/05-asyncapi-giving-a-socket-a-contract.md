@@ -6,6 +6,18 @@ description: "AsyncAPI 3 as the single source of truth for a WebSocket channel's
 duration: "21 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain the four top-level sections of an AsyncAPI 3 document (`servers`, `channels`, `operations`, `components`) and how each one references the layer below it.
+- Read `contracts/asyncapi.yaml`'s `handlingEvents` channel and `receiveHandlingEvent` operation to determine a channel's address, direction, and message shape without running any code.
+- Explain why AsyncAPI 3 moved `operations` out of `channels`, unlike 2.x's nested `publish`/`subscribe`, and what that separation buys once a channel carries more than one direction.
+- Validate `contracts/asyncapi.yaml` with `npx @asyncapi/cli validate` and tell an `information`-level governance note apart from a failing error.
+- State what "contract-first" means for this site at this iteration — validated and reviewed, not yet code-generating — and the gap that leaves open for Chapter 11 to close.
+
+## Why this matters
+
 Chapter 3 decoded a frame byte by byte. Chapter 4 named the shipping domain this site pushes over that frame. Neither chapter wrote down, in a form a machine can check, what a client is allowed to expect from the socket: which address to open, what message shows up on it, and what shape that message takes. `contracts/asyncapi.yaml` is that document. It is the WebSockets analog of the REST site's OpenAPI file and the gRPC site's `.proto` package — one artifact, reviewed before either stack writes a handler, that both the Quarkus and Python examples generate from and validate against. This chapter reads that file section by section and runs the one command that proves it is well-formed.
 
 ## Why a socket needs a contract
@@ -264,3 +276,11 @@ Every field in that JSON traces back to a schema property one section up: `event
 This contract is the thing Chapter 6 designs against directly: the message shape itself, and why `HandlingEvent` stays one flat shape instead of a union of per-event-type payloads. Chapter 7 then takes up message versioning — how an additive field differs from a breaking one, and what happens to this exact schema the day it needs to change. The `/ws/v1/...` prefix on this channel's address is already doing the heavy lifting for breaking changes — `contracts/README.md` states that a breaking change to the message shape becomes `/ws/v2/...`, the same versioned-path convention the REST site uses for its resources — which means Chapter 7 inherits a working answer to "what happens when this schema needs an incompatible change" rather than inventing one from nothing. The validate-only CI gate DRQ-012 wires in now keeps this exact command running on every push from here forward; the full regenerate-and-diff gate that would catch drift between the contract and either stack's generated code waits for the examples iteration, once there is generated code on both sides for it to compare.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>A validated contract with no running service is a smaller claim than Chapter 5 would make on the REST or gRPC sibling sites, and that gap is intentional rather than a shortcut taken to save time (DRQ-011). A WebSocket's failure mode without a contract is not a 404 or a compile error; it is a connection that stays open and healthy while the two ends quietly disagree about what a message means, discovered only when a field a client never learned to expect reaches it. Writing the schema down and running <code>asyncapi validate</code> against it before either stack exists catches the version of that problem a reviewer can catch on paper: a typo'd pattern, a missing required field, a <code>$ref</code> to nothing. It does not catch the version only a running client and a running server can surface together — a Quarkus handler and a Python handler disagreeing at runtime about a field neither one's code path exercises in its own tests. That is exactly the gap the examples iteration closes, and exactly why DRQ-012 pins today's gate to "validates" rather than overclaiming "generates identically" before a second implementation exists to check it against.</p></div>
+
+## For deeper coverage
+
+- Olaf Zimmermann, Mirko Stocker, Daniel Lübke, Uwe Zdun & Cesare Pautasso, *Patterns for API Design* (Addison-Wesley, 2022) — the message-exchange pattern vocabulary this contract's `channels`/`operations`/`components` split is an instance of.
+- Higginbotham, J., *Principles of Web API Design* (Addison-Wesley, 2021) — contract-first review discipline, applied here to a channel instead of a REST resource.
+- *Cloud Native Design Patterns* — "API Registry" chapter — one authoritative, versioned home for a contract with compatibility rules gating changes, the same role this chapter's `asyncapi validate` gate plays for `asyncapi.yaml`.
+- *Cloud Native Design Patterns* — "API Management" chapter — governing a published contract's lifecycle once more than one consumer depends on it.
+- [AsyncAPI 3.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.0.0) — the `servers`/`channels`/`operations`/`components` object model this chapter walks section by section.

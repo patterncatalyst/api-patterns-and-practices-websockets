@@ -6,6 +6,18 @@ description: "Testing a protocol you can't curl — connection lifecycle, messag
 duration: "20 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Write unit/conformance tests (`test_contract.py`, `HandlingEventContractTest`) that validate a frame against `build/handling-event.schema.json` with no socket and no container.
+- Drive live integration checks with `examples/_lib/lib.sh`'s shared vocabulary (`ws_first_frame`, `ws_connect_bg`, `assert_ws_rejected`, `wait_for_log_count`) against real `docker compose` containers.
+- Read a close code a `websocat`-based probe can't see, using the `ws_close_probe` Python helper's `ws.close_code`, and assert on values like `4400`/`4290`.
+- Scope Newman to the plain-HTTP seams around a WebSocket-only contract and `k6` to connection load, per the DRQ-006 split between `smoke.js` (gated) and `benchmark.js` (local-only).
+- Explain how the `drift` CI job and `scripts/check-proto-parity.py` keep every test layer pointed at the same contract-derived schema.
+
+## Why this matters
+
 Every chapter from Part 3 forward has ended the same way: a `verify.sh` runs, a schema validates, a PASS line prints. This chapter is where that recurring machinery finally gets named and explained as a system, rather than cited piecemeal chapter by chapter. The problem it solves is specific to this protocol: `curl` proves an HTTP endpoint exists by making one request and reading one response, and most test tooling built for the web assumes that shape. A WebSocket channel has no single request/response to curl — it has an upgrade handshake, a sequence of pushed frames, a close code that may or may not carry meaning, and in this site's case an identical contract implemented twice, in Quarkus and in Python, that has to agree with itself as much as with `contracts/asyncapi.yaml`. Five distinct kinds of test already exist in this repo to cover that shape: schema and proto conformance tests that never open a socket, `verify.sh`/`lib.sh` integration tests that open real sockets against real containers, a Python close-code probe for the one signal `websocat` can't read, a Newman collection for the plain HTTP seams sitting next to the WebSocket channel, and k6 for load — one gated, one not. None of this is new code; it is the existing corpus, finally walked end to end.
 
 ## Unit and conformance: proving the shape without a socket
@@ -197,3 +209,11 @@ This chapter named five layers that already existed scattered across twenty chap
 Chapter 22 picks up where this one's blind spots end: when a live connection misbehaves in a way none of these five layers caught — a client stuck mid-handshake, a frame that never arrived, a close code a probe wasn't watching for — what debugging it looks like, with the same tools this chapter inventoried turned toward diagnosis instead of a pass/fail gate. Chapter 23 is where the one piece of new code in this part lands: live OpenTelemetry over a WebSocket connection, verified headless the same way every `verify.sh` in this chapter has been. Chapter 24 closes Part 6 by naming the anti-patterns a team reaches for when it skips straight to shipping without any of this five-layer structure underneath it.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Treat WebSocket testing as five layers, not one suite: unit/conformance (<code>test_contract.py</code>, <code>HandlingEventContractTest</code>/<code>HandlingEventProtoRoundTripTest</code>) validates shape and round-trip values with no socket and no container, in milliseconds. Live integration (<code>verify.sh</code>/<code>lib.sh</code>, both stacks, real <code>docker compose</code> containers) proves frame contents, reconnect/resume, and cross-instance fan-out that a unit test structurally cannot reach. A dedicated close-code probe (Python's <code>websockets</code> library, not <code>websocat</code>) exists because <code>ws.close_code</code> is the one signal this project's primary WebSocket client can't read — checking exit code alone cannot distinguish a rejected connection from one the server still intends to hold open. Newman covers the plain-HTTP seams around the WS-only contract (DRQ-006/DRQ-030) — 12 assertions, 0 failed, against <code>/healthz</code> and the inject endpoint's 202/400/422 cases. k6 splits cleanly between <code>smoke.js</code> (gated, <code>rate==1.0</code>, fails the PR on any failed check) and <code>benchmark.js</code> (local-only, because absolute throughput is host-dependent). One CI job, <code>drift</code>, ties every layer back to the same contract-derived schema on every change to <code>contracts/asyncapi.yaml</code> — the property that makes "both stacks agree" something CI checks continuously, not a claim a chapter makes once.</p></div>
+
+## For deeper coverage
+
+- Sam Newman, *Building Microservices*, 2nd ed. (O'Reilly, 2021) — testing strategy across independently-deployable services, the same shape this chapter applies to two independently-built stacks implementing one contract.
+- *Cloud Native Design Patterns* — "API Testing with Newman" chapter — the Newman-collection pattern this chapter scopes to the plain-HTTP seams around a WebSocket-only contract.
+- *Cloud Native Design Patterns* — "Anti-Patterns" chapter — the companion catalogue of testing and operational anti-patterns Chapter 24 draws on for this site's own list.
+- [Python `websockets` library documentation](https://websockets.readthedocs.io/en/stable/) — the `close_code` attribute and connection API this chapter's `ws_close_probe` and proto-round-trip tests depend on.
+- [Quarkus — Testing Your Application](https://quarkus.io/guides/getting-started-testing) — the JUnit-based testing model behind `HandlingEventContractTest` and `HandlingEventProtoRoundTripTest`.

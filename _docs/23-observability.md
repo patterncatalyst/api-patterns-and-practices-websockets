@@ -6,6 +6,18 @@ description: "Tracing a message end to end through the Grafana LGTM stack."
 duration: "14 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Decide where to scope a span's boundary on a long-lived WebSocket connection instead of inheriting request/response's one-span-per-call default.
+- Add a manual span (`@WithSpan`, `tracer.start_as_current_span`) to bridge the gap auto-instrumentation leaves on a native WebSocket library.
+- State which signals actually leave the process: both stacks export spans over OTLP to Tempo, while metrics stay a local Prometheus-format scrape and logs stay on container stdout.
+- Correlate a log line to a Tempo trace by printing the trace id itself (`otel.trace_id=...`), with no shared pipeline required.
+- Split a `verify.sh` observability check into HARD (deterministic, local) and SOFT (depends on cold-start ingestion) assertions, per DRQ-028.
+
+## Why this matters
+
 Every `verify.sh` since Part 3 has opened a connection, read a frame, and asserted its shape — proof that a channel is *correct*. None of it addresses what an engineer watching this channel in production sees once a connection has been open for an hour and something inside it goes quiet. Chapters 21 and 22 built the tools for finding out why a specific connection misbehaves once you already suspect it; this chapter is about the signal that tells you *which* connection to suspect in the first place, days after the fact, without a debugger attached. `examples/part6-observability/` is the first example in this book to run OpenTelemetry live end to end: every earlier part wired the SDK and left it inert — Quarkus shipped `quarkus.otel.sdk.disabled=true`, the Python entrypoint never ran under `opentelemetry-instrument`, and the `lgtm` compose service sat behind an unused `observability` profile nobody enabled by default. This chapter's `compose.yaml` drops all three of those guards. `lgtm` (`grafana/otel-lgtm:0.36.0`) is a hard dependency with no `profiles:` guard at all, both app services wait on its healthcheck before accepting a connection, and `verify.sh` proves the wiring live against both stacks, headless, every run — not read off a screenshot, not assumed from the library docs.
 
 ## Why a socket breaks the one-span-per-request assumption
@@ -146,3 +158,11 @@ The same trace id, read three independent ways — a log line, a metric scrape, 
 This chapter turned the lights on: a manual span bridging the gap auto-instrumentation leaves on a native WebSocket library, a trace exported to a real backend, a metric and a log line that both stay local by design, and a verification split that gates on what's deterministic while still reporting on what isn't. Chapter 24 turns around and asks the opposite question — not what correct observability looks like, but which of the shortcuts this book has steered around (logging a payload instead of tracing it, a span that never ends because a connection never closes, a metric with unbounded per-connection cardinality) are the anti-patterns a team reaches for under deadline pressure, and why each one costs more than it saves the first time an on-call engineer needs the signal it was supposed to provide.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Give a long-lived connection an explicit span boundary instead of inheriting request/response's one-span-per-call default — this example scopes <code>ws.handling-events.connection</code> to the whole fixture-replay push, a choice made for what this channel does, not a universal rule for every socket. Let auto-instrumentation cover whatever it already reaches (Quarkus's HTTP-upgrade span, FastAPI's HTTP routes) and reserve manual spans for the gap it leaves — here, the entire WebSocket push on Python, where no <code>opentelemetry-instrumentation-websockets</code> package exists, and a child span on Quarkus, where the gap is narrower because the upgrade itself is already traced. Know which signals leave the process at all: this example pushes traces over OTLP to Tempo, but both stacks' metrics stay a local Prometheus-format pull scrape and both stacks' trace-id log line stays on local stdout — neither reaches Mimir or Loki here, and a team extending this example toward production needs to add that plumbing explicitly rather than assume the bundled LGTM image wires it up on its own. Correlate a log line to a trace by printing the trace id itself in the log line — a value match needs no shared infrastructure to stay in sync. And verify observability the way <code>verify.sh</code> does: gate a build on what's deterministic and local (the trace id in the app's own log, the counter on the app's own metrics endpoint) and let a cold multi-process ingestion pipeline's lag show up as a non-fatal warning, not a flaky failure.</p></div>
+
+## For deeper coverage
+
+- Charity Majors, Liz Fong-Jones & George Miranda, *Observability Engineering* (O'Reilly, 2022) — the three-pillars model this chapter applies unevenly by design, pushing only traces to Tempo while metrics and logs stay local.
+- Betsy Beyer, Chris Jones, Jennifer Petoff, Niall Richard Murphy, Charity Majors, Liz Fong-Jones & George Miranda (eds.), *Site Reliability Engineering*, 2nd ed. (O'Reilly, 2026) — the operational case for a deterministic HARD/SOFT verification split like `verify.sh`'s.
+- *Cloud Native Design Patterns* — "Observability" chapter — span boundaries, correlation identifiers, and the pull-versus-push distinction this chapter applies to a WebSocket connection specifically.
+- [OpenTelemetry documentation](https://opentelemetry.io/docs/) — the SDK, auto-instrumentation, and manual span APIs (`@WithSpan`, `start_as_current_span`) this chapter's two stacks use.
+- [W3C Trace Context](https://www.w3.org/TR/trace-context/) — the trace-id format this chapter's `otel.trace_id=...` log line renders as 32 hex digits.

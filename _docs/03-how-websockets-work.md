@@ -6,6 +6,20 @@ description: "The HTTP upgrade handshake, frame types, close codes, and subproto
 duration: "18 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Walk the HTTP `Upgrade` handshake step by step, including the `Sec-WebSocket-Accept` derivation from `Sec-WebSocket-Key` and the fixed GUID.
+- Decode a captured RFC 6455 frame's FIN, opcode, MASK, and payload-length fields, and explain why client frames must be masked and server frames must not.
+- Diagnose a clean close (opcode `0x8`, codes 1000-1011) versus an abnormal closure (1006), and identify the 4000-series range this site reserves for application-specific rejections.
+- Explain what `Sec-WebSocket-Protocol` and `Sec-WebSocket-Extensions` each negotiate, and why permessage-deflate (RFC 7692) is a deliberate trade-off rather than a free win.
+- Identify why `wss://` and sticky load-balancing are non-negotiable in production, and why a WebSocket carries no protocol-level backpressure signal beyond TCP's own.
+
+## Why this matters
+
+The previous chapter settled on a transport; this chapter supplies the mechanism underneath the choice — what actually turns one HTTP request into a connection that stays open for as long as a client cares to watch a booking. The new idea here is that everything built from this point forward rests on three things named precisely: a handshake that runs once, a frame format every subsequent byte belongs to, and a set of control frames that keep a connection alive or end it cleanly.
+
 Chapter 2 picked WebSockets over SSE, long-polling, and webhooks for this site's handling-event feed on the strength of one property: a WebSocket is bidirectional and holds one connection open for as long as the client cares to watch a booking. That claim has stayed abstract until now. This chapter names the mechanism underneath it — the HTTP Upgrade handshake that turns an ordinary request into a long-lived socket, the frame format RFC 6455 defines for everything that crosses that socket afterward, the control frames that keep a connection alive and end it cleanly, and the parts of the surrounding stack — TLS, proxies, load balancers — that have opinions about a connection that refuses to close. Chapter 4 picks up the handling-event payloads this protocol will carry; this chapter is only the protocol.
 
 ## The upgrade handshake
@@ -160,3 +174,11 @@ Nineteen bytes in, nineteen characters out — a JSON handling-event notificatio
 This chapter named the protocol; it said nothing about what rides inside the frames. Chapter 4 picks up the shipping/cargo domain this site shares with its REST and gRPC siblings and defines the handling-event vocabulary — the exact shape of the `{"event":"ARRIVED"}` payload this chapter decoded by hand — before Chapter 5 puts that vocabulary under an AsyncAPI 3 contract both stacks generate from. The pieces flagged along the way here get their own chapters rather than a paragraph each: Chapter 12 on backpressure past what TCP's send buffer alone provides, Chapter 13 on the 4000-series close codes this site defines for application-level rejections, Chapter 14 on turning ping/pong into an actual heartbeat policy, Chapter 17 on authenticating a connection running behind a public proxy, and Chapter 20 on measuring permessage-deflate against this site's real message shapes instead of assuming the tradeoff.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>This site's handling-event feed runs <code>wss://</code> only, never <code>ws://</code>, in every environment past a developer's own laptop against the Docker Compose lab — matching DRQ-007's runtime tiers, all three of which terminate TLS at the ingress. It negotiates the <code>handling-events.v1</code> subprotocol token via <code>Sec-WebSocket-Protocol</code> rather than leaving message-format agreement implicit, so a client built against a stale contract fails the handshake with a clear signal instead of connecting successfully and then choking on a field it doesn't recognize partway through a session. Close codes stay within RFC 6455's reserved ranges for transport-level conditions (1000, 1001, 1002, 1003, 1008, 1009, 1011) and move into this site's own 4000-series codes, defined in Chapter 13, for every handling-event-specific rejection — an unknown booking, an unauthorized subscription, a backpressure limit — rather than overloading 1008 for all of them and pushing callers to parse a reason string to find out which rule fired. permessage-deflate is left negotiable but off by default pending Chapter 20's measurement against this site's own payload shapes, rather than assumed free on the strength of its general reputation for shrinking repetitive JSON.</p></div>
+
+## For deeper coverage
+
+- Dynowski, L. & Dulak, M., *Learning API Styles* (O'Reilly, 2025) — where a framed, full-duplex protocol like this one sits among the API styles this series covers.
+- *Cloud Native Design Patterns* — "Protocols in Depth" and "WebSockets at Scale" chapters — the protocol-level comparison and the scaling concerns (stickiness, backpressure, fan-out) this chapter names but defers.
+- [RFC 6455](https://datatracker.ietf.org/doc/html/rfc6455) — primary source for the handshake, frame format, masking, opcodes, and close codes this chapter walks in full.
+- [RFC 7692](https://datatracker.ietf.org/doc/html/rfc7692) — the permessage-deflate extension this chapter leaves negotiable but off by default.
+- [MDN: WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) — the browser-side interface built on top of the wire protocol this chapter describes.

@@ -6,6 +6,19 @@ description: "WebSockets vs Server-Sent Events vs long-polling vs webhooks, a de
 duration: "21 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Compare WebSockets, Server-Sent Events, long-polling, webhooks, and gRPC server-streaming across direction, duplex, ordering, backpressure, proxy/firewall behavior, browser support, and reconnection.
+- Apply the decision framework's ordered questions — does it need live updates, who has to send, who's receiving — to pick a transport for a given interaction.
+- Diagnose when a WebSocket is the wrong answer, even on a site built around WebSockets.
+- Trace the handling-event feed's worked decision end to end, from "does it need live updates" to the final transport choice.
+
+## Why this matters
+
+Chapter 1 made the case for push over pull in general; it said nothing about which push mechanism to reach for. This chapter builds the decision: five transports solve some version of the same problem, they disagree on direction, duplex, ordering, backpressure, and reconnection, and the one new idea is that "needs push" doesn't resolve to "open a WebSocket" by default, even on a site about WebSockets.
+
 The booking confirmation page opens a WebSocket the moment it loads and keeps the connection open for the life of the tab, even though the booking it watches changes status twice a day at most. A customs broker's integration wants to know the instant a container clears, but the broker's system exposes no public endpoint and can't hold a connection open from its side either — polling a REST endpoint every thirty seconds is the only option it has, and it burns a request on a status that hasn't moved in hours. A warehouse dashboard needs a feed of handling events for every active shipment on the yard floor: dozens of updates a minute, one direction only, nothing the dashboard ever needs to send back. Three interactions, three different shapes, and a site about WebSockets has an obvious bias toward answering all three the same way.
 
 That bias is the wrong starting point. Chapter 1 argued request/response falls short once a client is watching something change rather than asking a question once; this chapter argues that "falls short" doesn't resolve to "open a WebSocket" by default. Five transports solve some version of the push problem — WebSockets, Server-Sent Events (SSE), HTTP long-polling, webhooks, and gRPC server-streaming — and they disagree on direction, connection lifetime, ordering, and who is allowed to initiate a message. Naming those disagreements here means every later chapter that reaches for a socket can say why the other four lost, instead of treating the choice as already settled by the table of contents. Chapter 3 picks up the protocol itself once this chapter rules it in.
@@ -137,3 +150,11 @@ This chapter assumed a WebSocket's shape without explaining where it comes from 
 Running the booking page's handling-event feed through the same questions gives the shape every later chapter's own version of this decision will take:
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>The booking page's handling-event feed is a WebSocket, not SSE, a long-poll, a webhook, or a gRPC stream. It needs live updates, ruling out plain request/response. It needs the client to send as well as receive — an initial subscribe naming the booking, and a resubscribe if the customer switches bookings without reloading the page — which rules out SSE's one-way channel regardless of how server-heavy the traffic looks. The receiver is a browser tab the team controls, which rules out a webhook, since nothing here can expose a public endpoint for someone else to call. And the volume and latency the customer expects — a status change reflected in under a second, not polled for — rule out both long-polling's per-update request cost and gRPC streaming's requirement that neither end be a browser. Every other interaction in this chapter's opening paragraph lands somewhere else on this same table, which is the point: the socket is correct here because the dimensions say so, not because this is a WebSockets site.</p></div>
+
+## For deeper coverage
+
+- Dynowski, L. & Dulak, M., *Learning API Styles* (O'Reilly, 2025) — comparing interaction styles on the dimensions this chapter's decision framework formalizes.
+- Gough, J. & Bryant, D. & Auburn, M., *Mastering API Architecture* (O'Reilly, 2022) — architectural trade-offs behind choosing a style for a given interaction rather than defaulting to one.
+- *Cloud Native Design Patterns* — "Communications" and "Protocols in Depth" chapters — the full comparison this chapter's transport table specializes for a push interaction.
+- [RFC 6455](https://datatracker.ietf.org/doc/html/rfc6455) — the WebSocket side of this chapter's comparison.
+- [WHATWG: Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html) — the `EventSource` behavior, including automatic reconnection and `Last-Event-ID`, this chapter compares against a socket.

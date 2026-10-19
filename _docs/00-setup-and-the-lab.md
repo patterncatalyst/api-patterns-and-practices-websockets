@@ -6,6 +6,20 @@ description: "Toolchain pins, the Docker Compose lab with opt-in LGTM tracing, a
 duration: "17 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Install and pin the exact toolchain every example in this site builds against: JDK 25.0.4 / Quarkus 3.40 with `quarkus-websockets-next`, Python 3.15 managed by `uv`, the AsyncAPI CLI, and the Docker Compose plugin.
+- Explain why `check-prereqs.sh` enforces looser minimum versions than the exact pins in the Version Matrix, and what each enforces.
+- Bring up the Docker Compose lab with `docker compose up --build`, and turn on tracing on demand with `docker compose --profile observability up --build`.
+- Trace the three-tier runtime progression this site climbs — Docker Compose, then minikube, then OpenShift Local (CRC) — without either service's code changing between tiers.
+- Tear down the lab cleanly with `docker compose down --volumes --remove-orphans`, and explain why `--volumes` matters for a stack that persists Tempo and Mimir data.
+
+## Why this matters
+
+This chapter builds the ground every later chapter stands on: a pinned toolchain, a Docker Compose lab that boots both stacks side by side, and a repeatable way to tear it down between runs. The one idea worth carrying forward is that none of this should ever become the thing you're debugging — once the toolchain and the lab shape are settled here, every later chapter can assume them and spend its own space on sockets, not setup.
+
 Every hands-on chapter from here forward hands you a live socket in two languages, pushing the same shipping/cargo handling events over the same AsyncAPI contract. This chapter pins the toolchain each example builds against, lays out the Docker Compose lab that boots both stacks side by side with observability one flag away, and describes the two scripts — `check-prereqs.sh` and the teardown — that make the lab's state predictable before a single line of handler code exists. Nothing here touches message shapes or connection lifecycle; that starts in Part 1. This chapter makes sure the toolchain and the lab shape are settled facts before the real protocol work begins, so neither is ever the thing you're debugging once a chapter asks you to reason about a reconnect or a backpressure policy instead.
 
 The lab itself — the running `compose.yaml`, the `check-prereqs.sh` and teardown scripts — ships with the examples iteration, not this one. What follows describes the toolchain those scripts will check, the Compose shape they will bring up, and the exact commands and output you'll see once they land, so the contract between this chapter's prose and the forthcoming example is unambiguous.
@@ -135,3 +149,11 @@ The minimums in this table are looser than the exact pins in the Version Matrix 
 Chapter 1 steps back from the lab to the problem this site's first part spends its time justifying: why polling a REST endpoint stops working once "almost real-time" isn't good enough, and what a persistent connection buys over it instead. Chapter 3 gives WebSockets itself a full treatment — the HTTP Upgrade handshake, frame anatomy, control versus data frames, and the close-code vocabulary every later error-handling chapter refers back to. Chapter 5 is where `contracts/asyncapi.yaml` is written and validated for the first time, which is also the first chapter this site's CI gate enforces. Everything this chapter fixed — the toolchain pins, the Compose shape, the three-tier runtime progression, `check-prereqs.sh` as the thing every chapter runs first — stays constant from here forward; only what's behind each upgrade handshake gets more real.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>This site pins JDK 25 / Quarkus 3.40, Python 3.15 / uv 0.13, and the Compose plugin as the toolchain every example builds against, surveyed to current stable rather than an older LTS floor, with the lab running entirely through Docker Compose and LGTM gated behind an opt-in profile; <code>check-prereqs.sh</code> and the Compose lab itself ship with the examples iteration, but the pins, the Compose shape, and the three-tier runtime progression they target are fixed as of this chapter.</p></div>
+
+## For deeper coverage
+
+- Gough, J. & Bryant, D. & Auburn, M., *Mastering API Architecture* (O'Reilly, 2022) — the architectural decisions behind picking a toolchain and a runtime posture before a single endpoint exists.
+- *Cloud Native Design Patterns* — "Communications" chapter — the interaction-style landscape this site's lab is built to exercise one corner of.
+- [Quarkus WebSockets Next guide](https://quarkus.io/guides/websockets-next) — the extension this chapter's toolchain pins and later chapters build on.
+- [Python `websockets` documentation](https://websockets.readthedocs.io/) — the native library this site's Python stack uses for the socket itself.
+- [Docker Compose documentation](https://docs.docker.com/compose/) — `profiles`, `depends_on` health conditions, and the plugin version this chapter's lab depends on.
