@@ -1,0 +1,80 @@
+// HandlingEvent — a parallel BINARY encoding of the AsyncAPI HandlingEvent
+// message (contracts/asyncapi.yaml, components.schemas.HandlingEvent).
+//
+// Part 5 (Ch19, "Binary Protobuf over WebSockets") adds Protobuf as a second
+// wire encoding of the exact same message JSON already carries; the two
+// encodings are asserted equal in shape by scripts/check-proto-parity.py
+// against build/handling-event.schema.json, generated from the AsyncAPI
+// contract by scripts/extract-message-schema.py. The AsyncAPI document stays
+// the single source of truth for the message's MEANING; this file is the
+// single source of truth for its binary ENCODING.
+//
+// occurredAt, registeredAt, amount, and location stay plain `string` fields
+// (RFC-3339 date-time, decimal, UN/LOCODE) rather than typed Protobuf
+// equivalents (e.g. google.protobuf.Timestamp) specifically so the
+// Protobuf-decoded values are byte-for-byte identical to the JSON values a
+// client already parses — a client that only ever sees one encoding or the
+// other sees the same strings either way.
+//
+// Field numbers are additive-only: once assigned, a number is never reused
+// or renumbered, even if the field it names is later removed, the same
+// non-breaking-evolution discipline Ch7 ("Versioning and Evolution") applies
+// to the JSON contract. Governed by buf (contracts/buf.yaml, lint STANDARD +
+// breaking FILE) — see contracts/README.md.
+syntax = "proto3";
+
+package shipping.handlingevents.v1;
+
+// The kind of handling event. Mirrors components.schemas.HandlingEventType
+// in contracts/asyncapi.yaml member-for-member, in the same order.
+// `HANDLING_EVENT_TYPE_UNSPECIFIED` is the zero value, matching the proto3
+// convention that every enum's zero value is unused-on-the-wire; the server
+// never sends it. Every other member is prefixed `HANDLING_EVENT_TYPE_`
+// per buf's ENUM_VALUE_PREFIX lint rule (contracts/buf.yaml, lint STANDARD);
+// scripts/check-proto-parity.py strips that prefix before comparing a member
+// against the AsyncAPI contract's bare enum strings (`RECEIVE`, `LOAD`, ...).
+enum HandlingEventType {
+  HANDLING_EVENT_TYPE_UNSPECIFIED = 0;
+  HANDLING_EVENT_TYPE_RECEIVE = 1;
+  HANDLING_EVENT_TYPE_LOAD = 2;
+  HANDLING_EVENT_TYPE_UNLOAD = 3;
+  HANDLING_EVENT_TYPE_CUSTOMS = 4;
+  HANDLING_EVENT_TYPE_CLAIM = 5;
+  HANDLING_EVENT_TYPE_HOLD = 6;
+  HANDLING_EVENT_TYPE_DELIVERED = 7;
+}
+
+// A single handling event recorded against a booking's cargo — the binary
+// twin of components.schemas.HandlingEvent in contracts/asyncapi.yaml.
+// Field names are lower_snake_case per buf's FIELD_LOWER_SNAKE_CASE lint
+// rule; scripts/check-proto-parity.py converts each to camelCase before
+// comparing it against the JSON Schema's property names.
+message HandlingEvent {
+  // evt_-prefixed, ULID-shaped (contracts/asyncapi.yaml: `^evt_[0-9A-Za-z]{26}$`).
+  string event_id = 1;
+
+  // bkg_-prefixed, ULID-shaped. Matches the channel's `bookingId` parameter.
+  string booking_id = 2;
+
+  // crg_-prefixed, ULID-shaped.
+  string cargo_id = 3;
+
+  HandlingEventType event_type = 4;
+
+  // UN/LOCODE, e.g. "USNYC", "NLRTM", "SGSIN".
+  string location = 5;
+
+  // RFC-3339 date-time string — when the event physically happened.
+  string occurred_at = 6;
+
+  // RFC-3339 date-time string — when the event was recorded by the system.
+  string registered_at = 7;
+
+  // Optional carrier voyage number (e.g. a LOAD or UNLOAD event); absent for
+  // events not tied to a specific voyage (e.g. CUSTOMS, CLAIM).
+  optional string voyage_number = 8;
+
+  // Optional decimal-string amount (e.g. "125.00"); no currency code — this
+  // feed reports amounts in the booking's quoted currency.
+  optional string amount = 9;
+}

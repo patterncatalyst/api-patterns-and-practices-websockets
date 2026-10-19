@@ -1,0 +1,17 @@
+# Convenience generation config, not a CI dependency (matches the gRPC
+# sibling's contracts/buf.gen.yaml posture). The AUTHORITATIVE stub
+# generation for each stack happens inside that stack's own build: Quarkus
+# via a protoc-invoking Maven plugin (io.github.ascopes:protobuf-maven-plugin,
+# see _plans/version-matrix.md), Python via grpcio-tools' `python -m
+# grpc_tools.protoc`. This file documents a one-shot local generation via
+# Buf's remote plugins for inspection only:
+#
+#     cd contracts && buf generate
+#
+# Output lands under examples/_generated/python, which is gitignored
+# (**/generated/, *_pb2.py in .gitignore) — no generated stub is ever
+# committed.
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/python
+    out: ../examples/_generated/python
