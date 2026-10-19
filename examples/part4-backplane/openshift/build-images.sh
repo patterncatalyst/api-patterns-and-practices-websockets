@@ -26,11 +26,13 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-# Newest UBI with the newest JDK, exact tag — matches
-# ../quarkus/Containerfile's own pin (re-check with
-# `skopeo list-tags docker://registry.access.redhat.com/ubi10/openjdk-25`;
-# bump deliberately, never silently).
-BASE_JVM_IMAGE="${BASE_JVM_IMAGE:-registry.access.redhat.com/ubi10/openjdk-25:1.24-16}"
+# Newest UBI with the newest JDK, exact tag. quarkus.openshift.base-jvm-image
+# is the RUNTIME base layered under the fast-jar, so it is the `-runtime`
+# variant (matching ../quarkus/Containerfile's runtime stage), NOT the full
+# openjdk-25 builder image. Re-check with
+# `skopeo list-tags docker://registry.access.redhat.com/ubi10/openjdk-25-runtime`;
+# bump deliberately, never silently.
+BASE_JVM_IMAGE="${BASE_JVM_IMAGE:-registry.access.redhat.com/ubi10/openjdk-25-runtime:1.24-16}"
 
 require_crc
 oc get project "$NS" >/dev/null 2>&1 || fail "project $NS missing: run ./openshift/install-infra.sh first"
@@ -72,24 +74,29 @@ build_python() {
     local src="$REPO_ROOT/examples/part4-backplane/python"
     local ctx
     ctx="$(mktemp -d -t part4-backplane-python-build-ctx.XXXXXX)"
-    trap '[[ -n "${ctx:-}" ]] && rm -rf "$ctx"' RETURN
+    # EXIT trap (not RETURN): `fail` exits the script, which bypasses a RETURN
+    # trap and would leak the mktemp dir. $ctx is expanded now (by value) so
+    # the trap still has the path after this local goes out of scope.
+    trap "rm -rf '$ctx'" EXIT
 
     # Mirror EXACTLY the repo-root-relative paths ../python/Containerfile's
     # COPY lines reference — the Containerfile is built with the repo root
     # as context (never this module's own directory), so the build context
-    # directory tree has to reproduce that same layout.
+    # directory tree has to reproduce that same layout. Each stage is guarded:
+    # a missing source must fail loudly HERE, not as a confusing in-cluster
+    # build error against an incomplete context.
     mkdir -p "$ctx/examples/part4-backplane/python" \
              "$ctx/examples/part3-handling-events/fixtures" \
              "$ctx/contracts" \
-             "$ctx/scripts"
-    cp "$src/pyproject.toml" "$ctx/examples/part4-backplane/python/"
-    cp "$src/uv.lock" "$ctx/examples/part4-backplane/python/"
-    cp -r "$src/app" "$ctx/examples/part4-backplane/python/app"
-    cp "$src/Containerfile" "$ctx/examples/part4-backplane/python/"
-    cp "$REPO_ROOT/contracts/asyncapi.yaml" "$ctx/contracts/"
-    cp "$REPO_ROOT/scripts/extract-message-schema.py" "$ctx/scripts/"
+             "$ctx/scripts" || fail "stage: mkdir build context tree"
+    cp "$src/pyproject.toml" "$ctx/examples/part4-backplane/python/" || fail "stage: pyproject.toml"
+    cp "$src/uv.lock" "$ctx/examples/part4-backplane/python/" || fail "stage: uv.lock"
+    cp -r "$src/app" "$ctx/examples/part4-backplane/python/app" || fail "stage: app/"
+    cp "$src/Containerfile" "$ctx/examples/part4-backplane/python/" || fail "stage: Containerfile"
+    cp "$REPO_ROOT/contracts/asyncapi.yaml" "$ctx/contracts/" || fail "stage: contracts/asyncapi.yaml"
+    cp "$REPO_ROOT/scripts/extract-message-schema.py" "$ctx/scripts/" || fail "stage: scripts/extract-message-schema.py"
     cp "$REPO_ROOT/examples/part3-handling-events/fixtures/handling-events.json" \
-       "$ctx/examples/part3-handling-events/fixtures/"
+       "$ctx/examples/part3-handling-events/fixtures/" || fail "stage: part3 fixtures/handling-events.json"
 
     if ! oc get bc part4-backplane-python -n "$NS" >/dev/null 2>&1; then
         oc new-build --name=part4-backplane-python --binary --strategy=docker \

@@ -29,9 +29,13 @@
 #      with `helm upgrade --set backplane=redis` + a rollout restart —
 #      PROTOCOL.md "Backplane modes").
 #
-# This script does NOT start, stop, deploy to, or build anything on the
-# cluster — it only PREFLIGHTS that ./deploy.sh already ran and then reads.
-# The live cluster bring-up/teardown is the user's call (see ../README.md
+# This script does NOT start, stop, or build the cluster, and does NOT do
+# the initial deploy — it PREFLIGHTS that ./deploy.sh already ran. It DOES
+# perform one deploy mutation as part of the proof: the Redis leg toggles
+# the backplane live with `helm upgrade --set backplane=redis` + a rollout
+# restart (same as verify-minikube.sh's Step 7), then restores nothing —
+# teardown.sh handles cleanup. The live cluster bring-up/teardown is the
+# user's call (see ../README.md
 # for the run order): crc start -> install-infra.sh -> build-images.sh ->
 # deploy.sh -> verify-crc.sh -> capture-evidence.sh -> teardown.sh.
 #
@@ -386,5 +390,7 @@ echo "PASS — part4-backplane on OpenShift Local (CRC, crc-admin context):" \
      "Routes; and the Ch18 cross-pod fan-out proof holds over BOTH the" \
      "AMQ-Streams-managed Kafka backplane and the Helm-toggled Redis" \
      "backplane, with instance A's own pod log confirming every delivery." \
-     "verify-crc.sh did not start, stop, build, or deploy anything."
+     "verify-crc.sh did not start, stop, or build the cluster; it toggled" \
+     "the backplane to Redis (helm upgrade --set + rollout restart) as part" \
+     "of the proof, same as verify-minikube.sh."
 echo "exit 0"
