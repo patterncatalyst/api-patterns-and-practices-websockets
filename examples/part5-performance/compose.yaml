@@ -1,0 +1,98 @@
+# Part 5 "Performance" example — compose topology for the SAME
+# `handlingEvents` channel as part3/part4 (contracts/asyncapi.yaml
+# `operations.receiveHandlingEvent`), now carrying TWO wire encodings of the
+# identical message — JSON text (default / `+json`) and Protobuf binary
+# (`+protobuf`) — negotiated per connection via `Sec-WebSocket-Protocol`
+# (DRQ-026). See ./README.md for the negotiation table and each stack's own
+# README for the encoding-specific implementation notes.
+#
+# Default `docker compose up` brings up: quarkus, python. Both independently
+# replay the SAME shared fixture (../part3-handling-events/fixtures/
+# handling-events.json) against the SAME contract and the SAME
+# contracts/handling-event.proto — verify.sh connects to each with both
+# subprotocols and asserts the decoded field values are IDENTICAL across
+# encodings, and that the Protobuf frame is strictly smaller.
+#
+# Ports: quarkus host 8090 -> container 8090 (WS + HTTP upgrade on the same
+# port — distinct from part3/part4's 8080 so all three can run at once);
+# python host 8091 -> container 8091 (WS) and host 8092 -> container 8092
+# (HTTP: /healthz, / — see python/app/http_app.py). Each service uses its
+# own compose project name (part5-performance) for isolation from part3/
+# part4's stacks.
+#
+# This part drops the four part4 connection concerns (JWT auth,
+# backpressure, error taxonomy, heartbeats) on purpose — it's about wire
+# ENCODING, not connection hardening (see quarkus/README.md and
+# python/README.md's opening paragraphs) — so there is no shared secret or
+# one-off backpressure/heartbeat container pattern here, unlike part4's
+# compose.yaml.
+#
+# The Grafana LGTM observability stack is opt-in (`--profile observability`)
+# so CI and a first boot stay fast — same convention as part3/part4.
+#
+# Usage:
+#   docker compose up --build                          # app stack only
+#   docker compose --profile observability up --build  # + Grafana LGTM
+
+services:
+  quarkus:
+    build:
+      context: ../..
+      dockerfile: examples/part5-performance/quarkus/Containerfile
+    container_name: part5-performance-quarkus
+    ports:
+      - "8090:8090"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    healthcheck:
+      # No dedicated health endpoint on this chapter's example (just the WS
+      # upgrade path, same as part4's quarkus service) — curl without -f
+      # treats any HTTP response (including the 404/426 a plain GET gets
+      # back) as "the server is up and answering".
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://127.0.0.1:8090/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  python:
+    build:
+      context: ../..
+      dockerfile: examples/part5-performance/python/Containerfile
+    container_name: part5-performance-python
+    ports:
+      - "8091:8091"
+      - "8092:8092"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8092/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  # ─── Observability (opt-in) ────────────────────────────────────────────
+  # `docker compose --profile observability up` to include. Off by default
+  # so CI's examples job (and a first boot) stay fast.
+  lgtm:
+    image: docker.io/grafana/otel-lgtm:0.36.0
+    container_name: part5-performance-lgtm
+    profiles: ["observability"]
+    ports:
+      - "3000:3000" # Grafana UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "9090:9090" # Prometheus / Mimir query
+      - "3100:3100" # Loki
+      - "3200:3200" # Tempo
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s

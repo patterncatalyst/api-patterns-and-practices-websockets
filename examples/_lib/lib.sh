@@ -96,6 +96,77 @@ ensure_websocat() {
 }
 
 # ---------------------------------------------------------------------------
+# Self-contained protoc: same self-downloading-cached-binary philosophy as
+# ensure_websocat above — part5-performance/verify.sh needs `protoc` on PATH
+# (to generate a throwaway Python decode stub from
+# contracts/handling-event.proto, and for scripts/check-proto-parity.py,
+# which itself shells out to `protoc --descriptor_set_out`) and the CI
+# `examples` matrix job does not install one, so the example must bring its
+# own rather than requiring a CI YAML change.
+#
+# Pin: protoc 36.2 (contracts/README.md / Ch0 version matrix / DRQ-025 —
+# same pin the buf-parity CI job's `apt-get install protobuf-compiler` step
+# and part5-performance's PROTOBUF_PY_PIN comment already assume) — no
+# floating tag. Release assets are `protoc-<version>-<platform>.zip`
+# (bin/protoc inside); override PROTOC_VERSION to pin a different release.
+# ---------------------------------------------------------------------------
+
+PROTOC_VERSION="${PROTOC_VERSION:-36.2}"
+
+ensure_protoc() {
+  if command -v protoc >/dev/null 2>&1; then
+    return 0
+  fi
+  local bin="$LGTM_BIN_DIR/protoc"
+  if [[ -x "$bin" ]]; then
+    export PATH="$LGTM_BIN_DIR:$PATH"
+    return 0
+  fi
+  local os arch asset
+  os="$(uname -s)"
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64|amd64) arch="x86_64" ;;
+    aarch64|arm64) arch="aarch_64" ;;
+  esac
+  case "$os" in
+    Linux) asset="protoc-${PROTOC_VERSION}-linux-${arch}.zip" ;;
+    Darwin) asset="protoc-${PROTOC_VERSION}-osx-${arch}.zip" ;;
+    *)
+      echo "lib.sh: FAIL — unsupported OS '$os' for protoc auto-download; install protoc manually" >&2
+      return 1
+      ;;
+  esac
+  local url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${asset}"
+  echo "lib.sh: downloading protoc ${PROTOC_VERSION} (${os}/${arch}) ..." >&2
+  mkdir -p "$LGTM_BIN_DIR"
+  local zip
+  zip="$(mktemp)"
+  if ! curl -fsSL "$url" -o "$zip"; then
+    echo "lib.sh: FAIL — could not download protoc from $url" >&2
+    rm -f "$zip"
+    return 1
+  fi
+  if ! command -v unzip >/dev/null 2>&1; then
+    echo "lib.sh: FAIL — 'unzip' is required to extract the downloaded protoc archive" >&2
+    rm -f "$zip"
+    return 1
+  fi
+  local extract_dir
+  extract_dir="$(mktemp -d)"
+  unzip -q "$zip" -d "$extract_dir" bin/protoc
+  rm -f "$zip"
+  mv "$extract_dir/bin/protoc" "$bin"
+  rm -rf "$extract_dir"
+  chmod +x "$bin"
+  if ! "$bin" --version >/dev/null 2>&1; then
+    echo "lib.sh: FAIL — downloaded protoc binary at $bin did not run" >&2
+    return 1
+  fi
+  export PATH="$LGTM_BIN_DIR:$PATH"
+}
+
+# ---------------------------------------------------------------------------
 # Docker compose lifecycle
 # ---------------------------------------------------------------------------
 

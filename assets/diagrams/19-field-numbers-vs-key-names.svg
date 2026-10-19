@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="40" width="410" height="330" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="60" font-size="12" font-weight="700" fill="#1d1d1d">JSON (asyncapi.yaml component schema)</text>
+<rect x="470" y="40" width="410" height="330" rx="12" fill="#fff3e0" stroke="#ddd"/>
+<text x="482" y="60" font-size="12" font-weight="700" fill="#1d1d1d">Protobuf (handling-event.proto)</text>
+<rect x="45" y="70" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="225.0" y="90.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">&quot;eventId&quot;: &lt;value&gt;  — key literal sent every frame</text>
+<rect x="45" y="110" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="225.0" y="130.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">&quot;bookingId&quot;: &lt;value&gt;  — key literal sent every frame</text>
+<rect x="45" y="150" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="225.0" y="170.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">&quot;cargoId&quot;: &lt;value&gt;  — key literal sent every frame</text>
+<rect x="45" y="190" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="225.0" y="210.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">&quot;eventType&quot;: &lt;value&gt;  — key literal sent every frame</text>
+<rect x="45" y="230" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="225.0" y="250.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">&quot;location&quot;: &lt;value&gt;  — key literal sent every frame</text>
+<rect x="45" y="270" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="225.0" y="290.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">&quot;occurredAt&quot;: &lt;value&gt;  — key literal sent every frame</text>
+<rect x="45" y="310" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="225.0" y="330.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">&quot;registeredAt&quot;: &lt;value&gt;  — key literal sent every frame</text>
+<rect x="495" y="70" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="675.0" y="90.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 1  event_id = &lt;value&gt;  — one-byte tag, no name on the wire</text>
+<rect x="495" y="110" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="675.0" y="130.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 2  booking_id = &lt;value&gt;  — one-byte tag, no name on the wire</text>
+<rect x="495" y="150" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="675.0" y="170.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 3  cargo_id = &lt;value&gt;  — one-byte tag, no name on the wire</text>
+<rect x="495" y="190" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="675.0" y="210.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 4  event_type = &lt;value&gt;  — one-byte tag, no name on the wire</text>
+<rect x="495" y="230" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="675.0" y="250.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 5  location = &lt;value&gt;  — one-byte tag, no name on the wire</text>
+<rect x="495" y="270" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="675.0" y="290.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 6  occurred_at = &lt;value&gt;  — one-byte tag, no name on the wire</text>
+<rect x="495" y="310" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="675.0" y="330.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 7  registered_at = &lt;value&gt;  — one-byte tag, no name on the wire</text>
+<text x="225" y="25" font-size="12" fill="#1d1d1d" text-anchor="middle" font-weight="700">renaming a key is free; field NUMBERS never move or get reused</text>
+<text x="675" y="25" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">field numbers are the wire identity — additive-only, same as Ch7&#x27;s JSON discipline</text>
+<text x="450" y="405" font-size="11" fill="#555555" text-anchor="middle">check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn&#x27;t also carry.</text>
+</svg>

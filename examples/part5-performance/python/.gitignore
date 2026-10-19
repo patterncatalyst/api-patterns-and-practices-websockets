@@ -1,0 +1,8 @@
+# Build-time generated Pydantic model — regenerate with
+# ./scripts/generate-models.sh (see README.md). Never hand-edit or commit.
+app/models_generated.py
+
+# Build-time generated Protobuf stubs — regenerate with
+# ./scripts/generate-proto.sh (see README.md). Never hand-edit or commit.
+app/handling_event_pb2.py
+app/handling_event_pb2.pyi

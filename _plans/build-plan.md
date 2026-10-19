@@ -147,6 +147,30 @@ Build order: version/ledger survey → extend harness → App A + verify → App
 broker infra + verify → chapters against working code → CI drift/gate + k6 →
 build + voice + checkpoint. Chapters follow working code.
 
+## r05 scope (in progress)
+
+**Part 5 "Performance & Optimization" (Ch19–20) + Protobuf binary encoding +
+throughput benchmark.**
+
+- **New app `examples/part5-performance/`** (both stacks) serves the shared
+  fixture over the SAME channel in two encodings — JSON text vs Protobuf
+  binary — selected per connection by **subprotocol** (DRQ-026).
+- **`contracts/handling-event.proto`** mirrors the AsyncAPI `HandlingEvent`
+  (RFC-3339 string timestamps for value parity); governed by **buf** +
+  `scripts/check-proto-parity.py` (AsyncAPI↔proto field/enum parity) — DRQ-025.
+- **verify.sh** decodes a real Protobuf binary frame matching the contract on
+  both stacks, asserts JSON and Protobuf field values identical, and the binary
+  frame smaller (DRQ-019).
+- **Ch19** Binary Protobuf over WebSockets; **Ch20** Optimizing throughput
+  (JSON vs Protobuf size, batching, permessage-deflate + CRIME caveat,
+  connection/message limits, backpressure interplay).
+- **CI**: `part5-performance` added to the drift gate + examples matrix; a
+  buf-lint/parity step; **k6 smoke gated**, comparative benchmark local (DRQ-027).
+- Generated stubs never committed.
+
+Build order: version survey + proto/contract + parity gate → app both stacks +
+verify green → Ch19/Ch20 against the working code → CI/k6 → build + voice.
+
 ## Deferred to later iterations (r02+)
 
 - Chapter prose for all 29 chapters, to the house depth standard (paired

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="260" y="10" width="380" height="50" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="450.0" y="40.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">k6/benchmark.js — 3 scenarios, same channel, same fixture</text>
+<rect x="40" y="90" width="250" height="90" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="165.0" y="125.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">json</text>
+<text x="165.0" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">avg 259.7B / p90 267.0B</text>
+<text x="165.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">measured on the wire</text>
+<rect x="325" y="90" width="250" height="90" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="450.0" y="125.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">protobuf</text>
+<text x="450.0" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">avg 154.0B / p90 157.0B</text>
+<text x="450.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">40.7% smaller than json</text>
+<rect x="610" y="90" width="250" height="90" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="735.0" y="125.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">json+deflate</text>
+<text x="735.0" y="142.5" font-size="11.5" fill="#555555" text-anchor="middle">avg 259.7B / p90 267.0B</text>
+<text x="735.0" y="157.5" font-size="11.5" fill="#555555" text-anchor="middle">identical to plain json</text>
+<rect x="610" y="200" width="250" height="80" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="735.0" y="230.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">k6/ws inflates compressed frames</text>
+<text x="735.0" y="247.5" font-size="11.5" fill="#555555" text-anchor="middle">before the script sees the bytes —</text>
+<text x="735.0" y="262.5" font-size="11.5" fill="#555555" text-anchor="middle">this row can&#x27;t show the win</text>
+<rect x="40" y="310" width="390" height="70" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="235.0" y="343.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Python :8091 (websockets)</text>
+<text x="235.0" y="360.0" font-size="11.5" fill="#555555" text-anchor="middle">permessage-deflate negotiated: 7908/7908 (100%)</text>
+<rect x="470" y="310" width="390" height="70" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="665.0" y="343.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Quarkus :8090 (WebSockets Next / Undertow)</text>
+<text x="665.0" y="360.0" font-size="11.5" fill="#555555" text-anchor="middle">permessage-deflate negotiated: 0/11806-18292 (0%)</text>
+<rect x="180" y="405" width="540" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="450.0" y="430.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">same stack difference, reproduced across every run —</text>
+<text x="450.0" y="447.5" font-size="11.5" fill="#555555" text-anchor="middle">not proof deflate doesn&#x27;t help, proof k6/ws can&#x27;t see it</text>
+<path d="M450,60 L165,90" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M450,60 L450,90" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M450,60 L735,90" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="598.5" y="69.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">compression: &quot;deflate&quot;</text>
+<text x="598.5" y="69.0" font-size="11" fill="#b8650a" text-anchor="middle">compression: &quot;deflate&quot;</text>
+<path d="M735,180 L735,200" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M235,380 L400,405" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M665,380 L500,405" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="450" y="470" font-size="11" fill="#555555" text-anchor="middle">Bytes/frame numbers are the fixture&#x27;s size, not a function of load — the only row that changes with load is connects/sec.</text>
+</svg>

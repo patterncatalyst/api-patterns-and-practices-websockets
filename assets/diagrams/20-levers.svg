@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="40" width="860" height="390" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="60" font-size="12" font-weight="700" fill="#1d1d1d">One HandlingEvent, pushed over one connection</text>
+<rect x="45" y="75" width="380" height="80" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="235.0" y="105.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">1. Encoding (Ch19)</text>
+<text x="235.0" y="122.5" font-size="11.5" fill="#555555" text-anchor="middle">JSON vs. Protobuf — fixed per-frame cost</text>
+<text x="235.0" y="137.5" font-size="11.5" fill="#555555" text-anchor="middle">40.7% smaller, deterministic</text>
+<rect x="475" y="75" width="380" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="665.0" y="105.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">2. Batching / coalescing</text>
+<text x="665.0" y="122.5" font-size="11.5" fill="#555555" text-anchor="middle">amortize per-frame overhead</text>
+<text x="665.0" y="137.5" font-size="11.5" fill="#555555" text-anchor="middle">fewer, larger frames — adds latency</text>
+<rect x="45" y="185" width="380" height="90" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="235.0" y="220.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">3. permessage-deflate (RFC 7692)</text>
+<text x="235.0" y="237.5" font-size="11.5" fill="#555555" text-anchor="middle">per-connection DEFLATE state, CPU per frame</text>
+<text x="235.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">Python on by default; Quarkus opt-in, 0% here</text>
+<rect x="475" y="185" width="380" height="90" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="665.0" y="220.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">4. Size limits</text>
+<text x="665.0" y="237.5" font-size="11.5" fill="#555555" text-anchor="middle">max-message-size / max-frame-size (Quarkus)</text>
+<text x="665.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">max_size / max_queue (Python)</text>
+<rect x="160" y="310" width="580" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="450.0" y="335.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">5. Backpressure (Ch12) bounds all of the above</text>
+<text x="450.0" y="352.5" font-size="11.5" fill="#555555" text-anchor="middle">under a slow consumer — a full queue or a stalled sendText</text>
+<text x="450.0" y="367.5" font-size="11.5" fill="#555555" text-anchor="middle">caps effective throughput regardless of encoding or compression</text>
+<rect x="260" y="400" width="380" height="40" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="450.0" y="425.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">k6 measures connection-churn here, not a sustained push rate</text>
+<path d="M425,115 L475,115" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M235,155 L235,185" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M665,155 L665,185" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M235,275 L400,310" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M665,275 L500,310" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M450,380 L450,400" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="450" y="25" font-size="12" fill="#1d1d1d" text-anchor="middle" font-weight="700">Four levers above the line, one ceiling below it</text>
+</svg>

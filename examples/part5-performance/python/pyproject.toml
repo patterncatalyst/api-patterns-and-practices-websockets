@@ -1,0 +1,27 @@
+[project]
+name = "performance-python"
+version = "1.0.0"
+description = "Part 5 example — Python native-websockets handling-events feed with TWO wire encodings of the same contract: JSON text frames (default) and Protobuf binary frames, selected per connection via Sec-WebSocket-Protocol (Ch19, DRQ-025/DRQ-026). Forks examples/part4-connection/python (FastAPI for HTTP/app lifecycle, the websockets library drives the WS connection); drops Part 4's connection concerns (backpressure/errors/heartbeats/auth) to isolate the encoding comparison."
+requires-python = ">=3.15"
+dependencies = [
+    "fastapi>=0.146.0",
+    "opentelemetry-distro>=0.66b1",
+    "protobuf==7.36.2",
+    "uvicorn[standard]>=0.54.0",
+    "websockets>=17.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator>=0.86.0",
+    "grpcio-tools==1.84.0",
+    "jsonschema>=4.26.0",
+    "pytest>=9.1.1",
+]

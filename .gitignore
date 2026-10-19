@@ -46,3 +46,6 @@ build/
 
 # stray websocat download if ensure_websocat runs from repo root
 .bin/
+
+# maven wrapper debug script (generated)
+mvnw-debug

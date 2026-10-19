@@ -31,7 +31,11 @@ servers:
       Local development server. The WebSocket upgrade request carries a
       bearer token as a query parameter (`token`) until the site's auth
       chapter lands a header-based alternative; the server advertises the
-      `handling-events.v1` subprotocol.
+      `handling-events.v1` subprotocol family, encoded as either
+      `handling-events.v1+json` (the default, and the only member of the
+      family before Part 5) or `handling-events.v1+protobuf` (Part 5,
+      DRQ-026) — see `Sec-WebSocket-Protocol` below for how a client selects
+      between the two.
     bindings:
       ws:
         method: GET
@@ -51,8 +55,22 @@ servers:
           properties:
             Sec-WebSocket-Protocol:
               type: string
-              const: handling-events.v1
-              description: Subprotocol advertised by both server and client.
+              enum:
+                - handling-events.v1
+                - handling-events.v1+json
+                - handling-events.v1+protobuf
+              description: >
+                Subprotocol advertised by both server and client, used to
+                negotiate which wire encoding the connection carries
+                (DRQ-026, Part 5). `handling-events.v1+json` is the default
+                and is what a client gets by asking for the original,
+                encoding-unqualified `handling-events.v1` — the two are
+                equivalent and a server accepts either. `handling-events.v1+protobuf`
+                switches the connection to the binary encoding defined in
+                `contracts/handling-event.proto`, the exact same
+                `HandlingEvent` fields in a different wire format. A
+                connection negotiates exactly one of the three; there is no
+                mixed-encoding connection.
         bindingVersion: 0.1.0
 
 channels:

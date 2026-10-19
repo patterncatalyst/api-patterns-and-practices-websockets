@@ -10,8 +10,11 @@ only if it grows enough to warrant it.
 
 ```
 contracts/
-  asyncapi.yaml   the contract — one WebSocket channel, one push message
-  README.md       this file
+  asyncapi.yaml          the contract — one WebSocket channel, one push message
+  handling-event.proto   a parallel BINARY encoding of the same message (Part 5)
+  buf.yaml               governs handling-event.proto (lint STANDARD, breaking FILE)
+  buf.gen.yaml           convenience local stub generation, not a CI dependency
+  README.md              this file
 ```
 
 ## What it models
@@ -77,3 +80,47 @@ Both stacks generate from this one file:
 Until then, `asyncapi validate` is the Ch5 end-to-end anchor (DRQ-011): a
 contract that validates and that both stacks will generate from, rather than
 a running service.
+
+## Protobuf: a parallel binary encoding
+
+Part 5 (Ch19, "Binary Protobuf over WebSockets") adds a second wire encoding
+of the exact same `HandlingEvent` message: `handling-event.proto` (DRQ-025).
+`asyncapi.yaml` stays the single source of truth for what the message
+*means*; the proto file is the single source of truth for how it looks as
+bytes. The two are governed as a pair, not independently:
+
+- **`handling-event.proto`** — proto3, `package shipping.handlingevents.v1`,
+  stable field numbers (additive-only, never reused — the same
+  non-breaking-evolution discipline Ch7 applies to the JSON contract).
+  `occurredAt`/`registeredAt`/`amount`/`location` stay plain `string` fields
+  rather than typed Protobuf equivalents (e.g. `google.protobuf.Timestamp`),
+  so a value decoded from either encoding is byte-for-byte identical.
+- **`buf.yaml`** governs it — `buf lint` (`STANDARD`, with two documented
+  exceptions for this site's single-file contract layout — see the comment
+  in `buf.yaml`), `buf build`, and `buf breaking` (`FILE`-level compatibility
+  from the commit after it's introduced), the same posture as the gRPC
+  sibling site's `contracts/buf.yaml`.
+- **`scripts/check-proto-parity.py`** closes the gap buf can't: it compiles
+  the proto to a descriptor set and diffs its field names, enum members (in
+  order), and required/optional split against
+  `build/handling-event.schema.json` (the same extracted schema
+  `scripts/extract-message-schema.py` already produces from
+  `asyncapi.yaml`). `buf breaking` only ever sees the proto side; this
+  script is what actually catches `asyncapi.yaml` and `handling-event.proto`
+  drifting apart.
+
+  ```bash
+  python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
+  python3 -I scripts/check-proto-parity.py
+  ```
+
+- **Encoding negotiation via subprotocol (DRQ-026).** A client picks JSON or
+  Protobuf through `Sec-WebSocket-Protocol`: `handling-events.v1+json` (the
+  default — equivalent to the original, encoding-unqualified
+  `handling-events.v1`) or `handling-events.v1+protobuf`. This is an
+  additive extension of the contract's existing subprotocol value, verified
+  with `asyncapi diff` to introduce no breaking change.
+- **No generated stubs are committed.** Java lands under `target/`, Python's
+  `_pb2.py`/`_pb2_grpc.py`/`_pb2.pyi` are gitignored (see `.gitignore`); each
+  stack regenerates its own stubs from `handling-event.proto` at build time,
+  the same convention the gRPC sibling site uses for its own `.proto` files.

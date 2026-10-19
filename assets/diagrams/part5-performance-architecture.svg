@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="350" y="15" width="240" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="470.0" y="45.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">client</text>
+<text x="470.0" y="62.5" font-size="11.5" fill="#555555" text-anchor="middle">WS upgrade + Sec-WebSocket-Protocol</text>
+<rect x="270" y="110" width="400" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="470.0" y="143.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">subprotocol negotiation (DRQ-026)</text>
+<text x="470.0" y="160.0" font-size="11.5" fill="#555555" text-anchor="middle">server picks the first offered value it also supports, echoes it back</text>
+<rect x="40" y="220" width="400" height="120" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="240.0" y="263.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">handling-events.v1+json</text>
+<text x="240.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">Quarkus :8090 / Python :8091</text>
+<text x="240.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">sendText(toJson(event))</text>
+<text x="240.0" y="310.0" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x1 — JSON TEXT frame</text>
+<rect x="500" y="220" width="400" height="120" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="700.0" y="263.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">handling-events.v1+protobuf</text>
+<text x="700.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">Quarkus :8090 / Python :8091</text>
+<text x="700.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">sendBinary(event.toProto().toByteArray())</text>
+<text x="700.0" y="310.0" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x2 — Protobuf BINARY frame</text>
+<rect x="60" y="380" width="360" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="240.0" y="405.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">RECEIVE event, e.g. 247 bytes</text>
+<text x="240.0" y="422.5" font-size="11.5" fill="#555555" text-anchor="middle">eventId/bookingId/eventType/occurredAt/...</text>
+<rect x="520" y="380" width="360" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="700.0" y="405.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">same RECEIVE event, e.g. 149 bytes</text>
+<text x="700.0" y="422.5" font-size="11.5" fill="#555555" text-anchor="middle">same field VALUES, ~40% smaller</text>
+<rect x="300" y="475" width="340" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="470.0" y="503.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">decode both -&gt; identical field values</text>
+<text x="470.0" y="520.0" font-size="11.5" fill="#555555" text-anchor="middle">verify.sh asserts byte-for-byte equal after decode</text>
+<path d="M440,80 L440,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="450.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade</text>
+<text x="450.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">upgrade</text>
+<path d="M390,180 L240,220" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="321.0" y="194.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">+json offered</text>
+<text x="321.0" y="194.0" font-size="11" fill="#b8650a" text-anchor="middle">+json offered</text>
+<path d="M550,180 L700,220" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="631.0" y="194.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">+protobuf offered</text>
+<text x="631.0" y="194.0" font-size="11" fill="#b8650a" text-anchor="middle">+protobuf offered</text>
+<path d="M240,340 L240,380" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M700,340 L700,380" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M240,435 L440,475" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M700,435 L640,475" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="470" y="545" font-size="12" fill="#555555" text-anchor="middle">Same contract, same fixture, two wire encodings — verify.sh proves field equality and the Protobuf size win live on both stacks.</text>
+</svg>
