@@ -219,3 +219,31 @@ Python version. r02's Ch0 said 3.15 while the r03 examples run 3.14; r04
 reconciles them to a single value — the newest stable the stack supports
 (attempt 3.15 across the examples; hold at 3.14 only if an actual
 incompatibility blocks it, recording the hold next to the pin).
+
+**Resolved (r04 toolchain pass, 2026-10-18):** 3.15.0 — no hold needed. Every
+dependency in `examples/part3-handling-events/python/pyproject.toml`
+(FastAPI, `websockets`, uvicorn, opentelemetry-distro, pydantic/pydantic-core,
+datamodel-code-generator, jsonschema, pytest) installs clean under CPython
+3.15.0 via `uv sync`, `uv run pytest tests/test_contract.py` passes (5/5), and
+`scripts/generate-models.sh` regenerates cleanly with
+`--target-python-version 3.15`. `requires-python`, `.python-version`, and
+`uv.lock` in both `examples/part3-handling-events/python/` and
+`examples/part3-handling-events/clients/python/` now read `3.15`/`3.15.0`,
+matching Ch0 and `_plans/version-matrix.md`.
+
+One real sub-hold surfaced in the Containerfile, not the dependency set: UBI
+10 has not published a `ubi10/python-315-minimal` image as of this survey
+(`skopeo list-tags` on it returns repo-not-found; the Red Hat Catalog API
+returns zero results), so the base image still ships only a 3.14 system
+interpreter. Left alone, `uv sync` would silently fall back to downloading an
+unpinned CPython build to satisfy the new `>=3.15` floor, and that downloaded
+interpreter wouldn't survive the multi-stage `COPY --from=build` into the
+runtime image (verified by building the unmodified Containerfile: the image
+built, but the server failed at startup with `ModuleNotFoundError: No module
+named 'uvicorn'` — the venv's `python3` symlink pointed outside what got
+copied). Fixed by pinning the fallback explicitly (`uv python install
+3.15.0` under `UV_PYTHON_INSTALL_DIR=/app/.uv-python`) and copying that
+directory into the runtime stage alongside `.venv`. Rebuilt and verified live:
+the image now starts cleanly on CPython 3.15.0 and serves both the WS and
+HTTP ports. Revisit once Red Hat ships a `ubi10/python-315-minimal` image and
+drop the uv-managed interpreter in favor of it.

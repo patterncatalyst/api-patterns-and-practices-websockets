@@ -93,7 +93,7 @@ details and the UBI 10 base image pin.
 
 | Tool / package | Version |
 | --- | --- |
-| Python | 3.14 (3.14.8 locally) |
+| Python | 3.15 (3.15.0 locally) |
 | uv | 0.13.1 |
 | fastapi | 0.146.0 |
 | websockets | 17.2 |

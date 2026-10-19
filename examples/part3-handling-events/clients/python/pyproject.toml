@@ -2,7 +2,7 @@
 name = "handling-events-client-python"
 version = "1.0.0"
 description = "Part 3 'Handling It' / Ch10 example — consuming client for the handlingEvents channel, built on the native `websockets` library (websockets.asyncio.client.connect). Connects to either ../../quarkus (ws://localhost:8080) or ../../python (ws://localhost:8081) — same contract, either stack."
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 dependencies = [
     "websockets>=17.2",
 ]

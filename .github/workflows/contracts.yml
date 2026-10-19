@@ -98,7 +98,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0   # no floating v10 tag; pin exact
         with:
           version: "0.13.1"
-          python-version: "3.14"
+          python-version: "3.15"
           enable-cache: true
           cache-dependency-glob: |
             examples/part3-handling-events/python/uv.lock

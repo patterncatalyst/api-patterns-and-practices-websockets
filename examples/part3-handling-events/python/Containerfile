@@ -20,6 +20,19 @@
 # Re-check with:
 #   skopeo list-tags docker://registry.access.redhat.com/ubi10/python-314-minimal
 # and confirm with `skopeo inspect`. Bump deliberately.
+#
+# requires-python is 3.15 (DRQ-024), but as of this survey (2026-10-18) Red
+# Hat has not published a ubi10/python-315-minimal image yet (confirmed via
+# `skopeo list-tags docker://registry.access.redhat.com/ubi10/python-315-minimal`
+# — repo not found — and the Red Hat Catalog API returning zero results).
+# The base image below still only ships a 3.14 system interpreter, which
+# doesn't satisfy pyproject.toml's floor, so `uv sync` would otherwise fall
+# back to silently downloading an unpinned CPython build. `uv python install
+# 3.15.0` below pins that fallback to an exact, intentional version instead
+# of leaving it implicit, and `UV_PYTHON_INSTALL_DIR` puts it under /app so
+# the runtime stage's COPY picks it up alongside the venv. Re-evaluate once
+# Red Hat ships a ubi10/python-315-minimal image and switch back to the
+# UBI-provided interpreter for both stages.
 
 # ── Stage 1: Build ──────────────────────────────────────────
 FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506 AS build
@@ -30,7 +43,10 @@ FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506 AS buil
 USER 0
 WORKDIR /app
 
-RUN pip install --no-cache-dir uv==0.13.1
+ENV UV_PYTHON_INSTALL_DIR=/app/.uv-python
+
+RUN pip install --no-cache-dir uv==0.13.1 && \
+    uv python install 3.15.0
 
 COPY examples/part3-handling-events/python/pyproject.toml ./
 COPY examples/part3-handling-events/python/uv.lock ./
@@ -53,7 +69,7 @@ RUN .venv/bin/python3 -I scripts/extract-message-schema.py build/handling-event.
       --input-file-type jsonschema \
       --output app/models_generated.py \
       --output-model-type pydantic_v2.BaseModel \
-      --target-python-version 3.14 \
+      --target-python-version 3.15 \
       --use-schema-description \
       --disable-timestamp \
       --formatters black isort
@@ -71,6 +87,10 @@ FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
 
 WORKDIR /app
 
+# .uv-python is the pinned, uv-managed CPython 3.15.0 the build stage
+# installed (see the note above the build stage's FROM) — the venv's
+# interpreter symlinks resolve into it, so it has to travel with .venv.
+COPY --from=build --chown=1001:0 /app/.uv-python /app/.uv-python
 COPY --from=build --chown=1001:0 /app/.venv /app/.venv
 COPY --from=build --chown=1001:0 /app/app /app/app
 COPY --from=build --chown=1001:0 /app/fixtures /app/fixtures

@@ -16,7 +16,7 @@ This site pins to the current stable release of each tool as of this writing, no
 
 The Python side pins to **Python 3.15**, the current stable release of the language, managed by **`uv`** rather than `pip` and a hand-rolled virtualenv: uv installs the interpreter, resolves and locks dependencies in a `pyproject.toml`-first workflow, and runs the project, all from one fast tool. This is the house standard across the REST and gRPC sibling sites and the shared Python scaffold (DRQ-002). Every Python example builds on **FastAPI** for HTTP routing and app lifecycle, paired with the native **`websockets`** library for the socket itself rather than a framework-bundled WebSocket shim: FastAPI's own `WebSocket` type is a thin wrapper over Starlette's ASGI-level primitive, fine for a single-process toy, but the native library exposes the connection state machine, ping/pong control frames, and close-code handling directly — the exact knobs Part 4's liveness and reconnect chapters need. Chapter 9 covers that choice, and when reaching for the framework's built-in support is the right call instead, in full.
 
-Contract-first work needs one more tool before either service exists: the **AsyncAPI CLI**, which validates `contracts/asyncapi.yaml` against the AsyncAPI 3.0 meta-schema the same way `buf lint` validates a `.proto` file on the gRPC site. Chapter 5 is where that contract gets written and validated for the first time; this chapter's lab only needs the CLI installed and on `PATH` so `check-prereqs.sh` can confirm it. Two load and functional testing tools round out the list without being needed for this chapter's own checks: **k6** drives the sustained-connection load tests Part 5 builds against, and **Newman** runs any REST-side assertions this site needs at the seam back to the REST booking service (DRQ-006). Installing both now means Part 5 is never the first time you reach for either.
+Contract-first work needs one more tool before either service exists: the **AsyncAPI CLI**, which validates `contracts/asyncapi.yaml` against the AsyncAPI 3.0 meta-schema the same way `buf lint` validates a `.proto` file on the gRPC site. Chapter 5 is where that contract gets written and validated for the first time; this chapter's lab only needs the CLI installed and on `PATH` so `check-prereqs.sh` can confirm it. Two load and functional testing tools round out the list without being needed for this chapter's own checks: **k6** drives the sustained-connection load tests Part 4 builds against, and **Newman** runs any REST-side assertions this site needs at the seam back to the REST booking service (DRQ-006). Installing both now means Part 4 is never the first time you reach for either.
 
 {% include codetabs.html langs="Quarkus|Python" %}
 
@@ -71,8 +71,11 @@ Each check follows the same three-step shape: locate the binary, parse its repor
 | websockets (library) | 17.1 | current stable; the native library both stacks' Python side builds on |
 | AsyncAPI CLI | 6.2.1 | validates `contracts/asyncapi.yaml` from Chapter 5 onward |
 | Docker Compose (plugin) | 5.6.0 | the `docker compose` subcommand, not the legacy `docker-compose` v1 binary |
-| k6 | 2.3.0 | load-testing tool for Part 5; installed now, used later |
+| k6 | 2.3.0 | load-testing tool for Part 4; installed now, used later |
 | Newman | 6.2.3 | REST-side assertions at the booking-service seam |
+| Kafka | 4.3.1 (KRaft mode, `apache/kafka` image) | current stable; backs Ch16's Kafka-backed reconnect and the Ch18 scale-out fan-out, ZooKeeper-free |
+| Redis | 8.10.2-alpine | current stable; the other Ch18 scale-out backplane, run alongside Kafka for the cross-instance fan-out proof |
+| PyJWT | 2.15.1 | current stable; validates the self-minted HS256 JWT at the upgrade (Ch17) |
 
 Every row is pinned to an exact version, never a floating major or a `latest` tag, and bumped as a reviewed change when the next survey pass finds a newer stable release — never as a side effect of an unrelated commit. The canonical copy of this table lives in `_plans/version-matrix.md`; this chapter's copy is the one `check-prereqs.sh` enforces at build time, so the two are kept in lockstep by the same review that bumps either one.
 
@@ -98,7 +101,7 @@ Once the examples iteration lands, running `check-prereqs.sh` against a fully-pr
 $ ./scripts/check-prereqs.sh
 checking java................. 25.0.4 (>= 25.0.0)        OK
 checking quarkus............... 3.40.0 (>= 3.33.0)        OK
-checking python................ 3.15.0 (>= 3.14.0)        OK
+checking python................ 3.15.0 (>= 3.15.0)        OK
 checking uv.................... 0.13.1 (>= 0.12.0)        OK
 checking asyncapi.............. 6.2.1 (>= 5.0.0)          OK
 checking docker................ 29.1.2                    OK
@@ -120,7 +123,7 @@ missing dependency: uv >= 0.12.0
 |---|---|---|
 | `java` | 25.0.0 | Quarkus build and dev mode |
 | `quarkus` | 3.33.0 | WebSockets Next extension availability |
-| `python` | 3.14.0 | native `websockets` library's minimum interpreter |
+| `python` | 3.15.0 | matches the `pyproject.toml` `requires-python` floor every example pins to |
 | `uv` | 0.12.0 | the `pyproject.toml` + `uv.lock` workflow this site's Python uses |
 | `asyncapi` | 5.0.0 | AsyncAPI 3.0 validation support |
 | `docker compose` | 2.20.0 | `profiles` and `depends_on` health conditions |
