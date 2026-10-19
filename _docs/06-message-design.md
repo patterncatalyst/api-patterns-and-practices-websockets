@@ -6,6 +6,18 @@ description: "Designing the handling-event message shapes a contract — and bot
 duration: "22 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why `HandlingEvent` uses one flat schema instead of an explicit envelope, and name the condition under which an explicit envelope would pay for itself.
+- Justify the `eventType` discriminator over one AsyncAPI message per event kind, in terms of evolution cost and cross-stack consistency.
+- Apply the four field-shape conventions this site reuses — prefixed identifiers, dual timestamps, decimal-string `Money`, and a never-sent `*_UNSPECIFIED` enum zero value — and state the failure each one prevents.
+- Distinguish a field that is missing because the schema does not yet define it from one that is defined but legitimately absent on a given message.
+- Configure a Java `record`/Jackson pair and a Python `Pydantic` model so both deserialize `HandlingEvent` identically.
+
+## Why this matters
+
 Chapter 5 put `contracts/asyncapi.yaml` in place as the thing both stacks generate from and validate against. This chapter is about what goes inside it: the shape of the `HandlingEvent` message itself, field by field, and the decisions that shape carries that a REST JSON body or a gRPC `.proto` message would make differently — or the same way, for the same reasons. A WebSocket connection has no request/response pair to frame a payload against; every message the server pushes has to carry enough of its own context to be useful standing alone, in whatever order it arrives, to a client that might have missed the one before it. That's what message design means on a socket: not "what fields does this event have" but "what does a client need to know, with nothing else to go on, to act on this message correctly."
 
 ## Envelope vs. payload: one flat object, two roles
@@ -176,3 +188,11 @@ Every change costs something a client eventually pays for. `type: "load"` with n
 Every design choice in this chapter was made with one eye on Chapter 7: the discriminated `eventType` enum, the optional `voyageNumber`/`amount` fields, and the required-vs-optional split are what make it possible to add an eighth event kind, a new optional field, or a stricter validation rule without breaking a client that's already connected. Chapter 7 names that explicitly — what counts as an additive, safe change versus a breaking one, how the `/ws/v1/...` channel path's version relates to the schema's own evolution, and what a client should do with a field it doesn't recognize.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Keep `HandlingEvent` as one flat, reused message discriminated by `eventType`, with IDs that carry a type prefix, two timestamps instead of one, Money as a decimal string, an explicit `*_UNSPECIFIED` enum zero value, and every non-identity field optional unless every event kind truly has it. None of these are socket-specific inventions — they're the REST and gRPC sibling sites' domain conventions carried onto a channel that has no request/response pair to lean on instead. Reach for a multi-schema envelope only when a channel carries distinct message families with no shared shape to discriminate within; this feed has one family, and the discriminator already does the job a wrapper would.</p></div>
+
+## For deeper coverage
+
+- Gregor Hohpe & Bobby Woolf, *Enterprise Integration Patterns* (Addison-Wesley, 2003) — the Message, Message Envelope, and Document Message patterns this chapter's "roles, not nesting" argument is built on.
+- Olaf Zimmermann, Mirko Stocker, Daniel Lübke, Uwe Zdun & Cesare Pautasso, *Patterns for API Design* (Addison-Wesley, 2022) — field-level design conventions (identifiers, enumerations, nullability) applied here to one asynchronous message instead of a synchronous request/response pair.
+- *Cloud Native Design Patterns* — "API Metadata" chapter — the discriminator-vs-schema-per-kind trade-off this chapter walks, generalized to metadata design across an API surface.
+- *Cloud Native Design Patterns* — "Event-Driven" chapter — designing one event shape to survive the event's own evolution, the same problem `HandlingEvent`'s nullable fields solve here.
+- [AsyncAPI 3.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.0.0) — the `components.schemas` and `components.messages` sections `HandlingEvent` is defined under.

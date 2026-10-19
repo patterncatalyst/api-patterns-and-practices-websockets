@@ -6,6 +6,18 @@ description: "Implementing the handling-event feed on Quarkus WebSockets Next."
 duration: "20 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Implement a `@WebSocket` endpoint whose `@OnOpen` method returns a `Multi<HandlingEvent>` to push a known sequence of events to a connecting client.
+- Explain why `HandlingEventWebSocket` declares no `@OnTextMessage` or `@OnClose` method, tracing each omission back to the contract's `action: receive` operation and the endpoint's actual resource lifecycle.
+- Choose between returning a declarative `Multi`/`Uni` and calling `WebSocketConnection.sendText` imperatively, based on whether the data to push is already fully known at connection time.
+- Configure Jackson, via `@JsonInclude(NON_NULL)`, `Instant` serialization, and enum naming, so a `HandlingEvent` record serializes to match `contracts/asyncapi.yaml` without a custom serializer.
+- Verify a running endpoint's output against a JSON Schema generated from the contract, using `HandlingEventContractTest` rather than a hand-read comparison.
+
+## Why this matters
+
 Chapter 5 fixed the contract; Chapter 6 fixed the message shape; Chapter 7 fixed what a version change may and may not do to a client already connected. None of those three chapters ran a socket. This chapter does: `examples/part3-handling-events/quarkus` is a complete, buildable Quarkus module that implements `operations.receiveHandlingEvent` from `contracts/asyncapi.yaml` — one class, one record, one enum, and a test that checks the three against the schema the contract describes. The whole implementation is `HandlingEventWebSocket`, nineteen lines excluding imports and comments, and the reason it stays that short is the subject of this chapter: `quarkus-websockets-next` turns "replay a sequence of events onto an open connection" into a method signature, not a hand-rolled state machine.
 
 ## The endpoint and its path parameter
@@ -201,3 +213,11 @@ Neither `voyageNumber` nor `amount` appears — `@JsonInclude(NON_NULL)` omittin
 This chapter's endpoint replays a closed, in-memory fixture — the entire event sequence exists before the first connection ever opens, which is why a single `Multi.createFrom().iterable(...)` call is enough. The next hands-on chapter changes that: a live source (a Kafka topic or an in-process event bus, keyed by `bookingId` rather than shared across every connection) means `HandlingEventFeed.events()` stops being a precomputed `List` and becomes a subscription a connection opens and a later `@OnClose` has to tear down — the exact gap this chapter named and chose not to fill ahead of need. Chapter 11 puts the Python implementation of this same contract next to this one, side by side, to compare the `Multi`-returning shape here against Python's own mechanism for the identical push; this chapter stayed single-stack so the Quarkus-specific lifecycle, injection, and serialization machinery could be read without a second language's syntax competing for attention on the same page. Part 4's chapters on backpressure and liveness are where `WebSocketConnection`'s imperative `sendText` family and this chapter's declarative `Multi` both get revisited under conditions — a slow consumer, an idle connection a middlebox might reap — this chapter's three-event fixture never produces.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>`HandlingEventWebSocket` returns a declarative <code>Multi&lt;HandlingEvent&gt;</code> from <code>@OnOpen</code> rather than injecting <code>WebSocketConnection</code> and calling <code>sendText</code> in a loop, because the entire event sequence this chapter replays is already known, in full, in memory, the moment a connection opens — exactly the shape a reactive stream is built to express in one line instead of an explicit send per item. It declares no <code>@OnTextMessage</code> method because <code>contracts/asyncapi.yaml</code>'s one operation on this channel is <code>action: receive</code>, not because an inbound handler was deferred for later; and no <code>@OnClose</code> method because no per-connection resource exists yet for one to release. WebSockets Next over the legacy <code>quarkus-websockets</code> extension (DRQ-002) is what makes the first of those three choices available at all — a <code>Multi</code> returned from a lifecycle callback has no equivalent on an extension built around JSR 356's blocking, one-thread-per-connection session API. None of this is free-standing trust in the Java code matching the contract by inspection: <code>HandlingEventContractTest</code> serializes every fixture event with the same Jackson configuration the running endpoint uses and validates the result against a JSON Schema generated from <code>contracts/asyncapi.yaml</code> itself, so a field renamed, an enum constant reordered, or an optional field that stops being omitted fails a fast, non-containerized test before it ever reaches a socket a client has connected to.</p></div>
+
+## For deeper coverage
+
+- Lukasz Dynowski & Marcin Dulak, *Learning API Styles* (O'Reilly, 2025) — a style-by-style view of how a channel's programming model (here, a reactive `Multi` over a WebSocket) differs from its request/response counterparts.
+- *Cloud Native Design Patterns* — "Communications" chapter — the push-vs-pull and connection-lifecycle trade-offs behind choosing a reactive stream over an imperative send loop.
+- *Cloud Native Design Patterns* — "WebSockets at Scale" chapter — the backpressure and liveness concerns this chapter's three-event fixture doesn't yet exercise, which Part 4 picks up.
+- [Quarkus WebSockets Next reference guide](https://quarkus.io/guides/websockets-next-reference) — the `@WebSocket`, `@OnOpen`, and `WebSocketConnection` APIs this chapter's endpoint is built from.
+- [RFC 6455 — The WebSocket Protocol](https://www.rfc-editor.org/rfc/rfc6455) — the connection lifecycle (`CONNECTING`/`OPEN`/`CLOSING`/`CLOSED`) `@OnOpen`/`@OnClose` map onto.

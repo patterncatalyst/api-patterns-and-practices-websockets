@@ -6,6 +6,20 @@ description: "Running the full stack locally with Docker Compose."
 duration: "12 min read"
 ---
 
+## Learning objectives
+
+By the end of this chapter you can:
+
+- Explain why every multi-stack example's Containerfile builds with `context: ../..` instead of a context scoped to `quarkus/` or `python/`, and what breaks if it isn't.
+- Gate a broker-dependent service's startup on `healthcheck` plus `depends_on: condition: service_healthy`, instead of a bare `depends_on` that only waits for the container to start.
+- Use `depends_on.required: false` to let one set of app services serve a profile-less, `--profile kafka`, and `--profile redis` run from a single `compose.yaml`.
+- Distinguish what a Compose `profiles` flag controls (which containers start) from what `BACKPLANE_MODE` controls (which `Backplane` implementation a running instance wires up).
+- Diagnose a `ConfigException: No resolvable bootstrap urls` crash at startup as distinct from the soft connection-retry warning an unreachable-but-resolvable broker host produces.
+
+## Why this matters
+
+Chapters 1 through 24 each proved one example's wire behavior with a single `docker compose up` against that example's own, disposable `compose.yaml` — a convenience for running one example in isolation, nothing more. `examples/part4-backplane` is the first example with enough moving parts (four app instances, two swappable brokers, three scenarios) that the compose file stops being incidental and becomes the thing this chapter has to account for in its own right.
+
 Every example on this site up to this point ran as a single `docker compose up` against one example's own `compose.yaml` — `examples/part3-handling-events`, `examples/part4-connection`, `examples/part4-backplane`, each isolated under its own compose project name, each torn down by `verify.sh`'s own EXIT trap. There is no unified compose file for the whole site, and this chapter doesn't invent one. What changes here is the question: not "does `quarkus-a` answer a WebSocket upgrade" but "does the compose topology itself — build context, healthcheck gating, the profile/env split that picks a backplane — hold up as a runtime, not just a dev convenience." `examples/part4-backplane/compose.yaml` is the centerpiece, because it's the one example on this site that runs four application instances and two optional brokers from one file, and every mechanism this chapter describes is already live in it.
 
 ## Build context at the repo root, not the example directory
@@ -90,3 +104,11 @@ A full run ends with one `PASS` line asserting all three scenarios held on both 
 Everything in this chapter proves a compose topology is correct on one machine, against one Docker daemon, under one operator's control. Chapter 26 moves the identical application images — same Containerfiles, same `INSTANCE_ID`/`BACKPLANE_MODE`/`KAFKA_BOOTSTRAP_SERVERS`/`REDIS_URL` contract this chapter documented — onto Kubernetes via minikube, with a separate OpenShift Local (CRC) appendix alongside it, because a scheduler reintroduces exactly the kind of timing and identity questions compose's `depends_on`/healthcheck/profile mechanics were built to answer for a single host: a Kafka StatefulSet's readiness probe stands in for `condition: service_healthy`, a Kubernetes Service's DNS name stands in for the compose network's `kafka`/`redis` hostnames, and `INSTANCE_ID` per pod replaces `INSTANCE_ID` per compose service as the signal `run_ch18_fanout`'s log assertion keys on. `_plans/version-matrix.md` already records that the minikube path reuses the identical `apache/kafka:4.3.1`/`redis:8.10.2-alpine` pins this chapter named, confirmed live via Strimzi's own default resolving to the same Kafka release — the same two-broker, four-instance shape, carried onto a platform that can restart a failed pod on its own, which is the capability a single compose file never had to begin with.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Docker Compose is the first rung of this Part's runtime progression because every mechanism it proves here generalizes forward rather than getting thrown away: a healthcheck gates startup the same way a Kubernetes readiness probe will in Chapter 26, a profile selects optional infrastructure the same way an opt-in Helm value or kustomize overlay will on the cluster paths, and the <code>BACKPLANE_MODE</code>/broker-hostname env contract this chapter traced through <code>compose.yaml</code> and <code>verify.sh</code> is the exact same contract <code>k8s/README.md</code> and the OpenShift appendix both reuse without modification. The one receipt worth carrying forward above the rest is the <code>ConfigException: No resolvable bootstrap urls</code> failure — an env var naming a broker hostname that only sometimes exists needs a resolvable-but-unreachable fallback, never an unresolvable one, and that rule doesn't change when the thing supplying the hostname becomes a Kubernetes Service instead of a compose network alias. Everything this chapter verified came from running <code>examples/part4-backplane/verify.sh</code> against the real file, not from reading the YAML and assuming it behaves as written.</p></div>
+
+## For deeper coverage
+
+- Liz Rice, *Container Security*, 2nd ed. (O'Reilly, 2025) — the container-boundary assumptions (build context scope, image provenance, what a `COPY` can and can't reach) behind why this chapter's Containerfiles build from the repo root instead of each example's own directory.
+- *Cloud Native Design Patterns* — "Graceful Shutdown" chapter — the readiness-signal asymmetry on the shutdown side of a pod's life, the same asymmetry `condition: service_healthy` exists to close on the startup side.
+- *Cloud Native Design Patterns* — "Failure Modes" chapter — the taxonomy behind why an unresolvable `KAFKA_BOOTSTRAP_SERVERS` crashes Quarkus at startup instead of degrading, versus the soft retry a merely-unreachable host produces.
+- [Docker Compose documentation](https://docs.docker.com/compose/) — `depends_on` conditions, `profiles`, and the `healthcheck` block this chapter's `compose.yaml` relies on.
+- [Compose Specification](https://compose-spec.io/) — the schema `compose.yaml` itself conforms to, including the `required: false` dependency form.
