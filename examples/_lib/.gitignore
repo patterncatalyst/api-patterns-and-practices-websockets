@@ -1,0 +1,3 @@
+# Self-downloaded websocat binary (see ensure_websocat in lib.sh) — fetched
+# fresh on first use, never committed.
+.bin/

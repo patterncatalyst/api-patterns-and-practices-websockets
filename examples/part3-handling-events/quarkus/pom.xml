@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Part 3 "Handling It" example — Quarkus side.
+
+  Implements the single `receiveHandlingEvent` operation from the shared
+  AsyncAPI contract in contracts/asyncapi.yaml: one WebSocket connection per
+  booking at /ws/v1/bookings/{bookingId}/handling-events, server-to-client
+  push only. On open, the endpoint replays the three HandlingEvents in
+  examples/part3-handling-events/fixtures/handling-events.json — the SAME
+  canonical fixture the Python/FastAPI sibling app replays — in order, as
+  JSON text frames.
+
+  The fixture is NOT committed under src/main/resources/ in this module —
+  examples/part3-handling-events/fixtures/handling-events.json is the single
+  source of truth. The copy-handling-events-fixture execution below copies it
+  onto the classpath at build time (generate-resources phase) via a path
+  relative to this module's basedir, so a local `mvn package`/`mvn test`/
+  `quarkus:dev` needs no manual step. The Containerfile reproduces the same
+  relative layout (see Containerfile) so the identical pom.xml resource
+  reference resolves inside the container build stage too.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.patterncatalyst.shipping</groupId>
+    <artifactId>part3-handling-events-quarkus</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>quarkus</packaging>
+
+    <properties>
+        <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <!-- Ch0 pins 3.40.0; the nearest resolvable release on this platform
+             BOM is 3.40.1 (a patch release) — verified resolving below. -->
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
+        <!-- Latest stable com.networknt:json-schema-validator as of this
+             writing (not Quarkus-BOM-managed; re-check before bumping). -->
+        <json-schema-validator.version>1.5.6</json-schema-validator.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- @WebSocket / @OnOpen / WebSocketConnection; Multi<HandlingEvent>
+             returned from @OnOpen establishes the server-push stream. Pulls
+             in quarkus-jackson transitively, which is what serializes
+             HandlingEvent records to JSON text frames. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-websockets-next</artifactId>
+        </dependency>
+        <!-- Traces the WebSocket upgrade and the push; off unless an OTLP
+             endpoint is reachable (see application.properties). -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- HandlingEventContractTest validates each emitted HandlingEvent
+             against build/handling-event.schema.json (generated from
+             contracts/asyncapi.yaml by scripts/extract-message-schema.py). -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+            <!-- Copies the canonical fixture onto the classpath before
+                 process-resources runs, from a path relative to this
+                 module's basedir (../fixtures) — see the file header above
+                 and Containerfile for how the container build reproduces
+                 the same relative layout. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-handling-events-fixture</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/fixtures</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../fixtures</directory>
+                                    <includes>
+                                        <include>handling-events.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
+                <skipITs>false</skipITs>
+                <quarkus.native.enabled>true</quarkus.native.enabled>
+            </properties>
+        </profile>
+    </profiles>
+</project>

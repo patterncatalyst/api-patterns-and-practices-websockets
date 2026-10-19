@@ -1,0 +1,92 @@
+# Part 3 "Handling It" example — compose topology for the
+# `handlingEvents` channel (contracts/asyncapi.yaml `operations.receiveHandlingEvent`):
+# one WebSocket connection per booking, server-to-client push only.
+#
+# Default `docker compose up` brings up: quarkus, python. Both independently
+# implement the SAME channel against the SAME contract and replay the SAME
+# shared fixture (../fixtures/handling-events.json) in order — see
+# ./README.md for the deterministic 3-event sequence (RECEIVE, LOAD,
+# CUSTOMS). The build context for both services is the REPO ROOT so each
+# Containerfile can COPY the contract/fixture files it needs straight from
+# contracts/ and ../fixtures/ — see quarkus/Containerfile and
+# python/Containerfile for the exact COPY lines.
+#
+# Ports: quarkus host 8080 -> container 8080 (WS + HTTP upgrade on the same
+# port); python host 8081 -> container 8081 (WS) and host 8082 -> container
+# 8082 (HTTP: /healthz, / — see python/app/http_app.py).
+#
+# The Grafana LGTM observability stack is opt-in (`--profile observability`)
+# so CI and a first boot stay fast. Quarkus has quarkus-opentelemetry on the
+# classpath but the SDK is disabled by default
+# (quarkus.otel.sdk.disabled=true in application.properties); Python
+# declares opentelemetry-distro but does not wrap the entrypoint with it yet
+# (Ch23's job, not this chapter's — see python/README.md). Setting
+# OTEL_EXPORTER_OTLP_ENDPOINT below is harmless either way: it only matters
+# once SDK export is explicitly turned on.
+#
+# Usage:
+#   docker compose up --build                          # app stack only
+#   docker compose --profile observability up --build  # + Grafana LGTM
+
+services:
+  quarkus:
+    build:
+      context: ../..
+      dockerfile: examples/part3-handling-events/quarkus/Containerfile
+    container_name: part3-handling-events-quarkus
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    healthcheck:
+      # No dedicated health endpoint on this chapter's example (just the WS
+      # upgrade path) — curl without -f treats any HTTP response (including
+      # the 404/426 a plain GET gets back) as "the server is up and
+      # answering", which is all a healthcheck needs here.
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  python:
+    build:
+      context: ../..
+      dockerfile: examples/part3-handling-events/python/Containerfile
+    container_name: part3-handling-events-python
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8082/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  # ─── Observability (opt-in) ────────────────────────────────────────────
+  # `docker compose --profile observability up` to include. Off by default
+  # so CI's examples job (and a first boot) stay fast.
+  lgtm:
+    image: docker.io/grafana/otel-lgtm:0.36.0
+    container_name: part3-handling-events-lgtm
+    profiles: ["observability"]
+    ports:
+      - "3000:3000" # Grafana UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "9090:9090" # Prometheus / Mimir query
+      - "3100:3100" # Loki
+      - "3200:3200" # Tempo
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
