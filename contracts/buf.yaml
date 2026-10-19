@@ -1,0 +1,35 @@
+# Governs contracts/handling-event.proto (DRQ-025). Matches the gRPC
+# sibling site's posture (v2, lint STANDARD, breaking FILE) with two
+# documented lint exceptions, both a consequence of this site keeping its
+# contract as a single file at the contracts/ root (DRQ-014) rather than a
+# package-matching directory tree the way the gRPC site's contracts/proto/
+# is laid out:
+#
+#   PACKAGE_DIRECTORY_MATCH — would require nesting the file at
+#     shipping/handlingevents/v1/handling_event.proto; this site has exactly
+#     one proto file and no plan for a second, so the directory tree buys
+#     nothing a single, easy-to-find file at the contracts/ root doesn't.
+#   FILE_LOWER_SNAKE_CASE — would require handling_event.proto; this file is
+#     named handling-event.proto to match the hyphenated naming already used
+#     by its sibling asyncapi.yaml/README.md in this same directory.
+#
+# Run from contracts/:
+#   buf lint
+#   buf build -o /dev/null
+#   buf breaking --against '.git#branch=main,subdir=contracts'
+#
+# `buf breaking` has nothing to compare against on the commit that
+# introduces this file — the "first-introduction skip" DRQ-025 calls out —
+# and starts enforcing FILE-level compatibility from the next change on.
+version: v2
+modules:
+  - path: .
+lint:
+  use:
+    - STANDARD
+  except:
+    - PACKAGE_DIRECTORY_MATCH
+    - FILE_LOWER_SNAKE_CASE
+breaking:
+  use:
+    - FILE

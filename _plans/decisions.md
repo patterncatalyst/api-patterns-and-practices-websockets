@@ -247,3 +247,34 @@ directory into the runtime stage alongside `.venv`. Rebuilt and verified live:
 the image now starts cleanly on CPython 3.15.0 and serves both the WS and
 HTTP ports. Revisit once Red Hat ships a `ubi10/python-315-minimal` image and
 drop the uv-managed interpreter in favor of it.
+
+## DRQ-025 — Protobuf as a parallel binary encoding; buf + AsyncAPI↔proto parity gate (r05)
+
+Part 5 adds **Protobuf as a second wire encoding** of the same `HandlingEvent`,
+alongside the JSON the AsyncAPI contract defines. A single hand-kept
+`contracts/handling-event.proto` (proto3, `shipping.handlingevents.v1`, stable
+field numbers, `HANDLING_EVENT_TYPE_UNSPECIFIED = 0`) mirrors the AsyncAPI
+message. **Timestamps stay RFC-3339 `string` fields** (not
+`google.protobuf.Timestamp`) so the Protobuf and JSON field VALUES are identical
+and the two encodings can be asserted equal. Governed by **buf** (`contracts/buf.yaml`,
+lint STANDARD + breaking FILE with a first-introduction skip, matching the gRPC
+sibling) PLUS a custom `scripts/check-proto-parity.py` that diffs the proto's
+field/enum set against `build/handling-event.schema.json` — buf cannot see the
+AsyncAPI side, and proto-vs-JSON drift is the real failure mode. Generated proto
+stubs are never committed (Java under `target/`, Python `*_pb2.*` gitignored).
+
+## DRQ-026 — Encoding negotiation via subprotocol (r05)
+
+A client selects JSON vs Protobuf through the WebSocket **subprotocol**
+(`Sec-WebSocket-Protocol`): `handling-events.v1+json` (default) vs
+`handling-events.v1+protobuf`, extending the contract's existing
+`handling-events.v1`. The idiomatic WS content-type mechanism, tied to Ch3;
+websocat (`--protocol`) and k6 can set it. The AsyncAPI contract is edited
+**additively** to document the two subprotocols so the breaking gate stays green.
+
+## DRQ-027 — k6: smoke gated, comparative benchmark local (r05)
+
+The Part 5 k6 **smoke** run is gated in CI (both encodings stream on both
+stacks). The comparative JSON-vs-Protobuf-vs-deflate **throughput benchmark**
+(size + messages/sec into LGTM) is **local-only** — absolute throughput is
+host-dependent and would make a flaky gate. Consistent with DRQ-023/DRQ-006.
