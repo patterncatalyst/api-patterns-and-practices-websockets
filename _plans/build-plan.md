@@ -194,6 +194,28 @@ Build order: survey/pin OTel+Newman → part6-observability app both stacks +
 verify green → Newman collection + CI → Ch23 then Ch21/22/24 → CI drift/matrix +
 version matrix → build + voice. Code before prose.
 
+## r07 scope (in progress)
+
+**Part 7 "Runtime Progression" (Ch25 Compose, Ch26 minikube, Appendix A CRC).**
+Deploy part4-backplane (both stacks) across the three runtime tiers (DRQ-031).
+
+- **Ch25 Docker Compose** — prose over the existing per-example composes
+  (build-context-repo-root, healthcheck-gated, profiles, the 4-instance backplane,
+  the verify.sh/_lib harness). No unified monolith compose.
+- **Ch26 Kubernetes (minikube)** — kustomize base+overlay, ingress-nginx WS
+  upgrade + sticky + idle-timeout, Strimzi Kafka + Redis in-cluster, image-load
+  (docker+containerd; podman unsupported), the cross-pod fan-out-through-ingress
+  proof. Verified LIVE headless.
+- **Appendix A OpenShift Local (CRC)** — restricted-v2 Helm + edge-TLS Routes +
+  AMQ Streams, in-cluster builds (Quarkus S2I, Python Docker-strategy), the
+  edge-carries-WS contrast, teardown. Verified LIVE headless.
+- **CI**: add a static `k8s-manifests` (kubeconform) job; NO cluster in CI;
+  cluster verify scripts in subdirs (not matched by the examples matrix glob).
+
+Build order: pins/ledger → minikube manifests + verify LIVE → CRC helm/scripts +
+verify LIVE → Ch25/26/AppA against captured evidence → CI + build + voice. Code
+(manifests, verified on a real cluster) before prose.
+
 ## Deferred to later iterations (r02+)
 
 - Chapter prose for all 29 chapters, to the house depth standard (paired
