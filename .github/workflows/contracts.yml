@@ -116,10 +116,21 @@ jobs:
     # (by the presence of the extra script / test class) rather than
     # hardcoding the app name, so the pattern already covers a Part 6+ app
     # that adds its own extra encoding.
+    #
+    # part6-observability (Ch23, DRQ-028/DRQ-029) forks the SAME
+    # `handlingEvents` channel/model as part3/part4 (plain JSON, no extra
+    # encoding step) and ships the same pair of generation artifacts — a
+    # Python model (python/scripts/generate-models.sh +
+    # python/tests/test_contract.py) and a Quarkus
+    # HandlingEventContractTest — so it slots into this generic loop with no
+    # new branching. part6-testing is NOT listed here: it has no app/model of
+    # its own (a Newman collection exercising part4-backplane's existing
+    # HTTP surface), so there is nothing for this contract-drift gate to
+    # regenerate or test against.
     name: Contract-drift gate (extract, regenerate, conformance-test all apps/stacks)
     runs-on: ubuntu-latest
     env:
-      DRIFT_APPS: "part3-handling-events part4-connection part4-backplane part5-performance"
+      DRIFT_APPS: "part3-handling-events part4-connection part4-backplane part5-performance part6-observability"
     steps:
       - uses: actions/checkout@v5
 
@@ -139,6 +150,7 @@ jobs:
             examples/part4-connection/python/uv.lock
             examples/part4-backplane/python/uv.lock
             examples/part5-performance/python/uv.lock
+            examples/part6-observability/python/uv.lock
 
       - uses: actions/setup-node@v4
         with:
@@ -297,6 +309,17 @@ jobs:
     # single-stage runs, which finish in a few minutes. One shared cap keeps
     # the matrix definition simple; it just needs to be big enough for the
     # slowest member.
+    #
+    # part6-observability's verify.sh adds its own cold start on top of the
+    # usual compose-build budget — the always-on `lgtm` service
+    # (grafana/otel-lgtm, Loki+Grafana+Tempo+Mimir+Collector in one image,
+    # DRQ-028/DRQ-029) plus its own `wait_for_tcp`/`wait_for_grafana_health`
+    # polls (90s each, worst case) before either stack is even exercised.
+    # That's still well inside a single attempt of the existing 45-minute
+    # cap (minutes, not tens-of-minutes, even x3 retries) — the runner-level
+    # bottleneck for that example is the `lgtm` image pull on a cold Docker
+    # cache, not anything this job can shorten, so 45 stays the shared cap
+    # rather than growing it per-example.
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -311,6 +334,17 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.13.1"
+      # part6-testing's verify.sh shells out to `npx newman@6.2.3` (no
+      # `docker.io/postman/newman` image tag newer than 6.1.3 exists yet —
+      # DRQ-030, _plans/version-matrix.md) — this runner needs Node/npx for
+      # that example. The matrix is auto-discovered (discover-examples), not
+      # hardcoded, so this step runs unconditionally for every example
+      # rather than gating on matrix.example; it's a no-op for examples that
+      # never call npx.
+      - name: Set up Node (for examples whose verify.sh needs npx, e.g. part6-testing's newman)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - name: Verify ${{ matrix.example }} (response semantics vs contract, both stacks)
         # Retry up to 3x: each verify.sh is self-contained (compose up ->
         # assert -> compose down via lib.sh's EXIT trap), so a retry starts

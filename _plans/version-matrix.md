@@ -48,6 +48,21 @@ Protobuf/buf are new as of Part 5 (DRQ-025); `_docs/00-setup-and-the-lab.md`
 when Part 5's own chapter prose lands, carrying forward the versions pinned
 above rather than re-surveying.
 
+| **OpenTelemetry / Observability (DRQ-028, DRQ-029, Part 6)** | |
+| `grafana/otel-lgtm` (Docker image) | `0.36.0` — pinned image tag (`examples/part6-observability/compose.yaml`); the same all-in-one Loki+Grafana+Tempo+Mimir+Collector image Ch0's lab (`_docs/00-setup-and-the-lab.md`) already names for the opt-in `observability` profile, and the one the gRPC/REST sibling sites use |
+| `opentelemetry-distro` (Python, PyPI) | `>=0.66b1` — `examples/part6-observability/python/pyproject.toml`; zero-code auto-instrumentation entry point (`opentelemetry-instrument`), still pre-1.0/beta upstream |
+| `opentelemetry-exporter-otlp-proto-grpc` (Python, PyPI) | `>=1.45.1` — `examples/part6-observability/python/pyproject.toml`; OTLP/gRPC exporter to the `lgtm` Collector on `:4317` |
+| `opentelemetry-instrumentation-fastapi` (Python, PyPI) | `>=0.66b1` — `examples/part6-observability/python/pyproject.toml`; auto-instruments the FastAPI HTTP side (the WS connection span itself is hand-written — DRQ-028 finding: native `websockets` has no OTel auto-instrumentation) |
+| OpenTelemetry SDK/API (Quarkus) | ships via `quarkus-opentelemetry` on the Quarkus 3.40.0 BOM (`examples/part6-observability/quarkus/pom.xml`) — not pinned separately; resolves to OTel SDK/API `1.62.0` + semconv `1.41.1` as of this survey (`mvn dependency:tree`) |
+| `prometheus-client` (Python, PyPI) | `>=0.26.0` — `examples/part6-observability/python/pyproject.toml`; backs the Python stack's own `:8082/metrics` scrape (`handling_events_delivered_total`), independent of the OTel traces above |
+| `quarkus-micrometer-registry-prometheus` | ships via the Quarkus 3.40.0 BOM (`examples/part6-observability/quarkus/pom.xml`) — not pinned separately; backs the Quarkus stack's `/q/metrics` scrape, parallel to the Python side's `prometheus-client` (no OTel-metrics bridge needed — each stack exports Prometheus directly) |
+
+Observability is new as of Part 6 (DRQ-028/DRQ-029); `_docs/00-setup-and-the-lab.md`
+(Ch0) already names `grafana/otel-lgtm` for the lab's opt-in `observability`
+profile but does not pin the per-language OTel library versions above —
+those stay app-level pins (`pyproject.toml`/the Quarkus BOM) surveyed here
+rather than duplicated into Ch0.
+
 ## Dependency policy
 
 Pin every dependency to the **upstream latest stable** release at the time
