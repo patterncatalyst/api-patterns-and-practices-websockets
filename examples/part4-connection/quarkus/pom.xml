@@ -74,6 +74,12 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-websockets-next</artifactId>
         </dependency>
+        <!-- Ch14: @Scheduled, backing HeartbeatLivenessSweep's periodic
+             pong-tracking liveness check — see that class's Javadoc. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-scheduler</artifactId>
+        </dependency>
         <!-- Traces the WebSocket upgrade and the push; off unless an OTLP
              endpoint is reachable (see application.properties). -->
         <dependency>

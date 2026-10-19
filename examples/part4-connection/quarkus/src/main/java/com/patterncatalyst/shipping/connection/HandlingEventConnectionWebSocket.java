@@ -12,6 +12,7 @@ import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnPongMessage;
 import io.quarkus.websockets.next.OnTextMessage;
 import io.quarkus.websockets.next.PathParam;
+import io.quarkus.websockets.next.UserData;
 import io.quarkus.websockets.next.WebSocket;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
@@ -46,18 +47,52 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
  *       then a {@link CloseCodes#BAD_REQUEST} close.
  *       {@link #onError} maps any other, unmapped server-side exception to
  *       {@link CloseCodes#UNEXPECTED_SERVER_ERROR}.</li>
- *   <li><b>Ch14 heartbeats</b> — delegated to WebSockets Next's built-in
- *       auto-ping ({@code quarkus.websockets-next.server.auto-ping-interval}
- *       in {@code application.properties}) plus the main HTTP server's idle
- *       timeout ({@code quarkus.http.idle-timeout}): a connection that
- *       cannot even answer a ping gets no read/write activity at all and is
- *       closed by Vert.x once idle-timeout elapses.
- *       {@link #onPongMessage} only logs the exchange; no liveness logic
- *       lives in this class.</li>
+ *   <li><b>Ch14 heartbeats</b> — WebSockets Next's built-in auto-ping
+ *       ({@code quarkus.websockets-next.server.auto-ping-interval} in
+ *       {@code application.properties}) keeps pings flowing OUT to every
+ *       connection, but Vert.x's HTTP idle-timeout is NOT what detects a
+ *       dead peer here: idle-timeout resets on any read OR write activity,
+ *       and the server's own outbound ping is write activity, so a peer
+ *       that never answers a single ping never trips it — idle-timeout
+ *       alone cannot tell "healthy" from "silently dead" once auto-ping is
+ *       on. {@link #onOpen} and {@link #onPongMessage} instead stamp
+ *       {@link #LAST_PONG_AT} on {@link WebSocketConnection#userData()} on
+ *       open and on every pong; {@link HeartbeatLivenessSweep} is the actual
+ *       detector — a scheduled sweep that closes any connection whose last
+ *       pong (or, if none has ever arrived, connection open time) is older
+ *       than {@code example.heartbeat.liveness-timeout}, with
+ *       {@link CloseCodes#LIVENESS_TIMEOUT}. See that class's Javadoc for
+ *       why the sweep lives in its own {@code @ApplicationScoped} bean
+ *       rather than here.</li>
  * </ul>
  */
-@WebSocket(path = "/ws/v1/bookings/{bookingId}/handling-events")
+@WebSocket(path = "/ws/v1/bookings/{bookingId}/handling-events", endpointId = "handling-events")
 public class HandlingEventConnectionWebSocket {
+
+    /**
+     * Must match the {@code endpointId} set on the {@link WebSocket @WebSocket}
+     * annotation above (annotation element values must be compile-time
+     * constants, which rules out referencing this field there directly) —
+     * {@link HeartbeatLivenessSweep} uses this constant to scope its sweep
+     * to this endpoint's connections via
+     * {@code OpenConnections#findByEndpointId} rather than every open
+     * connection in the application (there is only one endpoint in this
+     * example, but the sweep is written as if there could be more).
+     */
+    public static final String ENDPOINT_ID = "handling-events";
+
+    /**
+     * Epoch-millis timestamp of the last pong (or, from {@link #onOpen},
+     * connection-open time as the initial baseline) for this connection,
+     * stored per-connection via {@link WebSocketConnection#userData()} so
+     * {@link HeartbeatLivenessSweep} — which runs on its own scheduler
+     * thread, entirely outside this endpoint's {@code @SessionScoped}
+     * context — can read it directly off the {@code WebSocketConnection}
+     * instances {@code OpenConnections} hands back, with no CDI context of
+     * its own required (same reasoning as {@code ConnectionLifecycleShutdown}
+     * closing connections synchronously from a plain CDI observer method).
+     */
+    static final UserData.TypedKey<Long> LAST_PONG_AT = UserData.TypedKey.forLong("part4.lastPongAt");
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -91,6 +126,13 @@ public class HandlingEventConnectionWebSocket {
             Log.warnf("handling-events connection REJECTED bookingId=%s reason=%s", bookingId, auth.reason());
             return connection.close(new CloseReason(CloseCodes.AUTH_FAILURE, "authentication failed"));
         }
+
+        // Ch14 baseline: a peer that never answers a single ping (this
+        // chapter's whole liveness scenario) would otherwise never get a
+        // LAST_PONG_AT entry at all; stamping it here too means
+        // HeartbeatLivenessSweep always has a starting point to measure
+        // from, not just "connections that have ponged at least once".
+        connection.userData().put(LAST_PONG_AT, System.currentTimeMillis());
 
         Log.infof("handling-events connection opened bookingId=%s subject=%s; replaying %d fixture event(s)",
                 bookingId, auth.subject(), feed.events().size());
@@ -141,8 +183,19 @@ public class HandlingEventConnectionWebSocket {
                 .chain(() -> connection.close(new CloseReason(CloseCodes.BAD_REQUEST, "malformed client message")));
     }
 
+    /**
+     * Ch14 liveness signal: every pong proves the peer is still there, so
+     * this is the one place {@link #LAST_PONG_AT} actually moves forward
+     * after {@link #onOpen}'s initial stamp. A healthy, spec-compliant
+     * client answers WebSockets Next's auto-ping automatically at the
+     * protocol level and lands here every
+     * {@code quarkus.websockets-next.server.auto-ping-interval}; a peer
+     * that stops answering simply stops updating this timestamp, which is
+     * exactly what {@link HeartbeatLivenessSweep} checks for.
+     */
     @OnPongMessage
     void onPongMessage(Buffer data) {
+        connection.userData().put(LAST_PONG_AT, System.currentTimeMillis());
         Log.debugf("handling-events pong received bookingId=%s", connection.pathParam("bookingId"));
     }
 

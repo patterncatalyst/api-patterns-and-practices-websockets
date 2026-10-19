@@ -39,6 +39,7 @@ the full rationale, including the close-code-vs-error-envelope choice):
 | 1008 | Policy violation        | Ch17 — missing/malformed/bad-signature/expired JWT, at `@OnOpen`, before any event is streamed. |
 | 4400 | Bad request (app range) | Ch13 — a client text/binary frame (this channel accepts none); always preceded by the JSON error envelope. |
 | 4290 | Slow consumer (app range) | Ch12 — outbound backpressure CLOSE policy. |
+| 4408 | Liveness timeout (app range) | Ch14 — no pong received within the configured window (`HeartbeatLivenessSweep`). NOT bit-identical to the Python sibling, which lets the `websockets` library's own keepalive failure close with its hardcoded 1011 — see `CloseCodes.LIVENESS_TIMEOUT`'s Javadoc and the Ch14 section below. |
 | 1011 | Unexpected condition     | Ch13 — an unmapped server-side exception (`@OnError` backstop). |
 | 1001 | Going away               | Graceful application shutdown (`ConnectionLifecycleShutdown`). |
 
@@ -88,26 +89,63 @@ backstop and closes 1011.
 
 ## Ch14 — heartbeats
 
-Delegated entirely to WebSockets Next's built-in auto-ping
-(`quarkus.websockets-next.server.auto-ping-interval=20` —
-`application.properties`) plus the main HTTP server's idle timeout
-(`quarkus.http.idle-timeout=40s`): a healthy client's automatic pong (and
-the server's own ping) count as connection activity, so idle-timeout only
-fires for a connection that can't even answer a ping — a genuinely dead
-peer, not a merely idle one. `onPongMessage` only logs the exchange; no
-liveness logic lives in the endpoint. Both values match the Python
-sibling's `WS_PING_INTERVAL_S=20`/`WS_PING_TIMEOUT_S=20` defaults (20s
-interval + 20s timeout = the same 40s detection window).
+**The naive version of this (WebSockets Next's built-in auto-ping plus
+Vert.x's HTTP idle-timeout) does NOT detect a dead peer, confirmed live.**
+`quarkus.websockets-next.server.auto-ping-interval` keeps the server
+sending pings, but `quarkus.http.idle-timeout` resets on any read OR WRITE
+activity on the connection — and the server's own outbound ping IS write
+activity. A peer that never answers a single ping never trips idle-timeout,
+because the server keeps resetting its own idle clock with its own pings
+regardless of whether anything comes back. `verify.sh`'s raw, non-ponging
+socket probe stayed open well past idle-timeout before this fix — the
+Python sibling's equivalent probe correctly closed at its configured
+window, because that library's keepalive check is pong-aware, not a
+generic idle timer.
 
-Override via the standard Quarkus env mappings
-(`QUARKUS_WEBSOCKETS_NEXT_SERVER_AUTO_PING_INTERVAL`,
-`QUARKUS_HTTP_IDLE_TIMEOUT`) for a slower production value.
+The actual detector is `HeartbeatLivenessSweep`, a pong-tracked liveness
+check with no dependence on transport-level idle timers:
 
-Note: a spec-compliant WebSocket client (including `websocat`, used by
-`examples/_lib/lib.sh`) answers pings automatically at the protocol level —
-there is no way to manufacture a truly dead peer with it, so this behavior
-is implemented and documented here but not exercised by an automated
-self-check.
+1. `HandlingEventConnectionWebSocket#onOpen` and `#onPongMessage` stamp
+   `LAST_PONG_AT` (epoch millis) on the connection's `userData()` — on open
+   (so a peer that never pongs even once still has a baseline to measure
+   from) and on every pong thereafter.
+2. `HeartbeatLivenessSweep#sweep`, a `@Scheduled` method, runs every
+   `example.heartbeat.sweep-interval` (default `5s`) and closes
+   (`CloseCodes.LIVENESS_TIMEOUT`, 4408) any connection on this endpoint
+   whose last pong is older than `example.heartbeat.liveness-timeout`
+   (default `45s` = `auto-ping-interval` * 2 + 5s grace — a "missed two
+   consecutive pongs" window).
+
+The sweep reads connections straight off the injected `OpenConnections`
+registry and requests the close directly on each `WebSocketConnection` —
+the same no-session-context pattern `ConnectionLifecycleShutdown` already
+uses — because a `@Scheduled` method runs on its own worker thread with no
+WebSocket `@SessionScoped` context of its own; see `HeartbeatLivenessSweep`'s
+Javadoc for the full reasoning, including why it uses the non-blocking
+`close(...)` rather than `closeAndAwait`.
+
+**A requested close isn't instant.** Closing a WebSocket is itself a
+two-way handshake (server sends a close frame, then waits for the peer's
+own close frame back), and a peer this sweep just proved isn't responding
+obviously won't send that acknowledgment either — so Vert.x falls back to
+forcibly terminating the TCP connection once its own closing-handshake
+grace elapses (`HttpServerOptions.DEFAULT_WEBSOCKET_CLOSING_TIMEOUT`, 10s,
+not currently exposed as a Quarkus config property). Confirmed live:
+`@OnClose` then observes the connection's own final close code as `1006`
+(abnormal closure), not `4408` — the close this sweep requested never
+completed the handshake, which is standard protocol behavior for an
+unresponsive peer, not a bug. Total observed time from "last pong" to the
+raw TCP socket actually closing: `liveness-timeout` + up to one
+`sweep-interval` + ~10s.
+
+Override via `QUARKUS_WEBSOCKETS_NEXT_SERVER_AUTO_PING_INTERVAL` (ping
+interval), `EXAMPLE_HEARTBEAT_LIVENESS_TIMEOUT` (dead-peer threshold), and
+`EXAMPLE_HEARTBEAT_SWEEP_INTERVAL` (sweep frequency) — `verify.sh`'s Ch14
+stage shrinks all three to prove detection within a few seconds instead of
+waiting out the production-sized defaults, and asserts the silent
+raw-socket peer is actually closed within that short window (see
+`examples/part4-connection/verify.sh`'s `raw_silent_client_close_wait`
+heartbeat stage).
 
 ## Ch12 — outbound backpressure
 

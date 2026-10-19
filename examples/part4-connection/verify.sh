@@ -13,9 +13,19 @@
 #                         then a 4400 close.
 #   Ch12 backpressure   — an outbound overrun closes with 4290 (CLOSE
 #                         policy).
-#   Ch14 heartbeats     — best-effort: a client that completes the upgrade
-#                         and then never answers a ping should be closed by
-#                         the server's own idle/ping-timeout detection.
+#   Ch14 heartbeats     — a client that completes the upgrade and then never
+#                         answers a ping is closed by the server's own
+#                         pong-tracking liveness check, asserted within a
+#                         short, env-configured detection window on one-off
+#                         instances of both stacks (see Step 6). Quarkus's
+#                         detector is HeartbeatLivenessSweep — a scheduled
+#                         sweep over per-connection pong timestamps, NOT the
+#                         auto-ping-interval/idle-timeout combination alone
+#                         (that combination never detects a silent peer: the
+#                         server's own outbound ping is write activity that
+#                         keeps resetting Vert.x's idle clock regardless of
+#                         whether the peer ever answers — see that class's
+#                         Javadoc and the Quarkus app's README Ch14 section).
 #
 # Both stacks share ONE JWT secret (compose.yaml's WS_JWT_SECRET) and the
 # SAME close-code numbers (see README.md), so every assertion below runs
@@ -56,8 +66,16 @@ BP_PYTHON_PORT=18091
 BP_QUARKUS_NAME="part4-connection-bp-quarkus"
 BP_PYTHON_NAME="part4-connection-bp-python"
 
+# Ch14 heartbeat one-off containers (Step 6) — same pattern as the Ch12
+# backpressure one-offs above, on their own alternate host ports so they
+# don't collide with either the primary stack or the backpressure one-offs.
+HB_QUARKUS_PORT=18082
+HB_PYTHON_PORT=18092
+HB_QUARKUS_NAME="part4-connection-hb-quarkus"
+HB_PYTHON_NAME="part4-connection-hb-python"
+
 cleanup_all() {
-  docker rm -f "$BP_QUARKUS_NAME" "$BP_PYTHON_NAME" >/dev/null 2>&1 || true
+  docker rm -f "$BP_QUARKUS_NAME" "$BP_PYTHON_NAME" "$HB_QUARKUS_NAME" "$HB_PYTHON_NAME" >/dev/null 2>&1 || true
   compose_down "$COMPOSE_FILE" "$PROJECT" "$PROFILE"
 }
 
@@ -368,52 +386,72 @@ echo
 echo "=== Step 5 complete: Ch12 backpressure CLOSE policy (4290) proven live on both stacks ==="
 
 # ---------------------------------------------------------------------------
-# Step 6: Ch14 heartbeats — best-effort, against the PRIMARY stack
-# instances (default thresholds: 20s ping interval / 20s ping|idle
-# timeout -> ~40s silent-peer detection window on both). Bounded wait with
-# margin; reports the real outcome either way rather than assuming it.
+# Step 6: Ch14 heartbeats — one-off instances with a SHORT ping/liveness
+# window, so the silent-peer close is asserted (not just observed
+# best-effort) within a bounded wait. Quarkus's actual detector is
+# HeartbeatLivenessSweep (see quarkus/.../HeartbeatLivenessSweep.java and
+# that app's README Ch14 section) — auto-ping-interval alone + Vert.x's
+# idle-timeout do NOT detect a silent peer (the server's own outbound ping
+# is write activity that keeps resetting the idle clock regardless of
+# whether the peer answers), which is why this step forces the DEDICATED
+# EXAMPLE_HEARTBEAT_* knobs down, not just QUARKUS_HTTP_IDLE_TIMEOUT.
+#
+# Same one-off-container pattern as Step 5, on their own ports so they
+# don't collide with the primary stack or the backpressure one-offs.
 # ---------------------------------------------------------------------------
 echo
-echo "=== Step 6: Ch14 heartbeats (best-effort — see raw_silent_client_close_wait doc) ==="
+echo "=== Step 6: Ch14 heartbeats — one-off instances with a SHORT detection window ==="
 
-HEARTBEAT_TIMEOUT_S=75
-HEARTBEAT_RESULTS=()
+# Budget: EXAMPLE_HEARTBEAT_LIVENESS_TIMEOUT (5s) + EXAMPLE_HEARTBEAT_SWEEP_INTERVAL
+# (1s, worst case) for HeartbeatLivenessSweep to DETECT the silent peer and
+# request a close, PLUS Vert.x's own ~10s WebSocket closing-handshake grace
+# (HttpServerOptions.DEFAULT_WEBSOCKET_CLOSING_TIMEOUT — not currently
+# exposed as a Quarkus config property) before it gives up waiting for an
+# acknowledgment that, by construction, a silent peer will never send and
+# forcibly tears the TCP connection down — see HeartbeatLivenessSweep's
+# Javadoc. ~16s observed live; 25s leaves comfortable margin for a slower
+# CI host.
+HEARTBEAT_TIMEOUT_S=25
 
-for entry in "quarkus:localhost:8080" "python:localhost:8081"; do
-  stack="${entry%%:*}"
-  rest="${entry#*:}"
-  host="${rest%%:*}"
-  port="${rest##*:}"
-  echo "--- $stack: silent raw client, waiting up to ${HEARTBEAT_TIMEOUT_S}s for a server-initiated close ---"
-  result="$(raw_silent_client_close_wait "$host" "$port" "${CHANNEL_PATH}?token=${VALID_TOKEN}" "$HEARTBEAT_TIMEOUT_S")"
-  echo "lib.sh: $stack heartbeat probe result: $result" >&2
-  HEARTBEAT_RESULTS+=("$stack:$result")
-done
+docker rm -f "$HB_QUARKUS_NAME" "$HB_PYTHON_NAME" >/dev/null 2>&1 || true
 
-HEARTBEAT_PROVEN_LIVE=false
-for r in "${HEARTBEAT_RESULTS[@]}"; do
-  if [[ "$r" == *":CLOSED:"* ]]; then
-    HEARTBEAT_PROVEN_LIVE=true
-  fi
-done
+echo "--- Quarkus: AUTO_PING_INTERVAL=2 EXAMPLE_HEARTBEAT_LIVENESS_TIMEOUT=5s EXAMPLE_HEARTBEAT_SWEEP_INTERVAL=1s ---"
+docker run -d --name "$HB_QUARKUS_NAME" \
+  -p "${HB_QUARKUS_PORT}:8080" \
+  -e "WS_JWT_SECRET=${SHARED_JWT_SECRET}" \
+  -e QUARKUS_WEBSOCKETS_NEXT_SERVER_AUTO_PING_INTERVAL=2 \
+  -e EXAMPLE_HEARTBEAT_LIVENESS_TIMEOUT=5s \
+  -e EXAMPLE_HEARTBEAT_SWEEP_INTERVAL=1s \
+  "$QUARKUS_IMAGE" >/dev/null
+wait_for_ws "localhost:${HB_QUARKUS_PORT}" "$CHANNEL_PATH"
+quarkus_hb_result="$(raw_silent_client_close_wait localhost "${HB_QUARKUS_PORT}" "${CHANNEL_PATH}?token=${VALID_TOKEN}" "$HEARTBEAT_TIMEOUT_S")"
+echo "lib.sh: quarkus heartbeat probe result: $quarkus_hb_result" >&2
+assert_eq "CLOSED" "${quarkus_hb_result%%:*}" "quarkus heartbeat: silent peer closed within ${HEARTBEAT_TIMEOUT_S}s"
 
-if $HEARTBEAT_PROVEN_LIVE; then
-  echo "lib.sh: ok — Ch14 heartbeat/idle-timeout detection of a genuinely silent peer PROVEN LIVE on at least one stack: ${HEARTBEAT_RESULTS[*]}" >&2
-else
-  echo "lib.sh: Ch14 heartbeat detection NOT observed within ${HEARTBEAT_TIMEOUT_S}s on either stack (${HEARTBEAT_RESULTS[*]})." \
-       "Not failing the run for this: the auto-ping-interval/idle-timeout (Quarkus) and ping_interval/ping_timeout" \
-       "(Python) config is present and documented in both READMEs (both apps' own self-verify sections already note" \
-       "that a spec-compliant client can't manufacture a truly dead peer; this run's raw-socket client ruled that" \
-       "specific limitation out, but the server-side close still did not land inside the configured window here —" \
-       "treating heartbeat as CONFIG-VERIFIED ONLY for this run, not fabricating a pass." >&2
-fi
+echo "--- Python: WS_PING_INTERVAL_S=2 WS_PING_TIMEOUT_S=3 ---"
+docker run -d --name "$HB_PYTHON_NAME" \
+  -p "${HB_PYTHON_PORT}:8081" \
+  -e "WS_JWT_SECRET=${SHARED_JWT_SECRET}" \
+  -e WS_PING_INTERVAL_S=2 \
+  -e WS_PING_TIMEOUT_S=3 \
+  "$PYTHON_IMAGE" >/dev/null
+wait_for_ws "localhost:${HB_PYTHON_PORT}" "$CHANNEL_PATH"
+python_hb_result="$(raw_silent_client_close_wait localhost "${HB_PYTHON_PORT}" "${CHANNEL_PATH}?token=${VALID_TOKEN}" "$HEARTBEAT_TIMEOUT_S")"
+echo "lib.sh: python heartbeat probe result: $python_hb_result" >&2
+assert_eq "CLOSED" "${python_hb_result%%:*}" "python heartbeat: silent peer closed within ${HEARTBEAT_TIMEOUT_S}s"
+
+docker rm -f "$HB_QUARKUS_NAME" "$HB_PYTHON_NAME" >/dev/null 2>&1 || true
+
+echo
+echo "=== Step 6 complete: Ch14 heartbeat liveness detection of a genuinely silent peer PROVEN LIVE on BOTH stacks ==="
 
 echo
 echo "PASS — Part 4 connection-concerns: Quarkus and Python both implement" \
      "identical Ch17 auth (accept + 4 reject modes), Ch13 error taxonomy" \
-     "(BAD_REQUEST envelope + 4400 close), and Ch12 backpressure (4290" \
-     "close) against the SAME shared JWT secret and close codes. Ch14" \
-     "heartbeat/idle-timeout: $(if $HEARTBEAT_PROVEN_LIVE; then echo "proven live"; else echo "config-verified only (see log above)"; fi)."
+     "(BAD_REQUEST envelope + 4400 close), Ch12 backpressure (4290 close)," \
+     "and Ch14 heartbeat liveness detection of a silent peer (proven live" \
+     "on both stacks within a short, env-configured window) against the" \
+     "SAME shared JWT secret."
 
 # Explicit teardown in addition to the cleanup_all EXIT trap
 # (belt-and-suspenders); compose_down/docker rm are idempotent.

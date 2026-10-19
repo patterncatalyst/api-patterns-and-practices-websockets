@@ -19,7 +19,7 @@ connections against **both** stacks and asserts that live.
 | Ch17 | JWT auth | `quarkus/.../connection/JwtHs256.java`, `python/app/auth.py` | `1008` (policy violation) on any failure — missing, malformed, bad signature, or expired token. Every failure mode collapses to the same code so a prober can't learn which check failed. |
 | Ch13 | Error taxonomy | `quarkus/.../HandlingEventConnectionWebSocket#onTextMessage`, `python/app/ws_server.py` | `4400` (app range) — this channel accepts no client-to-server frames, so ANY client frame gets an in-band `{"error":{"code":"BAD_REQUEST","message":"..."}}` envelope first, then the close. |
 | Ch12 | Outbound backpressure | `quarkus/.../OutboundBackpressureGuard.java`, `python/app/outbound.py` | `4290` (app range) — the CLOSE policy for a sustained outbound overrun. `DROP` is also implemented (see each app's README) but `CLOSE` is the channel's default. |
-| Ch14 | Heartbeats / idle detection | WebSockets Next's `auto-ping-interval` + Vert.x `idle-timeout`; the `websockets` library's `ping_interval`/`ping_timeout` | No dedicated close code — a connection that cannot even answer a ping is closed by the transport layer's own idle/ping-timeout machinery (`1011`/library-default on actual failure paths; a clean idle peer is simply never closed). |
+| Ch14 | Heartbeats / liveness | Quarkus: `HeartbeatLivenessSweep` (a scheduled, pong-tracked liveness check); Python: the `websockets` library's `ping_interval`/`ping_timeout` keepalive | Quarkus: `4408` (app range, `CloseCodes.LIVENESS_TIMEOUT`) once `example.heartbeat.liveness-timeout` passes with no pong. Python: `1011` (the library's own hardcoded keepalive-failure code) — the two stacks agree on WHEN a silent peer is closed, not the exact numeric code; see the Quarkus app's README Ch14 section. |
 
 Two more codes exist and are shared across both stacks but aren't exercised
 by `verify.sh` (no deterministic trigger from outside the process):
@@ -68,39 +68,43 @@ see `compose.yaml`), then for **each** stack:
    fixture events are enqueued synchronously before the drain task ever
    runs, so the second `enqueue()` always overflows a `maxsize=1` queue.
 
-Then, best-effort, it opens a connection with a hand-rolled raw-socket
-client (plain `socket`, no WebSocket library) that completes the opening
-handshake and then sends absolutely nothing else — no pong, no close — for
-up to 75 seconds, to see whether the server's own heartbeat/idle-timeout
-machinery closes a genuinely silent peer. Neither `websocat` nor the
-`websockets` client library used elsewhere in this harness can manufacture
-that condition (both answer pings automatically at the protocol level,
-which both apps' own READMEs already note) — the raw socket sidesteps that
-limitation. The run reports whichever outcome actually happened rather than
-assuming one.
+5. Spins up a second pair of **one-off** instances (Step 6) with their
+   ping/liveness windows forced down to a few seconds, opens each with a
+   hand-rolled raw-socket client (plain `socket`, no WebSocket library)
+   that completes the opening handshake and then sends absolutely nothing
+   else — no pong, no close — and asserts the server itself closes that
+   genuinely silent peer within a short, bounded wait. Neither `websocat`
+   nor the `websockets` client library used elsewhere in this harness can
+   manufacture that condition (both answer pings automatically at the
+   protocol level, which both apps' own READMEs note) — the raw socket
+   sidesteps that limitation.
 
-**Last observed result:** Python's `websockets`-library server closed the
-silent connection at `CLOSED:40.0` — exactly its documented
-`ping_interval` + `ping_timeout` (20s + 20s) window, proven live. Quarkus
-reported `STILL_OPEN:75.0` — it did **not** close the connection within the
-probe's 75s budget, even though the server's own `auto-ping-interval`
-(20s) kept sending ping frames the whole time. The likely reason: Vert.x's
+**The naive Quarkus approach (auto-ping-interval + Vert.x idle-timeout
+alone) does NOT detect a dead peer — confirmed live while building this
+harness**, and is why Quarkus's real detector is a dedicated bean,
+`HeartbeatLivenessSweep`, not just those two settings. Vert.x's
 `http.idle-timeout` resets on BOTH read and write activity, and the
-server's own outbound ping is write activity — so a server that keeps
-pinging a silent peer keeps resetting its own idle clock, and idle-timeout
-alone never fires for a peer that only fails to answer. That's a gap
-between the documented intent ("a connection that cannot even answer a
-ping... is closed") and the observed behavior with this configuration, not
-a limitation of this harness's probe (which did reliably detect the
-Python side's equivalent dead-peer closure). Flagged here rather than
-silently treated as a pass; left as-is since fixing it is a Ch14 design
-question (e.g. a read-only idle timeout, or an explicit pong-tracking
-check) out of scope for wiring this verification harness.
+server's own outbound ping is write activity on that same connection — so
+a server that keeps pinging a silent peer keeps resetting its own idle
+clock, and idle-timeout alone never fires for a peer that only fails to
+answer (a raw-socket probe against that configuration stayed open past 75
+seconds, where the Python stack's equivalent probe correctly closed at its
+documented ~40s window). `HeartbeatLivenessSweep` instead stamps a
+per-connection pong timestamp on open and on every pong, and a
+`@Scheduled` sweep requests a close (`4408`) on any connection whose last
+pong is older than a configurable threshold — no dependence on any
+transport-level idle timer. The TCP socket itself doesn't drop the instant
+that threshold is crossed: closing a WebSocket is a two-way handshake, and
+a peer the sweep just proved isn't responding won't acknowledge that
+either, so Vert.x waits out its own ~10s closing-handshake grace before
+forcibly tearing the connection down — Step 6's timeout budget accounts
+for this. See `quarkus/README.md`'s Ch14 section and
+`HeartbeatLivenessSweep`'s Javadoc for the full design.
 
 Prints `PASS` only if every REQUIRED assertion (auth accept + all 4 reject
-modes, the error-taxonomy envelope + `4400`) holds on **both** stacks, and
-the `4290` backpressure close is proven on at least one deterministic
-one-off run per stack.
+modes, the error-taxonomy envelope + `4400`, the `4290` backpressure close
+on at least one deterministic one-off run per stack, AND the Ch14 silent
+peer closing within the short detection window on both stacks) holds.
 
 ### Ports
 
@@ -111,8 +115,9 @@ one-off run per stack.
 | `python` | `8082` | HTTP: `/healthz`, `/` (FastAPI/uvicorn, app lifecycle only) |
 
 The one-off backpressure containers `verify.sh` spins up for Step 5 run on
-`18080` (Quarkus) and `18091` (Python) so they don't collide with the
-primary stack, which stays up throughout the run.
+`18080` (Quarkus) and `18091` (Python); the one-off heartbeat containers for
+Step 6 run on `18082` (Quarkus) and `18092` (Python) — all four so they
+don't collide with the primary stack, which stays up throughout the run.
 
 ### Env knobs
 
@@ -123,7 +128,8 @@ primary stack, which stays up throughout the run.
 | `EXAMPLE_BACKPRESSURE_POLICY` | Quarkus | `CLOSE` | `CLOSE` or `DROP` |
 | `OUTBOUND_QUEUE_MAXSIZE` | Python | `32` | outbound queue depth (`<=0` is **unbounded**, not zero-capacity — see above) |
 | `OUTBOUND_BACKPRESSURE_POLICY` | Python | `close` | `close` or `drop` |
-| `QUARKUS_WEBSOCKETS_NEXT_SERVER_AUTO_PING_INTERVAL` / `QUARKUS_HTTP_IDLE_TIMEOUT` | Quarkus | `20` / `40s` | heartbeat interval / dead-peer detection window |
+| `QUARKUS_WEBSOCKETS_NEXT_SERVER_AUTO_PING_INTERVAL` | Quarkus | `20` | ping interval |
+| `EXAMPLE_HEARTBEAT_LIVENESS_TIMEOUT` / `EXAMPLE_HEARTBEAT_SWEEP_INTERVAL` | Quarkus | `45s` / `5s` | `HeartbeatLivenessSweep`'s dead-peer threshold / how often it checks — the ACTUAL Ch14 detector (not `QUARKUS_HTTP_IDLE_TIMEOUT`, which doesn't detect a silent peer at all — see above) |
 | `WS_PING_INTERVAL_S` / `WS_PING_TIMEOUT_S` | Python | `20` / `20` | heartbeat interval / timeout (same ~40s window) |
 
 ### Observability (opt-in)
@@ -144,8 +150,8 @@ docker compose --profile observability up --build
 via `scripts/generate_diagram.py`) show the client opening the channel
 against each stack with a token on the upgrade URL, the auth gate both
 stacks apply before any fixture frame is sent, the error/close-code paths
-(`1008`/`4400`/`4290`), the heartbeat loop, and the outbound-backpressure
-guard sitting in front of the fixture replay.
+(`1008`/`4400`/`4290`/`4408`), the heartbeat loop, and the
+outbound-backpressure guard sitting in front of the fixture replay.
 
 ## Generated artifacts
 
