@@ -227,7 +227,9 @@ except OSError:
 
 echo "=== Step 0: regenerate the contract-derived JSON Schema ==="
 ensure_websocat
-python3 -I "$EXTRACT_SCRIPT" "$SCHEMA_FILE"
+# Run via uv so PyYAML is present even on a bare CI runner whose system
+# python3 has no third-party modules (self-contained, no system pip).
+uv run --no-project --with pyyaml python3 -I "$EXTRACT_SCRIPT" "$SCHEMA_FILE"
 
 echo
 echo "=== Step 1: generate the Protobuf stub once (from contracts/handling-event.proto) ==="
@@ -323,7 +325,7 @@ run_stack_performance_tests "python" "localhost:8091"
 
 echo
 echo "=== Step 5: proto-vs-JSON-Schema parity smoke (scripts/check-proto-parity.py) ==="
-if ! ( cd "$SCRIPT_DIR/../.." && python3 -I scripts/check-proto-parity.py ); then
+if ! ( cd "$SCRIPT_DIR/../.." && uv run --no-project --with "$PROTOBUF_PY_PIN" python3 -I scripts/check-proto-parity.py ); then
   echo "verify.sh: FAIL — scripts/check-proto-parity.py did not exit 0" >&2
   exit 1
 fi
