@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 420" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="1140" height="380" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">Stateless mode (default profile, no broker) — PROTOCOL.md &quot;Resume parameter&quot;</text>
+<rect x="50" y="70" width="190" height="80" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="145.0" y="100.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CONNECT</text>
+<text x="145.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">3-event fixture seed</text>
+<text x="145.0" y="132.5" font-size="11.5" fill="#555555" text-anchor="middle">delivered (RECEIVE/LOAD/CUSTOMS)</text>
+<rect x="300" y="70" width="180" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="390.0" y="100.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">DISCONNECT</text>
+<text x="390.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">client goes away;</text>
+<text x="390.0" y="132.5" font-size="11.5" fill="#555555" text-anchor="middle">StatelessBackplane keeps nothing</text>
+<rect x="300" y="190" width="180" height="90" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="390.0" y="225.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">GAP</text>
+<text x="390.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">POST /internal/.../handling-events</text>
+<text x="390.0" y="257.5" font-size="11.5" fill="#555555" text-anchor="middle">injected while disconnected</text>
+<rect x="300" y="310" width="180" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="390.0" y="335.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">LOST</text>
+<text x="390.0" y="352.5" font-size="11.5" fill="#555555" text-anchor="middle">no subscriber queue to land in —</text>
+<text x="390.0" y="367.5" font-size="11.5" fill="#555555" text-anchor="middle">delivered to nobody, kept nowhere</text>
+<rect x="560" y="70" width="230" height="80" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="675.0" y="100.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">RECONNECT</text>
+<text x="675.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">?afterEventId=&lt;last seed id&gt;</text>
+<text x="675.0" y="132.5" font-size="11.5" fill="#555555" text-anchor="middle">query param accepted...</text>
+<rect x="870" y="70" width="250" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="995.0" y="100.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">...and IGNORED</text>
+<text x="995.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">replayFor()/subscribe() return</text>
+<text x="995.0" y="132.5" font-size="11.5" fill="#555555" text-anchor="middle">no history for this id — ever</text>
+<rect x="870" y="190" width="250" height="90" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="995.0" y="225.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">LIVE TAIL ONLY</text>
+<text x="995.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">new events from reconnect</text>
+<text x="995.0" y="257.5" font-size="11.5" fill="#555555" text-anchor="middle">onward are delivered normally</text>
+<path d="M240,110 L300,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="276.0" y="104.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">socket drops</text>
+<text x="276.0" y="104.0" font-size="11" fill="#555" text-anchor="middle">socket drops</text>
+<path d="M390,150 L390,190" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="396.0" y="164.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">client not watching</text>
+<text x="396.0" y="164.0" font-size="11" fill="#555" text-anchor="middle">client not watching</text>
+<path d="M390,280 L390,310" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="396.0" y="289.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">never queued, never stored</text>
+<text x="396.0" y="289.0" font-size="11" fill="#b8650a" text-anchor="middle">never queued, never stored</text>
+<path d="M480,110 L560,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="526.0" y="104.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">new WS upgrade</text>
+<text x="526.0" y="104.0" font-size="11" fill="#555" text-anchor="middle">new WS upgrade</text>
+<path d="M790,110 L870,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M995,150 L995,190" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="1001.0" y="164.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">the only thing resumed is the socket</text>
+<text x="1001.0" y="164.0" font-size="11" fill="#b8650a" text-anchor="middle">the only thing resumed is the socket</text>
+<text x="590" y="390" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Resuming the SOCKET is not resuming the STREAM. The gap event is gone the moment it&#x27;s injected — reconnect can&#x27;t ask for what no server ever kept.</text>
+</svg>
