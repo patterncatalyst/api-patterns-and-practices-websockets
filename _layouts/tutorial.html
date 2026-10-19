@@ -16,10 +16,29 @@ layout: default
     {%- assign current_index = forloop.index0 -%}
   {%- endif -%}
 {%- endfor -%}
-{%- assign prev_index = current_index | minus: 1 -%}
-{%- assign next_index = current_index | plus: 1 -%}
-{%- assign prev_doc = tutorial_docs[prev_index] -%}
-{%- assign next_doc = tutorial_docs[next_index] -%}
+{%- comment -%}
+  Overview/outline pages are excluded from tutorial_docs (the sorted chapter
+  list), so current_index is never set for them. Treat the outline as sitting
+  before the first chapter: no prev, and next = the first chapter (Ch0), not
+  tutorial_docs[1]. For a normal chapter, derive prev/next from its index.
+{%- endcomment -%}
+{%- assign overview_doc = site.docs | where_exp: "d", "d.overview == true" | first -%}
+{%- if page.overview -%}
+  {%- assign prev_doc = nil -%}
+  {%- assign next_doc = tutorial_docs[0] -%}
+{%- else -%}
+  {%- assign prev_index = current_index | minus: 1 -%}
+  {%- assign next_index = current_index | plus: 1 -%}
+  {%- comment -%} Guard against Liquid's negative-index wrap: tutorial_docs[-1]
+  returns the LAST item, so the first chapter's prev must not use index -1 —
+  send it back to the outline instead. {%- endcomment -%}
+  {%- if prev_index >= 0 -%}
+    {%- assign prev_doc = tutorial_docs[prev_index] -%}
+  {%- else -%}
+    {%- assign prev_doc = overview_doc -%}
+  {%- endif -%}
+  {%- assign next_doc = tutorial_docs[next_index] -%}
+{%- endif -%}
 
 {%- comment -%}
   Pad order to two digits for the big numeric marker.
