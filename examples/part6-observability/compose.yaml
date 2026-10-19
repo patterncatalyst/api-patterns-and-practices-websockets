@@ -1,0 +1,97 @@
+# Part 6 "Observability" example (Ch23, DRQ-028/DRQ-029) — compose topology
+# for the SAME `handlingEvents` channel as part3/part4
+# (contracts/asyncapi.yaml `operations.receiveHandlingEvent`), now
+# instrumented with LIVE OpenTelemetry traces + Micrometer/prometheus-client
+# metrics exported to the Grafana LGTM stack, instead of part4's
+# connection-hardening concerns. Both stacks implement the SAME shared
+# conventions (see each stack's README.md): a per-connection manual span
+# `ws.handling-events.connection`, a `otel.trace_id=... span=... bookingId=...
+# instance=...` log line, and a `handling_events_delivered_total` counter.
+#
+# Unlike part3/part4 (where `lgtm` sits behind the opt-in `observability`
+# compose profile), this chapter's WHOLE POINT is a live trace/metric export,
+# so `lgtm` is a HARD dependency here — no `profiles:` guard, and both app
+# services `depends_on: lgtm: condition: service_healthy` so neither starts
+# exporting before the collector can accept OTLP. Mirrors the gRPC sibling's
+# examples/21-observability/compose.yaml exactly (same image pin, same
+# curl-based healthcheck fix — see that file's comment on why `wget` doesn't
+# work on this image).
+#
+# Usage:
+#   docker compose up --build
+#   open http://localhost:3000   # Grafana (anonymous admin)
+#   curl -s http://localhost:3200/api/traces/<trace-id>   # Tempo query API
+
+services:
+  quarkus:
+    build:
+      context: ../..
+      dockerfile: examples/part6-observability/quarkus/Containerfile
+    container_name: part6-observability-quarkus
+    ports:
+      - "8080:8080" # WS upgrade + GET /q/metrics
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    depends_on:
+      lgtm:
+        condition: service_healthy
+    healthcheck:
+      # No dedicated health endpoint on this example (just the WS upgrade
+      # path + /q/metrics) — curl without -f treats any HTTP response
+      # (including the 404/426 a plain GET gets back) as "the server is up
+      # and answering" — same convention as part4-connection's quarkus
+      # healthcheck.
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  python:
+    build:
+      context: ../..
+      dockerfile: examples/part6-observability/python/Containerfile
+    container_name: part6-observability-python
+    ports:
+      - "8081:8081" # WS upgrade
+      - "8082:8082" # GET /healthz, /, /metrics
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+    depends_on:
+      lgtm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8082/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  # ─── Observability (ALWAYS ON for this chapter — NOT opt-in) ───────────
+  # This is the observability example; there is no reduced-speed path
+  # without it. No `profiles:` guard, unlike every other part's compose
+  # file — `lgtm` comes up with a bare `docker compose up`, and both app
+  # services hard-depend on its healthcheck before they start.
+  lgtm:
+    image: docker.io/grafana/otel-lgtm:0.36.0
+    container_name: part6-observability-lgtm
+    ports:
+      - "3000:3000" # Grafana UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "9090:9090" # Prometheus / Mimir query
+      - "3100:3100" # Loki
+      - "3200:3200" # Tempo query API — verify.sh polls http://localhost:3200/api/traces/<id>
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    healthcheck:
+      # The grafana/otel-lgtm:0.36.0 image's RHEL 9 base carries `curl` but
+      # not `wget` (confirmed on the gRPC sibling's identical image/tag) —
+      # `curl -fsS` is the healthcheck that actually passes.
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s

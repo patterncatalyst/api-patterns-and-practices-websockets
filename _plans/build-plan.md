@@ -171,6 +171,29 @@ throughput benchmark.**
 Build order: version survey + proto/contract + parity gate → app both stacks +
 verify green → Ch19/Ch20 against the working code → CI/k6 → build + voice.
 
+## r06 scope (in progress)
+
+**Part 6 "Testing, Debugging & Observability" (Ch21–24).** One new runnable
+example (Ch23) + three prose chapters citing existing evidence + a Newman
+functional example.
+
+- **Ch21 Testing** — prose; documents the real corpus (four verify.sh, lib.sh
+  helpers, pytest/@QuarkusTest conformance, k6 smoke, close-code probes) + the
+  new **Newman** functional HTTP collection (DRQ-030).
+- **Ch22 Debugging** — prose; websocat/devtools/tcpdump/close-codes with real
+  captured output from the existing apps.
+- **Ch23 Observability** — NEW `examples/part6-observability/` (both stacks):
+  live OTel traces+metrics into LGTM (hard dep), the manual-span-for-native-
+  websockets finding, verified HARD-logs+metric / SOFT-Tempo in the examples
+  matrix (DRQ-028/029).
+- **Ch24 Anti-patterns** — prose; each pitfall grounded in a real Part 3–5
+  finding (idle-timeout trap, asyncio maxsize=0, stateless gap, auth-at-upgrade,
+  proto field reuse, subprotocol-no-offer, …).
+
+Build order: survey/pin OTel+Newman → part6-observability app both stacks +
+verify green → Newman collection + CI → Ch23 then Ch21/22/24 → CI drift/matrix +
+version matrix → build + voice. Code before prose.
+
 ## Deferred to later iterations (r02+)
 
 - Chapter prose for all 29 chapters, to the house depth standard (paired

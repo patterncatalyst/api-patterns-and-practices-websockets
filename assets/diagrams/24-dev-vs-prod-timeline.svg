@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 460" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="1140" height="180" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">IN DEV — a short-lived manual test</text>
+<rect x="20" y="230" width="1140" height="210" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="250" font-size="12" font-weight="700" fill="#1d1d1d">IN PROD — a connection held open for hours</text>
+<rect x="50" y="70" width="230" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="165.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">connection opens,</text>
+<text x="165.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">a developer sends a few</text>
+<text x="165.0" y="125.0" font-size="11.5" fill="#555555" text-anchor="middle">messages by hand</text>
+<rect x="320" y="70" width="230" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="435.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tab closed within a minute</text>
+<text x="435.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">or two — well inside any</text>
+<text x="435.0" y="125.0" font-size="11.5" fill="#555555" text-anchor="middle">idle-timeout window</text>
+<rect x="600" y="70" width="540" height="65" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="870.0" y="100.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">looks completely fine — nobody ever waits long enough</text>
+<text x="870.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">for the idle clock to matter, because it never has to</text>
+<rect x="50" y="280" width="230" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="165.0" y="303.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">same auto-ping / idle-timeout</text>
+<text x="165.0" y="320.0" font-size="11.5" fill="#555555" text-anchor="middle">config, same channel,</text>
+<text x="165.0" y="335.0" font-size="11.5" fill="#555555" text-anchor="middle">connection held for hours</text>
+<rect x="320" y="280" width="230" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="435.0" y="303.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">peer goes silent</text>
+<text x="435.0" y="320.0" font-size="11.5" fill="#555555" text-anchor="middle">(laptop sleeps, mobile</text>
+<text x="435.0" y="335.0" font-size="11.5" fill="#555555" text-anchor="middle">network drops)</text>
+<rect x="600" y="280" width="280" height="65" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="740.0" y="303.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">server&#x27;s own outbound ping keeps</text>
+<text x="740.0" y="320.0" font-size="11.5" fill="#555555" text-anchor="middle">resetting the idle clock, every interval,</text>
+<text x="740.0" y="335.0" font-size="11.5" fill="#555555" text-anchor="middle">indefinitely</text>
+<rect x="920" y="280" width="220" height="65" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="1030.0" y="303.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">talking to nobody for hours,</text>
+<text x="1030.0" y="320.0" font-size="11.5" fill="#555555" text-anchor="middle">still thinks the connection</text>
+<text x="1030.0" y="335.0" font-size="11.5" fill="#555555" text-anchor="middle">is healthy</text>
+<rect x="600" y="370" width="540" height="55" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="870.0" y="395.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">only once HeartbeatLivenessSweep is added: 4408 close within one</text>
+<text x="870.0" y="412.5" font-size="11.5" fill="#555555" text-anchor="middle">configured liveness window — proven live in verify.sh&#x27;s Step 6</text>
+<path d="M280,102 L320,102" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M550,102 L600,102" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M280,312 L320,312" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M550,312 L600,312" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="581.0" y="306.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">clock reset, again and again</text>
+<text x="581.0" y="306.0" font-size="11" fill="#b8650a" text-anchor="middle">clock reset, again and again</text>
+<path d="M880,312 L920,312" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M870,345 L870,370" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="876.0" y="351.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">only the pong-tracked sweep breaks this</text>
+<text x="876.0" y="351.5" font-size="11" fill="#b8650a" text-anchor="middle">only the pong-tracked sweep breaks this</text>
+<text x="590" y="440" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">The exact same configuration passes every short manual check and fails, with no alert, at the one timescale that matters: how long a real connection stays open.</text>
+</svg>

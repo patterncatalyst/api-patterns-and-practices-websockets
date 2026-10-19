@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 620" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="370" y="15" width="240" height="55" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="490.0" y="40.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">WS client</text>
+<text x="490.0" y="57.5" font-size="11.5" fill="#555555" text-anchor="middle">opens handlingEvents channel</text>
+<rect x="40" y="110" width="420" height="165" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="250.0" y="168.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Quarkus — WebSockets Next (:8080)</text>
+<text x="250.0" y="185.0" font-size="11.5" fill="#555555" text-anchor="middle">quarkus-opentelemetry auto-traces the HTTP upgrade</text>
+<text x="250.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">@WithSpan onOpen -&gt; CHILD span ws.handling-events.connection</text>
+<text x="250.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">Log.infof otel.trace_id=... instance=part6-observability-quarkus</text>
+<text x="250.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle">Micrometer Counter handling_events_delivered_total -&gt; /q/metrics</text>
+<rect x="500" y="110" width="440" height="165" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="720.0" y="168.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Python — native websockets + FastAPI (:8081 / :8082)</text>
+<text x="720.0" y="185.0" font-size="11.5" fill="#555555" text-anchor="middle">NO opentelemetry-instrumentation-websockets exists</text>
+<text x="720.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">tracer.start_as_current_span(ws.handling-events.connection) — MANUAL</text>
+<text x="720.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">logger.info otel.trace_id=... instance=part6-observability-python</text>
+<text x="720.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle">prometheus_client Counter handling_events_delivered_total -&gt; :8082/metrics</text>
+<rect x="300" y="320" width="360" height="55" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="480.0" y="345.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">OTLP export (gRPC)</text>
+<text x="480.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317</text>
+<rect x="170" y="420" width="620" height="110" rx="9" fill="#f4f4f4" stroke="#6a6e73" stroke-width="1.5"/>
+<text x="480.0" y="465.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">lgtm (grafana/otel-lgtm:0.36.0) — HARD dependency, no profiles: guard</text>
+<text x="480.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">OTel Collector -&gt; Tempo (traces, :3200 query) / Mimir (metrics, :9090) / Loki (logs, :3100)</text>
+<text x="480.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">Grafana UI :3000 (anonymous admin)</text>
+<rect x="40" y="565" width="420" height="40" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="250.0" y="583.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">HARD: trace id in the app&#x27;s OWN log line</text>
+<text x="250.0" y="600.0" font-size="11.5" fill="#555555" text-anchor="middle">+ app&#x27;s OWN metric scrape &gt; 0</text>
+<rect x="500" y="565" width="440" height="40" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="720.0" y="583.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">SOFT: Tempo /api/traces/&lt;id&gt; eventually</text>
+<text x="720.0" y="600.0" font-size="11.5" fill="#555555" text-anchor="middle">shows span ws.handling-events.connection</text>
+<path d="M440,70 L250,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="315.0" y="84.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade</text>
+<text x="315.0" y="84.0" font-size="11" fill="#555" text-anchor="middle">upgrade</text>
+<path d="M540,70 L720,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="660.0" y="84.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade</text>
+<text x="660.0" y="84.0" font-size="11" fill="#555" text-anchor="middle">upgrade</text>
+<path d="M250,275 L440,320" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M720,275 L540,320" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M480,375 L480,420" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="486.0" y="391.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">OTLP</text>
+<text x="486.0" y="391.5" font-size="11" fill="#b8650a" text-anchor="middle">OTLP</text>
+<path d="M300,530 L260,565" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M660,530 L700,565" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="490" y="605" font-size="12" fill="#555555" text-anchor="middle">Same trace-id-in-logs shape on both stacks correlates a log line to the trace Tempo eventually ingests.</text>
+</svg>

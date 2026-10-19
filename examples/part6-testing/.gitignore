@@ -1,0 +1,3 @@
+# Newman's JSON run report, generated fresh by every verify.sh run — never
+# committed (see --reporter-json-export in verify.sh).
+newman/reports/

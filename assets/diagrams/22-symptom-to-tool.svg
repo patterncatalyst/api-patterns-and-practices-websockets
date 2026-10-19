@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 440" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="1260" height="400" rx="12" fill="#ffffff" stroke="#ddd"/>
+<rect x="460" y="30" width="380" height="55" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="650.0" y="63.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Symptom on a live connection?</text>
+<rect x="30" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="135.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Never upgrades</text>
+<text x="135.0" y="162.5" font-size="11.5" fill="#555555" text-anchor="middle">(no 101 at all)</text>
+<rect x="30" y="205" width="210" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="135.0" y="235.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">curl --include</text>
+<text x="135.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">the Upgrade request</text>
+<rect x="30" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="135.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Proxy stripped</text>
+<text x="135.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">Connection: Upgrade,</text>
+<text x="135.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">or wrong path/headers</text>
+<rect x="290" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="395.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">101 arrives,</text>
+<text x="395.0" y="162.5" font-size="11.5" fill="#555555" text-anchor="middle">then silence / hang</text>
+<rect x="290" y="205" width="210" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="395.0" y="235.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">DevTools Frames tab</text>
+<text x="395.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">or websocat -t</text>
+<rect x="290" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="395.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Auth gate rejected</text>
+<text x="395.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">post-upgrade (Ch17), or</text>
+<text x="395.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">subprotocol mismatch</text>
+<rect x="550" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="655.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Frame arrives,</text>
+<text x="655.0" y="162.5" font-size="11.5" fill="#555555" text-anchor="middle">wrong shape / won&#x27;t parse</text>
+<rect x="550" y="205" width="210" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="655.0" y="235.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">DevTools binary/text icon,</text>
+<text x="655.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">websocat -b | xxd</text>
+<rect x="550" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="655.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Opcode mismatch —</text>
+<text x="655.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">binary negotiated, client</text>
+<text x="655.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">expects text (Ch19)</text>
+<rect x="810" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="915.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Connection drops,</text>
+<text x="915.0" y="162.5" font-size="11.5" fill="#555555" text-anchor="middle">no obvious reason</text>
+<rect x="810" y="205" width="210" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="915.0" y="235.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">python ws_close_probe</text>
+<text x="915.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">+ server trace-id logs</text>
+<rect x="810" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="915.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">close_code says WHY —</text>
+<text x="915.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">4400/4290/4408/1008;</text>
+<text x="915.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">1006 = no code arrived</text>
+<rect x="1070" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="1175.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Works, then dies</text>
+<text x="1175.0" y="162.5" font-size="11.5" fill="#555555" text-anchor="middle">after sustained load</text>
+<rect x="1070" y="205" width="210" height="65" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="1175.0" y="235.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tcpdump/Wireshark on TCP</text>
+<text x="1175.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">+ server logs over time</text>
+<rect x="1070" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="1175.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Backpressure (4290) or</text>
+<text x="1175.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">liveness sweep (4408/1011)</text>
+<text x="1175.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">firing under pressure</text>
+<path d="M135.0,85 L135.0,115" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M135.0,180 L135.0,205" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M135.0,270 L135.0,295" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M395.0,85 L395.0,115" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M395.0,180 L395.0,205" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M395.0,270 L395.0,295" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M655.0,85 L655.0,115" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M655.0,180 L655.0,205" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M655.0,270 L655.0,295" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M915.0,85 L915.0,115" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M915.0,180 L915.0,205" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M915.0,270 L915.0,295" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1175.0,85 L1175.0,115" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1175.0,180 L1175.0,205" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1175.0,270 L1175.0,295" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="650" y="420" font-size="12" fill="#555555" text-anchor="middle">Reach for the cheapest tool that taps the right layer first — curl before websocat, websocat before tcpdump.</text>
+</svg>

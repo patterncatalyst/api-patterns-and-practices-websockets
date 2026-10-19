@@ -1,0 +1,31 @@
+{
+  "id": "a1b2c3d4-e5f6-4071-8a9b-0c1d2e3f4a5b",
+  "name": "part4-backplane (default/stateless profile, examples/part4-backplane/compose.yaml)",
+  "values": [
+    {
+      "key": "quarkusABase",
+      "value": "http://localhost:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "quarkusBBase",
+      "value": "http://localhost:8083",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "pythonAHttpBase",
+      "value": "http://localhost:8082",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "pythonBHttpBase",
+      "value": "http://localhost:8085",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

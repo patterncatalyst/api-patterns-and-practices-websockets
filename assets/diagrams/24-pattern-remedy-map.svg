@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 760" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="1140" height="110" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">LIFECYCLE</text>
+<rect x="20" y="150" width="1140" height="190" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="170" font-size="12" font-weight="700" fill="#1d1d1d">BOUNDS</text>
+<rect x="20" y="360" width="1140" height="110" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="380" font-size="12" font-weight="700" fill="#1d1d1d">SECURITY</text>
+<rect x="20" y="490" width="1140" height="190" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="510" font-size="12" font-weight="700" fill="#1d1d1d">SCHEMA &amp; DESIGN</text>
+<rect x="50" y="55" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="310.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">idle-timeout resets on the server&#x27;s</text>
+<text x="310.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">OWN outbound ping (Ch14)</text>
+<rect x="620" y="55" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="880.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">pong-tracked LAST_PONG_AT + a scheduled</text>
+<text x="880.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">sweep, close 4408</text>
+<rect x="50" y="185" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="310.0" y="223.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">asyncio.Queue maxsize&lt;=0 means</text>
+<text x="310.0" y="240.0" font-size="11.5" fill="#555555" text-anchor="middle">UNBOUNDED, not zero (Ch12)</text>
+<rect x="620" y="185" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="880.0" y="223.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a positive bound + a send timeout,</text>
+<text x="880.0" y="240.0" font-size="11.5" fill="#555555" text-anchor="middle">close 4290</text>
+<rect x="50" y="275" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="310.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a backplane with N instances does N</text>
+<text x="310.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">times the discard work per event (Ch18)</text>
+<rect x="620" y="275" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="880.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">key/partition the broadcast domain —</text>
+<text x="880.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">don&#x27;t treat it as unbounded</text>
+<rect x="50" y="395" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="310.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">four token failures answered</text>
+<text x="310.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">differently is a signature oracle (Ch17)</text>
+<rect x="620" y="395" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="880.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">collapse every failure to one close code,</text>
+<text x="880.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">1008 — reason logged server-side only</text>
+<rect x="50" y="525" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="310.0" y="563.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a reused Protobuf field number is a</text>
+<text x="310.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">silent misread, not a parse error (Ch19)</text>
+<rect x="620" y="525" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="880.0" y="563.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">field numbers are additive-only — buf</text>
+<text x="880.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">breaking + check-proto-parity.py gate it</text>
+<rect x="50" y="615" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="310.0" y="653.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">rejecting a client that offers no</text>
+<text x="310.0" y="670.0" font-size="11.5" fill="#555555" text-anchor="middle">subprotocol (Ch19, DRQ-026)</text>
+<rect x="620" y="615" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="880.0" y="653.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">an explicit permissive fallback path,</text>
+<text x="880.0" y="670.0" font-size="11.5" fill="#555555" text-anchor="middle">JSON by default</text>
+<path d="M570,95 L620,95" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M570,225 L620,225" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M570,315 L620,315" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M570,435 L620,435" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M570,565 L620,565" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M570,655 L620,655" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="590" y="735" font-size="12" fill="#555555" text-anchor="middle">Every left box is a real failure this site&#x27;s own verify.sh or build caught; every right box is the fix already shipped in the example it names.</text>
+</svg>

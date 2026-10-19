@@ -1,0 +1,266 @@
+{
+  "info": {
+    "_postman_id": "f6a1b2c3-d4e5-4f60-9a1b-2c3d4e5f6071",
+    "name": "part6-testing — functional HTTP (Ch21, DRQ-030)",
+    "description": "Functional-HTTP coverage for the HTTP surfaces this WebSocket-only site exposes (DRQ-006: Newman = functional testing). Targets examples/part4-backplane's `GET /healthz` (python-a/python-b) and `POST /internal/bookings/{bookingId}/handling-events` inject endpoint (PROTOCOL.md \"Inject endpoint\") on both stacks (quarkus-a, python-a) — schema-valid body -> 202 Accepted, malformed body -> 4xx. Run against a live `docker compose up` of examples/part4-backplane via ../verify.sh; see ../README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Shared id generator — matches contracts/asyncapi.yaml's",
+          "// `^(evt|bkg|crg)_[0-9A-Za-z]{26}$` pattern: a fixed prefix plus 26",
+          "// chars drawn from [0-9A-Za-z].",
+          "function randomId(prefix) {",
+          "  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';",
+          "  let out = '';",
+          "  for (let i = 0; i < 26; i++) {",
+          "    out += chars.charAt(Math.floor(Math.random() * chars.length));",
+          "  }",
+          "  return prefix + out;",
+          "}",
+          "",
+          "// One bookingId/cargoId for the WHOLE collection run (set once, reused",
+          "// by every item below) — part4-backplane's Backplane implementations",
+          "// filter strictly by bookingId, so a single run touching one id never",
+          "// cross-contaminates another concurrent run on the same compose stack.",
+          "if (!pm.collectionVariables.get('bookingId')) {",
+          "  pm.collectionVariables.set('bookingId', randomId('bkg_'));",
+          "}",
+          "if (!pm.collectionVariables.get('cargoId')) {",
+          "  pm.collectionVariables.set('cargoId', randomId('crg_'));",
+          "}",
+          "",
+          "// A FRESH eventId before every request (harmless no-op for the Health",
+          "// folder's GETs, which never reference {{eventId}}) — each inject call",
+          "// needs its own unique id, per the schema's uniqueness expectation.",
+          "pm.collectionVariables.set('eventId', randomId('evt_'));",
+          "pm.collectionVariables.set('nowIso', new Date().toISOString());"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "bookingId", "value": "" },
+    { "key": "cargoId", "value": "" },
+    { "key": "eventId", "value": "" },
+    { "key": "nowIso", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "python-a /healthz -> 200 {status: ok}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{pythonAHttpBase}}/healthz",
+              "host": ["{{pythonAHttpBase}}"],
+              "path": ["healthz"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('content-type is application/json', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});",
+                  "pm.test('body is exactly {status: ok}', () => {",
+                  "  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "python-b /healthz -> 200 {status: ok}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{pythonBHttpBase}}/healthz",
+              "host": ["{{pythonBHttpBase}}"],
+              "path": ["healthz"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('body is exactly {status: ok}', () => {",
+                  "  pm.expect(pm.response.json()).to.eql({ status: 'ok' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inject - Quarkus (WebSockets Next)",
+      "item": [
+        {
+          "name": "quarkus-a inject schema-valid HandlingEvent -> 202",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"bookingId\": \"{{bookingId}}\",\n  \"cargoId\": \"{{cargoId}}\",\n  \"eventType\": \"DELIVERED\",\n  \"location\": \"NLRTM\",\n  \"occurredAt\": \"{{nowIso}}\",\n  \"registeredAt\": \"{{nowIso}}\"\n}"
+            },
+            "url": {
+              "raw": "{{quarkusABase}}/internal/bookings/{{bookingId}}/handling-events",
+              "host": ["{{quarkusABase}}"],
+              "path": ["internal", "bookings", "{{bookingId}}", "handling-events"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status code is 202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "quarkus-a inject malformed body (invalid eventType) -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"bookingId\": \"{{bookingId}}\",\n  \"cargoId\": \"{{cargoId}}\",\n  \"eventType\": \"NOT_A_REAL_TYPE\",\n  \"location\": \"NLRTM\",\n  \"occurredAt\": \"{{nowIso}}\",\n  \"registeredAt\": \"{{nowIso}}\"\n}"
+            },
+            "url": {
+              "raw": "{{quarkusABase}}/internal/bookings/{{bookingId}}/handling-events",
+              "host": ["{{quarkusABase}}"],
+              "path": ["internal", "bookings", "{{bookingId}}", "handling-events"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Quarkus has no bean-validation on the HandlingEvent record (plain",
+                  "// Java record, no @Valid) — only Jackson's enum deserialization can",
+                  "// reject a request here. An unrecognized eventType value fails",
+                  "// deserialization and RESTEasy Reactive's default unreadable-entity",
+                  "// mapper returns 400 Bad Request (confirmed live, 2026-10-19).",
+                  "pm.test('status code is 400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inject - Python (native websockets + FastAPI)",
+      "item": [
+        {
+          "name": "python-a inject schema-valid HandlingEvent -> 202",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"bookingId\": \"{{bookingId}}\",\n  \"cargoId\": \"{{cargoId}}\",\n  \"eventType\": \"DELIVERED\",\n  \"location\": \"NLRTM\",\n  \"occurredAt\": \"{{nowIso}}\",\n  \"registeredAt\": \"{{nowIso}}\"\n}"
+            },
+            "url": {
+              "raw": "{{pythonAHttpBase}}/internal/bookings/{{bookingId}}/handling-events",
+              "host": ["{{pythonAHttpBase}}"],
+              "path": ["internal", "bookings", "{{bookingId}}", "handling-events"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status code is 202 Accepted', () => pm.response.to.have.status(202));",
+                  "pm.test('response echoes accepted status + ids', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('accepted');",
+                  "  pm.expect(json.eventId).to.eql(pm.collectionVariables.get('eventId'));",
+                  "  pm.expect(json.bookingId).to.eql(pm.collectionVariables.get('bookingId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "python-a inject malformed body (bad bookingId + eventType) -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"bookingId\": \"not-a-valid-id\",\n  \"cargoId\": \"{{cargoId}}\",\n  \"eventType\": \"NOT_A_REAL_TYPE\",\n  \"location\": \"NLRTM\",\n  \"occurredAt\": \"{{nowIso}}\",\n  \"registeredAt\": \"{{nowIso}}\"\n}"
+            },
+            "url": {
+              "raw": "{{pythonAHttpBase}}/internal/bookings/{{bookingId}}/handling-events",
+              "host": ["{{pythonAHttpBase}}"],
+              "path": ["internal", "bookings", "{{bookingId}}", "handling-events"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Pydantic v2 (app/models_generated.py) enforces the bkg_/evt_/crg_",
+                  "// id patterns AND the eventType enum at the FastAPI request-body",
+                  "// boundary -> 422 Unprocessable Content with a `detail` array",
+                  "// (confirmed live, 2026-10-19), unlike Quarkus's plain-record model.",
+                  "pm.test('status code is 422 Unprocessable Content', () => pm.response.to.have.status(422));",
+                  "pm.test('validation error names the bad bookingId pattern', () => {",
+                  "  const json = pm.response.json();",
+                  "  const bookingIdError = json.detail.find((d) => d.loc.includes('bookingId'));",
+                  "  pm.expect(bookingIdError, 'a bookingId validation error').to.exist;",
+                  "  pm.expect(bookingIdError.type).to.eql('string_pattern_mismatch');",
+                  "});",
+                  "pm.test('validation error names the bad eventType enum value', () => {",
+                  "  const json = pm.response.json();",
+                  "  const eventTypeError = json.detail.find((d) => d.loc.includes('eventType'));",
+                  "  pm.expect(eventTypeError, 'an eventType validation error').to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

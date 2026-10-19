@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 620" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="20" width="1080" height="150" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">HANDSHAKE — one HTTP request, one 101 response</text>
+<rect x="20" y="190" width="1080" height="150" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="210" font-size="12" font-weight="700" fill="#1d1d1d">DATA FRAMES — every byte after the 101 belongs to a frame</text>
+<rect x="20" y="360" width="1080" height="150" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="380" font-size="12" font-weight="700" fill="#1d1d1d">CLOSE — a close frame, or an abrupt reset with none</text>
+<rect x="50" y="55" width="300" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="200.0" y="85.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CLIENT</text>
+<text x="200.0" y="102.5" font-size="11.5" fill="#555555" text-anchor="middle">GET + Upgrade, Connection,</text>
+<text x="200.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">Sec-WebSocket-Key, Version:13</text>
+<rect x="410" y="55" width="290" height="80" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="555.0" y="85.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">SERVER</text>
+<text x="555.0" y="102.5" font-size="11.5" fill="#555555" text-anchor="middle">101 Switching Protocols +</text>
+<text x="555.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">Sec-WebSocket-Accept</text>
+<rect x="760" y="55" width="320" height="80" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="920.0" y="85.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">TAP: curl --include /</text>
+<text x="920.0" y="102.5" font-size="11.5" fill="#555555" text-anchor="middle">browser DevTools Network tab</text>
+<text x="920.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">— see the 101 + every header</text>
+<rect x="50" y="225" width="290" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="195.0" y="255.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">TEXT frame</text>
+<text x="195.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x1 — JSON</text>
+<text x="195.0" y="287.5" font-size="11.5" fill="#555555" text-anchor="middle">e.g. HandlingEvent</text>
+<rect x="400" y="225" width="300" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="550.0" y="255.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">BINARY frame</text>
+<text x="550.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x2 — Protobuf</text>
+<text x="550.0" y="287.5" font-size="11.5" fill="#555555" text-anchor="middle">same message, fewer bytes</text>
+<rect x="760" y="225" width="320" height="80" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="920.0" y="255.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">TAP: DevTools Frames tab</text>
+<text x="920.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">(per connection) / websocat</text>
+<text x="920.0" y="287.5" font-size="11.5" fill="#555555" text-anchor="middle">-t (text) or -b (binary)</text>
+<rect x="50" y="400" width="290" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="195.0" y="430.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CLOSE frame</text>
+<text x="195.0" y="447.5" font-size="11.5" fill="#555555" text-anchor="middle">code + optional reason</text>
+<text x="195.0" y="462.5" font-size="11.5" fill="#555555" text-anchor="middle">(or: peer vanishes, no frame)</text>
+<rect x="400" y="400" width="300" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="550.0" y="430.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">TCP teardown</text>
+<text x="550.0" y="447.5" font-size="11.5" fill="#555555" text-anchor="middle">two-way close handshake,</text>
+<text x="550.0" y="462.5" font-size="11.5" fill="#555555" text-anchor="middle">or abrupt reset -&gt; 1006</text>
+<rect x="760" y="400" width="320" height="100" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="920.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">TAP: python ws_close_probe</text>
+<text x="920.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">(websockets lib) reads</text>
+<text x="920.0" y="465.0" font-size="11.5" fill="#555555" text-anchor="middle">ws.close_code directly —</text>
+<text x="920.0" y="480.0" font-size="11.5" fill="#555555" text-anchor="middle">websocat CANNOT see this</text>
+<path d="M350,95 L410,95" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="386.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade request</text>
+<text x="386.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">upgrade request</text>
+<path d="M700,95 L760,95" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="736.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">observed here</text>
+<text x="736.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">observed here</text>
+<path d="M340,265 L760,265" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="556.0" y="259.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">inspect</text>
+<text x="556.0" y="259.0" font-size="11" fill="#555" text-anchor="middle">inspect</text>
+<path d="M400,300 L760,300" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="586.0" y="294.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">inspect</text>
+<text x="586.0" y="294.0" font-size="11" fill="#555" text-anchor="middle">inspect</text>
+<path d="M340,440 L400,440" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="376.0" y="434.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">close handshake</text>
+<text x="376.0" y="434.0" font-size="11" fill="#555" text-anchor="middle">close handshake</text>
+<path d="M700,440 L760,440" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="736.0" y="434.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">the blind spot</text>
+<text x="736.0" y="434.0" font-size="11" fill="#b8650a" text-anchor="middle">the blind spot</text>
+<text x="560" y="585" font-size="12" fill="#555555" text-anchor="middle">tcpdump/Wireshark taps underneath all three phases at the TCP layer — full visibility on ws://, only encrypted length/timing on wss://.</text>
+</svg>

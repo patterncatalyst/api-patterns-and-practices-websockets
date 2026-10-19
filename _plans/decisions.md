@@ -278,3 +278,37 @@ The Part 5 k6 **smoke** run is gated in CI (both encodings stream on both
 stacks). The comparative JSON-vs-Protobuf-vs-deflate **throughput benchmark**
 (size + messages/sec into LGTM) is **local-only** — absolute throughput is
 host-dependent and would make a flaky gate. Consistent with DRQ-023/DRQ-006.
+
+## DRQ-028 — Part 6: new part6-observability example, verified in the examples matrix (r06)
+
+Ch23 ships a new `examples/part6-observability/` (both stacks) that turns on live
+OpenTelemetry over a WebSocket into the LGTM stack — today OTel is wired but
+INERT (Quarkus `quarkus.otel.sdk.disabled=true`, Python entrypoint not wrapped in
+`opentelemetry-instrument`, the `lgtm` compose service behind an unused profile),
+so nothing lands in Tempo. The new app makes **`lgtm` a hard dependency** (not
+profile-gated) and both stacks export. Verified HEADLESS, in the standard CI
+`examples` matrix, with the gRPC-sibling split: **HARD** asserts (the connection's
+trace id appears in the app's own structured log line + a WebSocket metric is
+present via a synchronous Prometheus scrape) and a **SOFT** Tempo poll
+(`:3200/api/traces/<id>`, bounded retry, warns on ingest lag, never fails). Key
+WS finding: the native `websockets` library has no OTel auto-instrumentation, so
+the Python connection/push span is created MANUALLY with the SDK tracer — vs
+Quarkus auto-tracing the HTTP upgrade. Ch21/22/24 are prose citing existing
+evidence; only Ch23 adds runnable code.
+
+## DRQ-029 — Observability metrics shape (r06)
+
+Quarkus exposes metrics via Micrometer→Prometheus (`quarkus-micrometer-registry-prometheus`,
+scraped at `/q/metrics`); Python exposes a Prometheus endpoint (prometheus-client
+or the OTel metrics exporter). `verify.sh` asserts a WebSocket metric is present
+per stack (sum-all-labels > 0), mirroring the gRPC sibling's `assert_metric_present`.
+Both stacks also export OTLP traces to LGTM.
+
+## DRQ-030 — Newman functional HTTP testing in Part 6 (r06)
+
+Part 6 ships a **full Newman example** (DRQ-006: Newman = functional): a runnable
+Postman/Newman collection exercising the HTTP surfaces this site exposes —
+health endpoints and the part4-backplane `POST /internal/.../handling-events`
+inject endpoint (202 + schema-valid body) — run via a pinned Newman in a CI step
+and cited by Ch21 as the functional-testing layer alongside the WS verify.sh/k6
+corpus. (The contract itself is WS-only; Newman covers the HTTP seam around it.)
