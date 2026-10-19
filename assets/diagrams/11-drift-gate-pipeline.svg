@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="185" width="170" height="90" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="105.0" y="228.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">PR: edit</text>
+<text x="105.0" y="245.0" font-size="11.5" fill="#555555" text-anchor="middle">contracts/asyncapi.yaml</text>
+<rect x="250" y="15" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="355.0" y="45.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">validate</text>
+<text x="355.0" y="62.5" font-size="11.5" fill="#555555" text-anchor="middle">asyncapi validate (CLI)</text>
+<rect x="250" y="115" width="210" height="95" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="355.0" y="153.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">breaking</text>
+<text x="355.0" y="170.0" font-size="11.5" fill="#555555" text-anchor="middle">asyncapi diff -t all + jq:</text>
+<text x="355.0" y="185.0" font-size="11.5" fill="#555555" text-anchor="middle">remove / edit type|pattern / add required</text>
+<rect x="250" y="245" width="210" height="95" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="355.0" y="283.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">drift</text>
+<text x="355.0" y="300.0" font-size="11.5" fill="#555555" text-anchor="middle">extract schema, regenerate Python model,</text>
+<text x="355.0" y="315.0" font-size="11.5" fill="#555555" text-anchor="middle">run both conformance tests</text>
+<rect x="250" y="375" width="210" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="355.0" y="408.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">examples matrix</text>
+<text x="355.0" y="425.0" font-size="11.5" fill="#555555" text-anchor="middle">verify.sh per example, 3x retry</text>
+<rect x="540" y="175" width="220" height="110" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="650.0" y="228.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">examples-summary</text>
+<text x="650.0" y="245.0" font-size="11.5" fill="#555555" text-anchor="middle">gate: all 4 jobs green?</text>
+<rect x="830" y="80" width="140" height="70" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="900.0" y="113.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">merge allowed</text>
+<text x="900.0" y="130.0" font-size="11.5" fill="#555555" text-anchor="middle">contract change lands</text>
+<rect x="830" y="280" width="140" height="70" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="900.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">gate fails</text>
+<text x="900.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">caught before merge</text>
+<path d="M190,210 L250,48" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M190,220 L250,162" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M190,235 L250,292" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M190,250 L250,410" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460,48 L540,200" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460,162 L540,215" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460,292 L540,250" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460,410 L540,270" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M760,205 L830,115" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="801.0" y="154.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">all green</text>
+<text x="801.0" y="154.0" font-size="11" fill="#b8650a" text-anchor="middle">all green</text>
+<path d="M760,250 L830,310" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="801.0" y="274.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">any red</text>
+<text x="801.0" y="274.0" font-size="11" fill="#555" text-anchor="middle">any red</text>
+<text x="490" y="440" font-size="12" fill="#555555" text-anchor="middle">asyncapi diff&#x27;s own -t breaking misses payload-schema changes — the breaking job&#x27;s jq filter closes that gap itself.</text>
+</svg>
