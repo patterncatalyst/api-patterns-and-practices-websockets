@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="370" y="10" width="240" height="50" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="490.0" y="33.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">WS client</text>
+<text x="490.0" y="50.0" font-size="11.5" fill="#555555" text-anchor="middle">opens handlingEvents channel</text>
+<rect x="290" y="95" width="400" height="55" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="490.0" y="113.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">HTTP upgrade span</text>
+<text x="490.0" y="130.0" font-size="11.5" fill="#555555" text-anchor="middle">auto-traced where the framework instruments it (Quarkus);</text>
+<text x="490.0" y="145.0" font-size="11.5" fill="#555555" text-anchor="middle">plain accept otherwise (Python)</text>
+<rect x="270" y="185" width="440" height="60" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="490.0" y="213.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">manual span: ws.handling-events.connection</text>
+<text x="490.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle">wraps the whole fixture-replay push</text>
+<rect x="20" y="300" width="400" height="70" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="220.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">per-event: HANDLING_EVENTS_DELIVERED_TOTAL.inc()</text>
+<text x="220.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">Prometheus-format PULL scrape only</text>
+<text x="220.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">never reaches Mimir in this example</text>
+<rect x="540" y="300" width="400" height="70" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="740.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">otel.trace_id=... log line written to stdout</text>
+<text x="740.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">read by docker compose logs</text>
+<text x="740.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">never reaches Loki in this example</text>
+<rect x="380" y="410" width="220" height="50" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="490.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">OTLP export (gRPC)</text>
+<text x="490.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">to lgtm Collector</text>
+<rect x="120" y="500" width="280" height="55" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="260.0" y="525.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Tempo (traces, :3200)</text>
+<text x="260.0" y="542.5" font-size="11.5" fill="#555555" text-anchor="middle">the only signal pushed here</text>
+<rect x="420" y="500" width="200" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="520.0" y="525.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Mimir (:9090)</text>
+<text x="520.0" y="542.5" font-size="11.5" fill="#555555" text-anchor="middle">not fed by this example</text>
+<rect x="640" y="500" width="200" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="740.0" y="525.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Loki (:3100)</text>
+<text x="740.0" y="542.5" font-size="11.5" fill="#555555" text-anchor="middle">not fed by this example</text>
+<path d="M460,60 L460,95" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M460,150 L460,185" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<path d="M350,245 L220,300" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M570,245 L740,300" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M490,245 L490,410" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="496.0" y="321.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">OTLP</text>
+<text x="496.0" y="321.5" font-size="11" fill="#b8650a" text-anchor="middle">OTLP</text>
+<path d="M460,460 L260,500" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M500,460 L520,500" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M540,460 L740,500" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M220,370 L260,500" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="246.0" y="429.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">trace id is the correlating value</text>
+<text x="246.0" y="429.0" font-size="11" fill="#555" text-anchor="middle">trace id is the correlating value</text>
+<text x="480" y="605" font-size="12" fill="#555555" text-anchor="middle">Only the trace leaves the process over OTLP; the metric and the log line stay local, read or scraped directly.</text>
+</svg>

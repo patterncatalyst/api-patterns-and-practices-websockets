@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Part 6 "Observability" example — Quarkus side. Forks
+  examples/part4-connection/quarkus's pom.xml (itself forked from part3), but
+  drops the Ch12/13/14/17 connection-concern dependencies (scheduler,
+  json-schema-validator stays only for the drift-gated contract test) — this
+  part is about LIVE OpenTelemetry over the SAME `handlingEvents` channel as
+  part3/part4, not connection hardening.
+
+  Implements the same `receiveHandlingEvent` operation from the shared
+  AsyncAPI contract in contracts/asyncapi.yaml as part3/part4 — one WebSocket
+  connection per booking at /ws/v1/bookings/{bookingId}/handling-events,
+  replaying the shared fixture on open — now instrumented with a manual
+  connection span (`ws.handling-events.connection`), a trace-id-in-logs line,
+  and a Micrometer/Prometheus delivery counter (DRQ-028/DRQ-029). See
+  src/main/java/.../observability/HandlingEventObservabilityWebSocket for the
+  implementation and README.md for the exact conventions shared with the
+  Python sibling (verify.sh asserts both uniformly).
+
+  The fixture is reused from part3, NOT duplicated here (same mechanism as
+  part4's pom.xml) — the copy-handling-events-fixture execution below
+  resolves it from a path relative to THIS module's basedir
+  (../../part3-handling-events/fixtures — two levels up, since part6's and
+  part3's quarkus/ modules are siblings under examples/), onto the classpath
+  at build time. The Containerfile reproduces the same relative layout
+  inside the build stage so the identical pom.xml resource reference
+  resolves there too.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.patterncatalyst.shipping</groupId>
+    <artifactId>part6-observability-quarkus</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>quarkus</packaging>
+
+    <properties>
+        <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <!-- Matches part3/part4's pin — re-check before bumping. -->
+        <quarkus.platform.version>3.40.1</quarkus.platform.version>
+        <!-- Latest stable com.networknt:json-schema-validator as of this
+             writing (not Quarkus-BOM-managed; re-check before bumping). -->
+        <json-schema-validator.version>1.5.6</json-schema-validator.version>
+        <skipITs>true</skipITs>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- @WebSocket / @OnOpen; WebSocketConnection. Pulls in
+             quarkus-jackson transitively, which serializes HandlingEvent to
+             the JSON text frame. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-websockets-next</artifactId>
+        </dependency>
+        <!-- Traces: the OTel SDK is ENABLED (quarkus.otel.sdk.disabled=false,
+             application.properties) and exports to the OTLP endpoint the
+             `lgtm` compose service listens on. Also supplies the
+             @WithSpan/Span API used to wrap and log the connection span. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-opentelemetry</artifactId>
+        </dependency>
+        <!-- Metrics (DRQ-029): Micrometer -> Prometheus scrape at
+             /q/metrics, independent of the OTel traces above (no bridge
+             needed — this app only needs Micrometer's own Prometheus
+             export, not OTel metrics). Backs the
+             handling_events_delivered_total counter. -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- HandlingEventContractTest validates each emitted HandlingEvent
+             against build/handling-event.schema.json (generated from
+             contracts/asyncapi.yaml by scripts/extract-message-schema.py). -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+            <!-- Copies the canonical fixture (owned by part3, reused here —
+                 see the file header above) onto the classpath before
+                 process-resources runs. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-handling-events-fixture</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/fixtures</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../part3-handling-events/fixtures</directory>
+                                    <includes>
+                                        <include>handling-events.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler-plugin.version}</version>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <argLine>@{argLine}</argLine>
+                    <systemPropertyVariables>
+                        <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
+                <skipITs>false</skipITs>
+                <quarkus.native.enabled>true</quarkus.native.enabled>
+            </properties>
+        </profile>
+    </profiles>
+</project>
