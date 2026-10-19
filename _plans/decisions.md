@@ -174,3 +174,48 @@ schema on both stacks — a genuine end-to-end run, not test-only assertions.
 Matches the gRPC sibling and the house headless-verification posture. k6 stays
 load-only and deferred to Part 4 (DRQ-006); Newman is not needed in Part 3 (no
 REST seam).
+
+## DRQ-020 — Part 4 ships two per-Part example apps (r04)
+
+`examples/part4-connection/` holds the per-connection-lifecycle chapters (Ch12
+backpressure, Ch13 error handling, Ch14 liveness/heartbeats, Ch17 security) —
+no broker, so its verify stays fast. `examples/part4-backplane/` holds the
+backplane chapters (Ch15 stateless reconnect on the default profile, Ch16
+Kafka-backed reconnect on `--profile kafka`, Ch18 scale-out fan-out on
+`--profile kafka` and `--profile redis`), keeping the stateless-vs-Kafka
+reconnect **centerpiece** in one profile-toggled codebase. Rejected: one
+monolithic app (couples light demos to broker bring-up) and seven per-chapter
+apps (breaks the per-Part convention, multiplies drift surface).
+
+## DRQ-021 — Ch17 auth: self-minted HS256 JWT at the upgrade; Keycloak named
+
+The socket authenticates with a self-minted **HS256 JWT** carried in the
+contract's `token` query param, validated at the WebSocket upgrade on both
+stacks (Python in the `websockets` handshake hook with PyJWT; Quarkus at the
+upgrade/`@OnOpen`), with runtime token minting so `exp` never goes stale.
+**Keycloak/OIDC is named as the production, Red Hat-aligned path but not stood
+up in CI** (heavyweight cold start + JWKS flakiness for a teaching example).
+Matches the gRPC sibling's auth precedent.
+
+## DRQ-022 — Ch18 scale-out fan-out runs live in CI on both Kafka and Redis
+
+The multi-instance fan-out proof (a client on instance A receives an event
+published through instance B) runs **live in CI on both Kafka and Redis**
+(single broker, two instances, generous timeouts + the existing 3× matrix
+retry), contrasted per DRQ-005. Each frame/log carries its serving instance id
+so the A/B assertion can prove the event crossed instances.
+
+## DRQ-023 — k6 is a gated smoke run in CI; k6 enters in Part 4
+
+k6 WS load scripts ship under each Part 4 app and run a **small gated smoke
+load in CI** (not merely opt-in). k6 formally enters the series in **Part 4**
+(correcting the earlier "Part 5" label in Ch0 and the version matrix); it
+remains the load tool, Newman the functional tool (DRQ-006).
+
+## DRQ-024 — One Python version across docs and examples
+
+Ch0's matrix, `_plans/version-matrix.md`, and every example pin the **same**
+Python version. r02's Ch0 said 3.15 while the r03 examples run 3.14; r04
+reconciles them to a single value — the newest stable the stack supports
+(attempt 3.15 across the examples; hold at 3.14 only if an actual
+incompatibility blocks it, recording the hold next to the pin).
