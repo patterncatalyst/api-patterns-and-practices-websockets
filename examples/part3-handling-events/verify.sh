@@ -40,6 +40,63 @@ EXPECTED_LOCATION="USNYC"
 
 CHANNEL_PATH="/ws/v1/bookings/${EXPECTED_BOOKING_ID}/handling-events"
 
+# Set once the reconnect-check client (Step 4) is actually started; cleanup_all
+# (installed as the EXIT trap right after compose_up, below) reaps it
+# alongside the usual compose_down teardown, on both the success and the
+# set -e failure path.
+CLIENT_PID=""
+
+cleanup_all() {
+  if [[ -n "$CLIENT_PID" ]]; then
+    kill "$CLIENT_PID" >/dev/null 2>&1 || true
+    wait "$CLIENT_PID" 2>/dev/null || true
+  fi
+  compose_down "$COMPOSE_FILE" "$PROJECT" "$PROFILE"
+}
+
+# wait_for_log_pattern <file> <grep-pattern> [timeout_secs]
+#
+# Polls <file> for a line matching <grep-pattern> (fixed string, see `grep
+# -F`), or fails loudly after timeout_secs (default 30).
+wait_for_log_pattern() {
+  local file="$1" pattern="$2" timeout="${3:-30}" waited=0 interval=1
+  while (( waited < timeout )); do
+    if grep -qF -- "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+    sleep "$interval"
+    waited=$(( waited + interval ))
+  done
+  echo "lib.sh: FAIL — wait_for_log_pattern: '$pattern' not found in $file within ${timeout}s" >&2
+  echo "lib.sh: --- $file (tail) ---" >&2
+  tail -n 40 "$file" >&2 2>/dev/null || true
+  return 1
+}
+
+# wait_for_log_count <file> <grep-pattern> <min-count> [timeout_secs]
+#
+# Polls <file> until it contains at least <min-count> lines matching
+# <grep-pattern> (fixed string), or fails loudly after timeout_secs (default
+# 30). Unlike wait_for_log_pattern, this distinguishes "already happened
+# once" from "happened again" — needed below to prove the client actually
+# resumed receiving after reconnecting, not just that it received once
+# before the forced disconnect.
+wait_for_log_count() {
+  local file="$1" pattern="$2" min_count="$3" timeout="${4:-30}" waited=0 interval=1 count=0
+  while (( waited < timeout )); do
+    count="$(grep -cF -- "$pattern" "$file" 2>/dev/null || true)"
+    if (( count >= min_count )); then
+      return 0
+    fi
+    sleep "$interval"
+    waited=$(( waited + interval ))
+  done
+  echo "lib.sh: FAIL — wait_for_log_count: '$pattern' seen $count/$min_count times in $file within ${timeout}s" >&2
+  echo "lib.sh: --- $file (tail) ---" >&2
+  tail -n 40 "$file" >&2 2>/dev/null || true
+  return 1
+}
+
 echo "=== Step 0: regenerate the contract-derived JSON Schema ==="
 ensure_websocat
 python3 -I "$EXTRACT_SCRIPT" "$SCHEMA_FILE"
@@ -95,6 +152,10 @@ run_stack_tests() {
 echo
 echo "=== Step 1: docker compose up${PROFILE:+ (--profile $PROFILE)} ==="
 compose_up "$COMPOSE_FILE" "$PROJECT" "$PROFILE"
+# Supersedes the EXIT trap compose_up just registered with one that also
+# reaps the Step 4 reconnect-check client (CLIENT_PID, set by Step 4) —
+# compose_down is still called with the identical arguments either way.
+trap cleanup_all EXIT
 
 echo
 echo "=== Step 2: verify both stacks individually ==="
@@ -110,11 +171,48 @@ for field in eventId eventType bookingId cargoId location occurredAt registeredA
 done
 
 echo
+echo "=== Step 4: client reconnect check — clients/python's consuming" \
+     "client (examples/part3-handling-events/clients/python, uv-managed)" \
+     "against the Python server, forced to drop and recover ==="
+
+CLIENT_PY_DIR="$SCRIPT_DIR/clients/python"
+CLIENT_LOG="$(mktemp -t handling-events-client.XXXXXX.log)"
+
+echo "lib.sh: starting reconnect-check client -> ws://localhost:8081$CHANNEL_PATH (log: $CLIENT_LOG)" >&2
+CLIENT_WS_HOST=localhost CLIENT_WS_PORT=8081 CLIENT_BOOKING_ID="$EXPECTED_BOOKING_ID" \
+  uv run --project "$CLIENT_PY_DIR" python -m app.client >"$CLIENT_LOG" 2>&1 &
+CLIENT_PID=$!
+
+wait_for_log_pattern "$CLIENT_LOG" "received CUSTOMS" 30
+echo "lib.sh: ok — reconnect-check client received the initial 3-event sequence" >&2
+
+echo "lib.sh: docker compose -p $PROJECT restart python (forcing the client's connection to drop) ..." >&2
+docker compose -p "$PROJECT" -f "$COMPOSE_FILE" restart python >&2
+
+wait_for_log_pattern "$CLIENT_LOG" "reconnecting in" 60
+echo "lib.sh: ok — reconnect-check client logged a reconnect attempt after the forced disconnect" >&2
+
+# The restarted container replays the fixture from the top on the new
+# connection (see README.md — this chapter has no per-booking replay), so a
+# SECOND "received CUSTOMS" line proves the client actually resumed
+# receiving, not just that it retried (the first line is already in the log
+# from before the forced disconnect).
+wait_for_log_count "$CLIENT_LOG" "received CUSTOMS" 2 90
+echo "lib.sh: ok — reconnect-check client resumed receiving after reconnecting" >&2
+
+kill "$CLIENT_PID" >/dev/null 2>&1 || true
+wait "$CLIENT_PID" 2>/dev/null || true
+CLIENT_PID=""
+rm -f "$CLIENT_LOG"
+
+echo
 echo "PASS — Part 3 handling-events: Quarkus and Python both implement" \
      "operations.receiveHandlingEvent identically — the same first RECEIVE" \
      "frame, field-for-field, from two independently generated" \
-     "implementations of one AsyncAPI contract."
+     "implementations of one AsyncAPI contract — and the reference" \
+     "consuming client reconnects with backoff and resumes receiving after" \
+     "a forced server-side disconnect."
 
-# Explicit teardown in addition to lib.sh's EXIT trap (belt-and-suspenders);
-# compose_down is idempotent/safe to call twice.
+# Explicit teardown in addition to the cleanup_all EXIT trap
+# (belt-and-suspenders); compose_down is idempotent/safe to call twice.
 compose_down "$COMPOSE_FILE" "$PROJECT" "$PROFILE"
