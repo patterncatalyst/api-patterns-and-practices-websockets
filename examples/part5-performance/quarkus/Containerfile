@@ -38,19 +38,51 @@
 # ── Stage 1: Build ──────────────────────────────────────────
 FROM registry.access.redhat.com/ubi10/openjdk-25:1.24-16 AS build
 
+# This image runs as UID 185 by default and has no `unzip` — confirmed live
+# both matter here because ./mvnw (below) falls back from its pinned
+# `*-bin.zip` distribution to the equivalent `*-bin.tar.gz` the instant
+# `command -v unzip` fails, and that fallback's bytes don't match the
+# `distributionSha256Sum` .mvn/wrapper/maven-wrapper.properties pins for the
+# `.zip` — mvnw then (correctly) refuses to run an artifact whose checksum
+# doesn't match what it expected, not because the download was corrupted.
+# Installing `unzip` keeps mvnw on its pinned, checksum-verified `.zip` path
+# instead of carrying a second, tar.gz-specific checksum pin. USER 0 is
+# needed only for this microdnf install — the runtime stage below still
+# switches to USER 185 before the image ever runs the application.
+USER 0
+RUN microdnf install -y unzip && microdnf clean all
+
 WORKDIR /build/examples/part5-performance/quarkus
 COPY examples/part5-performance/quarkus/pom.xml .
+COPY examples/part5-performance/quarkus/mvnw .
+COPY examples/part5-performance/quarkus/.mvn ./.mvn
 COPY examples/part5-performance/quarkus/src ./src
 
 COPY examples/part3-handling-events/fixtures /build/examples/part3-handling-events/fixtures
 COPY contracts/handling-event.proto /build/contracts/handling-event.proto
 
+# Uses the project's OWN Maven Wrapper (./mvnw, pinned to 3.9.16 by
+# .mvn/wrapper/maven-wrapper.properties) rather than this base image's
+# bundled `mvn` (Maven 3.9.9 — confirmed live via `skopeo`/the image's own
+# /usr/share/maven/lib jars). part3/part4's Containerfiles use the bundled
+# `mvn` fine, since neither pulls in io.github.ascopes:protobuf-maven-plugin;
+# THIS module does, and that plugin's MainGenerateMojo fails to load under
+# Maven 3.9.9 specifically — confirmed live, reproducible on every cold
+# build — with `NoClassDefFoundError: org/objectweb/asm/ClassVisitor` (a
+# Plexus/Guice plugin-realm classloading gap fixed somewhere between Maven
+# 3.9.9 and 3.9.16, not a missing/flaky dependency: the same `org.ow2.asm:
+# asm:9.10.1` jar the error is missing is fetched successfully elsewhere in
+# the same build for a different plugin's realm). `./mvnw` against the
+# wrapper pin above builds clean — confirmed live on the host before this
+# Containerfile change, which only swaps WHICH `mvn` invokes the identical
+# `package` goal, no pom.xml/plugin-version change.
+#
 # The extra -Daether.* / -Dmaven.wagon.* flags give the resolver more room
 # under CI's shared Maven local-repo lock and more retries against a flaky
 # mirror — see part3/part4's Containerfile for the same note. protoc itself
 # is downloaded by protobuf-maven-plugin from Maven Central during
 # generate-sources, same mirror-flakiness exposure as any other dependency.
-RUN mvn -B package -DskipTests -Dmaven.javadoc.skip=true \
+RUN ./mvnw -B package -DskipTests -Dmaven.javadoc.skip=true \
       -Daether.syncContext.named.time=300 -Daether.syncContext.named.time.unit=SECONDS \
       -Dmaven.wagon.http.retryHandler.count=3 -Daether.connector.http.retryHandler.count=3
 
