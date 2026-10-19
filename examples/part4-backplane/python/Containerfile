@@ -47,6 +47,18 @@ WORKDIR /app
 
 ENV UV_PYTHON_INSTALL_DIR=/app/.uv-python
 
+# `aiokafka==0.14.0` ships no prebuilt wheel for cp315 yet (Python 3.15 is
+# too new), so `uv sync` builds its sdist's C speedups (legacy_records.c,
+# the zlib/lz4/snappy-backed record-compression extension) from source — the
+# `-minimal` UBI image has neither a compiler nor zlib headers (confirmed
+# live, in order: `FileNotFoundError: [Errno 2] No such file or directory:
+# 'cc'`, then — once gcc was added — `fatal error: zlib.h: No such file or
+# directory`). `gcc`/`make`/`zlib-devel` come from the public
+# ubi-10-baseos/appstream repos (no entitlement needed) and are discarded
+# with the rest of this build stage — the runtime stage below never sees
+# them. This is a real Containerfile gap, not an app-code change.
+RUN microdnf install -y gcc make zlib-devel && microdnf clean all
+
 RUN pip install --no-cache-dir uv==0.13.1 && \
     uv python install 3.15.0
 

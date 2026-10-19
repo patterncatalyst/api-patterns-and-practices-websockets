@@ -437,8 +437,18 @@ wait_for_tcp() {
 
   echo "lib.sh: waiting for TCP $host:$port (timeout ${timeout}s) ..." >&2
   while (( waited < timeout )); do
+    # fd 3 is opened (and, since `(...)` is a subshell, auto-closed on exit)
+    # entirely INSIDE this subshell — there is nothing left open in the
+    # parent shell to close afterward. A previous version of this function
+    # followed this with a parent-shell `exec 3>&- 3<&- 2>/dev/null` to
+    # "clean up" fd 3 — confirmed live to be a real bug, not a no-op: a bare
+    # `exec` with only redirections and no command applies them to the
+    # CURRENT shell PERMANENTLY, so that trailing `2>/dev/null` silently
+    # redirected every subsequent `>&2` write (every other lib.sh helper's
+    # diagnostic/assertion output, for the rest of the verify.sh process) to
+    # /dev/null the first time a broker ever came up successfully. Removed
+    # rather than re-scoped, since there was never anything to close here.
     if (exec 3<>"/dev/tcp/$host/$port") 2>/dev/null; then
-      exec 3>&- 3<&- 2>/dev/null || true
       echo "lib.sh: TCP $host:$port is up after ${waited}s" >&2
       return 0
     elif command -v nc >/dev/null 2>&1 && nc -z -w 2 "$host" "$port" 2>/dev/null; then
