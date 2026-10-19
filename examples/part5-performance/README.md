@@ -110,6 +110,150 @@ exits 0.
 
 Prints `PASS` only if every assertion above holds for **both** stacks.
 
+## k6 (DRQ-023/DRQ-027)
+
+Two scripts under [`k6/`](k6/), pinned to **k6 2.3.0** — same pin as Part
+4's `k6/smoke.js` scripts (contracts/README.md, Ch0 version matrix). Both
+use the stable `k6/ws` module: it has no dedicated subprotocols field, so
+the `Sec-WebSocket-Protocol` is offered as a plain request header, and it
+dispatches a distinct `binaryMessage` event (ArrayBuffer payload) for
+Protobuf's binary frames, confirmed against the pinned release's own source
+(`github.com/grafana/k6` tag `v2.3.0`,
+`internal/js/modules/k6/ws/ws.go:215-218`) — no need for
+`k6/experimental/websockets` here.
+
+### `k6/smoke.js` — GATED, CI
+
+Smoke-level only (3 VUs, 1 iteration each, no ramp — the same shape as
+`examples/part4-*/k6/smoke.js`): against **one** stack at a time, each VU
+opens the channel twice — offering `+json`, then `+protobuf` — and asserts
+the upgrade, the subprotocol echo, and that the 3 fixture frames arrive on
+the wire opcode the negotiated encoding promises (TEXT for `+json`, BINARY
+for `+protobuf`). A failed check fails the k6 run, and thus the PR, the
+same DRQ-023 contract Part 4's smoke jobs already use.
+
+```bash
+docker compose up --build -d quarkus python
+
+K6_WS_URL="ws://localhost:8090/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+  k6 run k6/smoke.js   # Quarkus
+
+K6_WS_URL="ws://localhost:8091/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+  k6 run k6/smoke.js   # Python
+```
+
+Env vars: `K6_WS_URL` (required — selects the stack), `K6_SUBPROTOCOL`
+(optional — exercise only `handling-events.v1+json` or
+`handling-events.v1+protobuf` in a given invocation; default: both).
+**Confirmed live** against both stacks (this project's own CI runner,
+2026-10-19): 54/54 checks passed on Quarkus `:8090` and 54/54 on Python
+`:8091` — both JSON-as-TEXT and Protobuf-as-BINARY, both stacks.
+
+### `k6/benchmark.js` — comparative, LOCAL only
+
+**Not** part of the CI gate — DRQ-027: absolute throughput is
+host-dependent, which would make a flaky CI threshold. Run it by hand
+against a stack on your own machine; its printed comparison is what Ch20
+cites. Runs three scenarios **concurrently** against the same target —
+`json`, `protobuf`, and `json_deflate` (JSON + `compression: "deflate"`,
+i.e. permessage-deflate, RFC 7692) — each a `ramping-vus` executor that
+repeatedly opens a fresh connection, reads the 3 fixture frames, and
+closes, as fast as it can for the sustained-load window.
+
+```bash
+docker compose up --build -d quarkus python
+
+K6_WS_URL="ws://localhost:8090/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+PART5_BENCH_VUS=5 PART5_BENCH_DURATION=15s \
+  k6 run k6/benchmark.js
+```
+
+Env vars: `K6_WS_URL` (target stack), `PART5_BENCH_VUS` (per-scenario VU
+count, default 5), `PART5_BENCH_DURATION` (per-scenario sustained-load
+duration, default 15s). **Not** named `K6_VUS`/`K6_DURATION` — those are
+k6-reserved env vars that, if set, silently discard this script's
+`options.scenarios` for a single default scenario (confirmed live: k6 logs
+`"env" level configuration overrode scenarios configuration entirely` and
+then fails outright, since this script has no default-exported function).
+
+To also push these metrics into the project's LGTM stack (DRQ-006,
+`docker compose --profile observability up`), add k6's built-in
+OpenTelemetry metrics output on the command line — no script change
+needed:
+
+```bash
+K6_OTEL_GRPC_EXPORTER_INSECURE=true K6_OTEL_GRPC_EXPORTER_ENDPOINT=localhost:4317 \
+  k6 run -o opentelemetry k6/benchmark.js
+```
+
+(Confirmed only that pinned k6 2.3.0 ships this output — `k6 run --help`'s
+Outputs section lists `k6 run -o opentelemetry`; a live LGTM round-trip for
+this script was not separately exercised. The console summary below is the
+path actually run end to end.)
+
+**What this does NOT measure:** this channel replays its 3 fixture events
+on connect and then stays idle (no further pushes) — there is no sustained
+in-connection stream, so "messages/sec" below is connection-churn
+throughput (connects/sec × 3), not a steady push rate. And for
+`json_deflate`: `k6/ws` (gorilla/websocket) **transparently inflates** a
+compressed frame before handing its bytes to the script — there is no
+k6/ws API to read the on-the-wire compressed length. That scenario's
+bytes-per-frame is expected to read identically to the plain `json` row;
+it proves nothing about deflate's wire savings. What it DOES prove is
+whether the extension was negotiated at all (read from the echoed
+`Sec-WebSocket-Extensions` response header).
+
+**Real numbers, captured live on this project's dev box (2026-10-19,
+`PART5_BENCH_VUS=2`, `PART5_BENCH_DURATION=8s`, each stack freshly
+restarted and given time for the OS's ephemeral TCP port range to drain
+`TIME_WAIT` before measuring — see the caveat below):**
+
+| Stack | Encoding | bytes/frame (avg / p90) | connects (success %) | frames/sec |
+|---|---|---:|---:|---:|
+| Quarkus `:8090` | json | 259.7B / 267.0B | 9868/11967 (82.5%) | 2114.2/s |
+| Quarkus `:8090` | protobuf | 154.0B / 157.0B | 9911/12001 (82.6%) | 2123.4/s |
+| Quarkus `:8090` | json+deflate | 259.7B / 267.0B | 9718/11806 (82.3%) | 2082.0/s |
+| Python `:8091` | json | 259.7B / 267.0B | 7952/7952 (100.0%) | 1703.9/s |
+| Python `:8091` | protobuf | 154.0B / 157.0B | 7943/7943 (100.0%) | 1701.9/s |
+| Python `:8091` | json+deflate | 259.7B / 267.0B | 7908/7908 (100.0%) | 1694.4/s |
+
+The **bytes/frame column was identical across every run of this benchmark**
+regardless of load (it's the fixture frame size, not a function of
+throughput) — Protobuf measures **40.7% smaller** (154.0B vs. 259.7B avg),
+consistent with the per-event table above. `json+deflate`'s bytes/frame
+reads the same as plain `json` in every run, exactly as the caveat above
+predicts.
+
+**permessage-deflate negotiation differed by stack, reproduced across every
+run**: Python's `websockets` server negotiated the extension on every
+successful connect (`negotiated: 7908/7908` in the run above); Quarkus's
+WebSockets Next (Undertow) **never** negotiated it in any run of this
+benchmark (`negotiated: 0` out of 11806–18292 attempts across three
+separate runs) — a real, reproducible difference between the two stacks'
+WebSocket server implementations, not a fluke of one run.
+
+**Connect success rate is a local-host artifact, not an encoding effect**:
+at this benchmark's default pace (no think time — each VU reconnects as
+fast as it can), the three scenarios' success rates track each other
+within a run (encoding choice doesn't change the ceiling), but the
+absolute rate varies run to run with recent load on the dev box — this
+project also measured 100%/100%/100% on Quarkus on a freshly-booted
+container before any other k6 run had touched it, and as low as 2/6108
+(port exhaustion: ~55k connections from an immediately-preceding run had
+left the OS ephemeral port range full of `TIME_WAIT` sockets) when two
+heavy runs were fired back to back with no cooldown. Give the stack's
+container a few seconds after startup, and this script some idle time
+between back-to-back invocations, for a representative number — both
+caveats are also called out in `k6/benchmark.js`'s header comment.
+
+### Gated vs. local — the house pattern
+
+Same split as `examples/part4-*`'s `k6-smoke` CI job and build-plan.md's
+DRQ-023/DRQ-027: `smoke.js` is fast, deterministic, and gated (a failed
+check fails the PR); `benchmark.js` is comparative, host-dependent, and
+local-only (run it, read the summary, cite the numbers in prose — don't
+wire it into a CI threshold).
+
 ### Ports
 
 | Service | Host port | Purpose |
