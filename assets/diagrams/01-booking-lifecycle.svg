@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="250" width="815" height="120" rx="12" fill="#fff8ef" stroke="#ddd"/>
+<text x="32" y="270" font-size="12" font-weight="700" fill="#1d1d1d">Handling-event feed — each event pushed over the WebSocket, not polled for</text>
+<rect x="20" y="60" width="170" height="60" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="105.0" y="95.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">PENDING</text>
+<rect x="235" y="60" width="170" height="60" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="320.0" y="95.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CONFIRMED</text>
+<rect x="450" y="60" width="170" height="60" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="535.0" y="95.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">IN_TRANSIT</text>
+<rect x="665" y="60" width="170" height="60" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="750.0" y="95.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">DELIVERED</text>
+<rect x="40" y="290" width="150" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="115.0" y="314.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">GATE_IN</text>
+<text x="115.0" y="331.0" font-size="11.5" fill="#555555" text-anchor="middle">container gated in</text>
+<rect x="235" y="290" width="150" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="310.0" y="314.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">LOAD / UNLOAD</text>
+<text x="310.0" y="331.0" font-size="11.5" fill="#555555" text-anchor="middle">container moves</text>
+<rect x="430" y="290" width="150" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="505.0" y="314.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CUSTOMS_HOLD</text>
+<text x="505.0" y="331.0" font-size="11.5" fill="#555555" text-anchor="middle">hold opened</text>
+<rect x="660" y="290" width="150" height="52" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="735.0" y="314.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">DELIVERY_CONFIRMED</text>
+<text x="735.0" y="331.0" font-size="11.5" fill="#555555" text-anchor="middle">signed at the dock</text>
+<path d="M190,90.0 L235,90.0" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M405,90.0 L450,90.0" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M620,90.0 L665,90.0" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<path d="M320.0,120 L115.0,290" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M535.0,120 L310.0,290" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M535.0,120 L505.0,290" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<path d="M750.0,120 L735.0,290" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+<text x="20" y="30" font-size="12" fill="#2f6db5" text-anchor="start">Booking state the REST service tracks</text>
+</svg>
