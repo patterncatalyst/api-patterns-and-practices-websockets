@@ -1,0 +1,135 @@
+# Part 5 example — Python, UBI 10, uv-managed. Forked from
+# examples/part4-connection/python/Containerfile. The WS endpoint serves the
+# shared fixture in TWO wire encodings (JSON text / Protobuf binary),
+# selected per connection via Sec-WebSocket-Protocol (DRQ-026); FastAPI/
+# uvicorn serves HTTP/app lifecycle on a separate port. See README.md.
+#
+# Build (from the REPO ROOT, so this context can reach contracts/ + the
+# shared fixtures/ dir under examples/part3-handling-events/):
+#   docker build -f examples/part5-performance/python/Containerfile \
+#     -t ch19-performance-python .
+#
+# This build runs the SAME build-time steps as local dev (see
+# scripts/generate-models.sh, scripts/generate-proto.sh, and
+# ../../../scripts/extract-message-schema.py):
+#   1. extract contracts/asyncapi.yaml's HandlingEvent schema to a
+#      self-contained JSON Schema, then generate app/models_generated.py
+#      from it with datamodel-code-generator (JSON encoding);
+#   2. compile contracts/handling-event.proto with grpcio-tools' bundled
+#      protoc into app/handling_event_pb2.py(+.pyi) (Protobuf encoding).
+# Both are build-time only — neither the extracted schema nor either
+# generated module is committed (see ../../../.gitignore and ./.gitignore).
+#
+# protobuf==7.36.2 and grpcio-tools==1.84.0 both publish prebuilt wheels that
+# install on CPython 3.15 with no compiler (confirmed empirically: both
+# installed in well under a second with no "Building wheel for ..." step),
+# unlike part4-backplane's aiokafka, which needed gcc/zlib-devel added to the
+# build stage for its sdist's C speedups — no such step is needed here.
+#
+# UBI 10 publishes only the -minimal Python image (no ubi10/python-314).
+# Pin: registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+# Re-check with:
+#   skopeo list-tags docker://registry.access.redhat.com/ubi10/python-314-minimal
+# and confirm with `skopeo inspect`. Bump deliberately.
+#
+# requires-python is 3.15, but as of this survey (2026-10-18) Red Hat has
+# not published a ubi10/python-315-minimal image yet (confirmed via
+# `skopeo list-tags docker://registry.access.redhat.com/ubi10/python-315-minimal`
+# — repo not found — and the Red Hat Catalog API returning zero results).
+# The base image below still only ships a 3.14 system interpreter, which
+# doesn't satisfy pyproject.toml's floor, so `uv sync` would otherwise fall
+# back to silently downloading an unpinned CPython build. `uv python install
+# 3.15.0` below pins that fallback to an exact, intentional version instead
+# of leaving it implicit, and `UV_PYTHON_INSTALL_DIR` puts it under /app so
+# the runtime stage's COPY picks it up alongside the venv. Re-evaluate once
+# Red Hat ships a ubi10/python-315-minimal image and switch back to the
+# UBI-provided interpreter for both stages.
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506 AS build
+
+# The image runs as UID 1001; the build stage needs root to write /app.
+# Build at the same path the runtime uses: a venv is not relocatable, its
+# console scripts carry the absolute interpreter path.
+USER 0
+WORKDIR /app
+
+ENV UV_PYTHON_INSTALL_DIR=/app/.uv-python
+
+RUN pip install --no-cache-dir uv==0.13.1 && \
+    uv python install 3.15.0
+
+COPY examples/part5-performance/python/pyproject.toml ./
+COPY examples/part5-performance/python/uv.lock ./
+COPY examples/part5-performance/python/app ./app
+
+# `--group dev` pulls in grpcio-tools + datamodel-code-generator + jsonschema
+# (needed below to generate both encodings' code and, for CI, to run tests —
+# not needed at runtime).
+RUN uv sync --locked --group dev
+
+# Stage the one contract directory this service needs (both handling-event
+# encodings live under contracts/), extract HandlingEvent to a
+# self-contained JSON Schema, generate the Pydantic v2 model from it, and
+# compile the .proto into Python message classes. Mirrors
+# scripts/generate-models.sh and scripts/generate-proto.sh exactly
+# (datamodel-code-generator's AsyncAPI input is unreliable; the extracted
+# JSON Schema is the reliable generator input — see contracts/README.md).
+COPY contracts/asyncapi.yaml ./contracts/asyncapi.yaml
+COPY contracts/handling-event.proto ./contracts/handling-event.proto
+COPY scripts/extract-message-schema.py ./scripts/extract-message-schema.py
+RUN .venv/bin/python3 -I scripts/extract-message-schema.py build/handling-event.schema.json && \
+    .venv/bin/datamodel-codegen \
+      --input build/handling-event.schema.json \
+      --input-file-type jsonschema \
+      --output app/models_generated.py \
+      --output-model-type pydantic_v2.BaseModel \
+      --target-python-version 3.15 \
+      --use-schema-description \
+      --disable-timestamp \
+      --formatters black isort && \
+    .venv/bin/python3 -m grpc_tools.protoc \
+      -I contracts \
+      --python_out=app \
+      --pyi_out=app \
+      contracts/handling-event.proto
+
+# The shared fixture, reused from the Part 3 example (Part 5 is about wire
+# encoding, not new message content — see app/feed.py).
+COPY examples/part3-handling-events/fixtures/handling-events.json \
+     ./fixtures/handling-events.json
+
+# Rebuild the venv without the dev group (grpcio-tools,
+# datamodel-code-generator, and jsonschema are not needed to run the
+# server — protobuf itself stays, it's a runtime dependency).
+RUN rm -rf .venv && uv sync --locked --no-dev
+
+# ── Stage 2: Runtime ────────────────────────────────────────
+FROM registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506
+
+WORKDIR /app
+
+# .uv-python is the pinned, uv-managed CPython 3.15.0 the build stage
+# installed (see the note above the build stage's FROM) — the venv's
+# interpreter symlinks resolve into it, so it has to travel with .venv.
+COPY --from=build --chown=1001:0 /app/.uv-python /app/.uv-python
+COPY --from=build --chown=1001:0 /app/.venv /app/.venv
+COPY --from=build --chown=1001:0 /app/app /app/app
+COPY --from=build --chown=1001:0 /app/fixtures /app/fixtures
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app" \
+    PYTHONUNBUFFERED=1 \
+    WS_HOST=0.0.0.0 \
+    WS_PORT=8091 \
+    HTTP_HOST=0.0.0.0 \
+    HTTP_PORT=8092 \
+    HANDLING_EVENTS_FIXTURE=/app/fixtures/handling-events.json
+
+EXPOSE 8091 8092
+USER 1001
+
+# app.main starts both listeners (the native-websockets WS feed, serving
+# both encodings on one port, and the FastAPI/uvicorn HTTP side) on the same
+# event loop — see app/main.py.
+ENTRYPOINT ["python3", "-m", "app.main"]
