@@ -49,3 +49,6 @@ build/
 
 # maven wrapper debug script (generated)
 mvnw-debug
+presentation/*/node_modules/
+presentation/*/package-lock.json
+presentation/*/qa/

@@ -1,0 +1,9 @@
+{
+  "name": "websockets-201-python",
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  },
+  "scripts": {
+    "build": "node deck.js"
+  }
+}
