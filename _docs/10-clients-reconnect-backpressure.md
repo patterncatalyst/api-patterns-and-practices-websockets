@@ -221,6 +221,14 @@ This chapter built the narrowest version of reconnect and backpressure that stil
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>A long-lived WebSocket client needs two things neither server in this example needs: reconnect logic, because nothing external is watching a broken outbound connection and deciding to restart it, and a backpressure policy, because nothing stops a server from pushing frames faster than a slow consumer can process them. Both clients in this chapter answer the first with exponential backoff capped at a maximum delay and randomized with jitter (<code>base * 2^attempt</code>, capped, then <code>&#177;jitter_ratio</code>), so a brief blip retries fast, a long outage doesn't retry forever, and many clients recovering from the same outage don't retry in lockstep against a server that's still warming up; both reset the attempt counter to zero on a successful connection, and both catch connection failures broadly (not just <code>ConnectionClosed</code>/<code>OSError</code>) because a server mid-restart can fail a handshake in ways neither of those types covers. Both answer the second with a bounded queue between the socket and the consumer, offering an explicit choice: <code>BLOCK</code> (the default: no frame lost, producer throttles) or <code>DROP_OLDEST</code> (never blocks, evicts the oldest frame under pressure), exposed as configuration rather than hardcoded, because which trade-off is correct depends on whether a stale frame still carries value, not on anything the framework can decide for you. And crucially, reconnect here is stateless: a fresh connection resumes receiving new frames, it does not replay what the gap cost. Treat that as a disclosed limitation, not a silent one: if a consumer cannot tolerate missing events, the fix is a durable, replayable log a client can resume from an offset, which is Chapter 16's job, not this one's.</p></div>
 
+## Build, run, observe
+
+```bash
+cd examples/part4-connection && ./verify.sh
+```
+
+Brings up both running stacks and proves the four connection concerns live: a missing or bad JWT gets rejected, a malformed client frame gets an in-band error envelope, an outbound overrun closes with 4290, and a client that stops answering pings gets closed by the server's own heartbeat sweep. It prints PASS once every assertion holds on both stacks; see `examples/part4-connection/README.md` for full output.
+
 ## For deeper coverage
 
 - Michael T. Nygard, *Release It!, Second Edition* (Pragmatic Bookshelf, 2018): stability patterns for the failure modes a reconnect loop and a bounded buffer both exist to contain, a struggling peer that shouldn't be hammered by synchronized retries, and a queue that has to fail in a chosen way once it fills.

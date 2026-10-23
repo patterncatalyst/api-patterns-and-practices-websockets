@@ -203,6 +203,14 @@ Part 3 ends here having built the thing its title promised: one `HandlingEvent` 
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>"One contract, two stacks" is a property this project enforces with three independent mechanisms layered on top of each other, not a single trick: Python generates its model from the contract so drift there would require the generator itself to misbehave; Quarkus hand-keeps its record and enum and catches drift with <code>HandlingEventContractTest</code>, a test specifically aimed at the hand-kept side's own failure mode; and <code>verify.sh</code> connects to both running services and asserts field-by-field agreement on the frames they actually emit, comparing parsed values rather than raw bytes because JSON key order is not and should not be part of the contract. None of that is aspirational: <code>.github/workflows/contracts.yml</code>'s four jobs (<code>validate</code>, <code>breaking</code>, <code>drift</code>, <code>examples</code>) run it on every push, and the <code>breaking</code> job specifically does not trust the AsyncAPI CLI's own <code>-t breaking</code> classifier alone, because a verified local test against this exact contract showed it reports zero changes for an enum-member removal that is unambiguously a breaking change; the job's own jq filter, checking for any <code>remove</code>, any <code>edit</code> of a <code>type</code> or <code>pattern</code>, or any <code>add</code> to a <code>required</code> array, catches what the CLI's structural classifier was never built to see in a payload schema. Reach for this much machinery when independent teams, independent deploy cadences, or a cost-of-being-wrong high enough to matter mean nobody can be trusted to notice drift by reading diffs; skip most of it when one person already holds the whole contract in their head and the gate would mostly be re-proving what they already know.</p></div>
 
+## Build, run, observe
+
+```bash
+cd examples/part3-handling-events && ./verify.sh
+```
+
+Brings up both the Quarkus and the Python stack over Docker Compose and replays the same deterministic three-event fixture through each, asserting every field against the fixture and against the contract-derived JSON Schema. It prints PASS once every assertion holds on both stacks; see `examples/part3-handling-events/README.md` for full output.
+
 ## For deeper coverage
 
 - Olaf Zimmermann, Mirko Stocker, Daniel Lübke, Uwe Zdun & Cesare Pautasso, *Patterns for API Design* (Addison-Wesley, 2022): the contract-ownership and schema-evolution patterns behind holding two independently-generated stacks to one source document.
