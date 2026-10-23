@@ -140,12 +140,7 @@ That's also why this chapter's fix composes with everything Part 4 built before 
 
 ## On the wire
 
-`examples/part4-backplane/verify.sh` runs three sequential `docker compose up`/`down` cycles (stateless for Ch15, Kafka for Ch16 and Ch18, Redis for Ch18), and its Stage B and Stage C are this chapter's live proof. Each stage connects a client to instance A, injects an event through instance B's HTTP endpoint, and asserts two separate things: that A's *client* received B's event, and that A's own *server log* shows it doing the delivering: `wait_for_docker_log_pattern` greps `docker logs` for the exact line `PROTOCOL.md`'s "Instance identity" section specifies:
-
-```bash
-cd examples/part4-backplane
-./verify.sh
-```
+`examples/part4-backplane/verify.sh` runs three sequential `docker compose up`/`down` cycles (stateless for Ch15, Kafka for Ch16 and Ch18, Redis for Ch18), and its Stage B and Stage C are this chapter's live proof. Each stage connects a client to instance A, injects an event through instance B's HTTP endpoint, and asserts two separate things: that A's *client* received B's event, and that A's own *server log* shows it doing the delivering: `wait_for_docker_log_pattern` greps `docker logs` for the exact line `PROTOCOL.md`'s "Instance identity" section specifies.
 
 Stage B (`--profile kafka`), after Ch16's replay proof, runs Ch18's fan-out check on both stacks:
 
@@ -195,6 +190,14 @@ This chapter closes Part 4. Chapters 12 through 17 hardened a single connection 
 Part 5, Performance & Optimization, picks up from here with a different kind of scaling question: not "can an event reach the right instance" but "how much data can one connection carry, and how fast." Chapter 19 moves the wire format itself from JSON to binary Protobuf frames: a change orthogonal to everything in this chapter (a backplane doesn't care what bytes it's forwarding) but one that compounds with it, since a fan-out system paying the per-instance amplification cost this chapter described benefits doubly from a smaller, faster-to-serialize payload on every hop. Chapter 20 picks up throughput optimization from there. Neither chapter revisits the backplane directly, but every later example still runs on top of the same two-instance, dual-broker topology this chapter introduced: the default production shape assumed from here forward, not a special case to leave behind.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>A sticky load balancer solves one problem (keeping a client's connection on the same instance) and does nothing for a different problem it's easy to conflate with it: getting an event from wherever it originates to whichever instance happens to be holding the connection that wants it. Close that second gap with a backplane every instance subscribes to and any instance can publish to (a Kafka topic with a per-instance, non-shared consumer group, or a Redis Pub/Sub channel), never by trying to route events through the load balancer or by reaching across instances directly. Teach Kafka and Redis as a contrasted pair, not a recommendation: Kafka buys durability and replay (it also powers resume-after-reconnect at no extra cost) against topic/partition/offset bookkeeping and a consumer per instance per booking; Redis buys near-zero operational surface and lower latency at the cost of losing anything published while a subscriber wasn't listening, with no log anywhere to ask for it again. Expect fan-out to cost roughly one deserialize-and-filter per instance per event, not per connected client: a backplane with N instances subscribed does N times the discard work of a single instance, regardless of how many of those instances actually have someone watching, so size the instance count and the partitioning/keying strategy with that multiplier in mind rather than assuming scale-out divides cost evenly.</p></div>
+
+## Build, run, observe
+
+```bash
+cd examples/part4-backplane && ./verify.sh
+```
+
+Brings up four app instances (two Quarkus, two Python) and runs three sequential Docker Compose cycles, stateless, Kafka, and Redis, asserting a disconnected client's gap-era event is lost with no broker, is replayed after reconnect over Kafka, and that an event injected through one instance reaches a client connected to another instance over both backplanes. It prints PASS once every stage holds on both stacks; see `examples/part4-backplane/README.md` and `PROTOCOL.md` for full output.
 
 ## For deeper coverage
 

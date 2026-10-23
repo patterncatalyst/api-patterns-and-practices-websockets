@@ -170,6 +170,14 @@ Part 6, Testing, Debugging & Observability, picks up from here with a different 
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Treat throughput as four independent levers sitting on top of one shared ceiling, not one knob. Encoding (Ch19's Protobuf vs. JSON) is a fixed, load-independent per-frame discount: 40.7% smaller, measured identically at any connection rate. Batching trades latency for fewer, larger frames, and only pays off once per-frame overhead dominates a small, frequent payload. Compression is a per-stack opt-in, not a universal default: Python's <code>websockets</code> library negotiates permessage-deflate unless told not to, Quarkus WebSockets Next requires <code>quarkus.websockets-next.server.per-message-compression-supported=true</code> to negotiate it at all; this example's own benchmark measured 100% negotiation on Python against 0% on Quarkus with the identical client request, a real framework-default difference to check before assuming a feature is active on both stacks. Size limits (<code>max-message-size</code>/<code>max-frame-size</code> on Quarkus, <code>max_size</code>/<code>max_queue</code> on Python, the latter defaulting to a real 1&nbsp;MiB ceiling even when unset explicitly) bound a single frame the same way Chapter 12's queue bounds accumulated sends. Backpressure governs all four: a smaller or compressed frame buys more throughput for the same queue depth, a batched one buys less, but none of them changes whether or when the bound trips. Measure every claim as a ratio or a negotiation outcome reproduced across repeated runs, never as a bare connects/sec number from one host in one ephemeral-port state, which is exactly why <code>k6/benchmark.js</code> stays local-only and cited in prose, while <code>k6/smoke.js</code>'s deterministic checks are the ones that gate a PR.</p></div>
 
+## Build, run, observe
+
+```bash
+cd examples/part5-performance && ./verify.sh
+```
+
+Brings up both stacks and replays the same fixture over the JSON and the Protobuf wire encodings negotiated via `Sec-WebSocket-Protocol`, asserting the decoded fields match across encodings and that the Protobuf frame is strictly smaller. It prints PASS once every assertion holds on both stacks; see `examples/part5-performance/README.md` for full output.
+
 ## For deeper coverage
 
 - Pekka Enberg, *Latency: Reduce delay in software systems* (Manning, 2025): the systems-level latency-versus-throughput tradeoffs behind this chapter's batching-adds-latency argument.

@@ -182,14 +182,7 @@ connected to instance A over BOTH the Kafka and the Redis backplane,
 with instance A's own log confirming it did the delivering.
 ```
 
-Run the Newman collection the same way CI does, from the repo root:
-
-```bash
-cd examples/part6-testing
-./verify.sh
-```
-
-Its captured JSON report (`newman/reports/newman-report.json`, regenerated every run) is the exact per-run tally this chapter's functional-HTTP section cites:
+Run the Newman collection the same way CI does, from the repo root, and its captured JSON report (`newman/reports/newman-report.json`, regenerated every run) is the exact per-run tally this chapter's functional-HTTP section cites:
 
 ```json
 {
@@ -209,6 +202,14 @@ This chapter named five layers that already existed scattered across twenty chap
 Chapter 22 picks up where this one's blind spots end: when a live connection misbehaves in a way none of these five layers caught (a client stuck mid-handshake, a frame that never arrived, a close code a probe wasn't watching for), what debugging it looks like, with the same tools this chapter inventoried turned toward diagnosis instead of a pass/fail gate. Chapter 23 is where the one piece of new code in this part lands: live OpenTelemetry over a WebSocket connection, verified headless the same way every `verify.sh` in this chapter has been. Chapter 24 closes Part 6 by naming the anti-patterns a team reaches for when it skips straight to shipping without any of this five-layer structure underneath it.
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Treat WebSocket testing as five layers, not one suite: unit/conformance (<code>test_contract.py</code>, <code>HandlingEventContractTest</code>/<code>HandlingEventProtoRoundTripTest</code>) validates shape and round-trip values with no socket and no container, in milliseconds. Live integration (<code>verify.sh</code>/<code>lib.sh</code>, both stacks, real <code>docker compose</code> containers) proves frame contents, reconnect/resume, and cross-instance fan-out that a unit test structurally cannot reach. A dedicated close-code probe (Python's <code>websockets</code> library, not <code>websocat</code>) exists because <code>ws.close_code</code> is the one signal this project's primary WebSocket client can't read: checking exit code alone cannot distinguish a rejected connection from one the server still intends to hold open. Newman covers the plain-HTTP seams around the WS-only contract (DRQ-006/DRQ-030): 12 assertions, 0 failed, against <code>/healthz</code> and the inject endpoint's 202/400/422 cases. k6 splits cleanly between <code>smoke.js</code> (gated, <code>rate==1.0</code>, fails the PR on any failed check) and <code>benchmark.js</code> (local-only, because absolute throughput is host-dependent). One CI job, <code>drift</code>, ties every layer back to the same contract-derived schema on every change to <code>contracts/asyncapi.yaml</code>: the property that makes "both stacks agree" something CI checks continuously, not a claim a chapter makes once.</p></div>
+
+## Build, run, observe
+
+```bash
+cd examples/part6-testing && ./verify.sh
+```
+
+Brings up part4-backplane's existing compose stack and runs the Newman collection against both stacks' health and inject endpoints, asserting a schema-valid event is accepted and a malformed one is rejected. It prints PASS once every assertion holds on both stacks; see `examples/part6-testing/README.md` for full output.
 
 ## For deeper coverage
 
