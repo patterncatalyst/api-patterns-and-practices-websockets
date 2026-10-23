@@ -422,6 +422,34 @@ table("APPENDIX · GLOSSARY & VERSIONS", "Glossary and version matrix",
   "A short glossary and the toolchain version matrix this site pins against, for look-up during a conversation rather than memorized ahead of one. HandlingEvent is the one message type this feed ever sends, flat and discriminated by an eventType enum rather than split into per-kind schemas. AsyncAPI 3.0 is the contract specification itself — the WebSocket analog of OpenAPI for REST or a .proto package for gRPC. The toolchain rows are surveyed to current stable releases rather than an older LTS floor, the same posture the REST and gRPC sibling sites take, so a reader installing today lands close to what every example actually targets: JDK 25.0.4 and Quarkus 3.40.0 on one side, Python 3.15.0 on the other, with Kafka 4.3.1 and Redis 8.10.2-alpine as the two backplane options Act E's scale-out concept introduced. Every version here is pinned to an exact release, never a floating tag, and bumped only as a reviewed change when a survey pass finds a newer stable release.",
   { colW: [2.1, 2.3, 7.69] });
 
+
+/* --- Scan to explore (QR codes) --- */
+{
+  const s = S();
+  addContentTitle(s, "SCAN TO EXPLORE", "Take it with you");
+
+  // Left QR: the site
+  s.addImage({ path: `${ASSETS}/qr-websockets-site.png`, x: 2.30, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("The site", { x: 1.55, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("Chapters, the AsyncAPI contracts, and both-stack runnable examples", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/api-patterns-and-practices-websockets", { x: 1.45, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 10, color: COLOR.red, align: "center", valign: "middle" });
+
+  // Right QR: the hub
+  s.addImage({ path: `${ASSETS}/qr-hub.png`, x: 7.93, y: 1.78, w: 3.10, h: 3.10 });
+  s.addText("Workshops & Tutorials", { x: 7.18, y: 4.98, w: 4.60, h: 0.40,
+    fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
+  s.addText("The whole series: every workshop, tutorial, and deck in one place", { x: 7.08, y: 5.40, w: 4.80, h: 0.72,
+    fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
+  s.addText("patterncatalyst.github.io/patterncatalyst-workshops-tutorials-list", { x: 7.08, y: 6.12, w: 4.80, h: 0.32,
+    fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
+
+  addNotes(s, "This is the 101 concepts deck, so the two codes point where the ideas live and where the whole series lives. On the left, the site: the chapters, the AsyncAPI contracts, and the runnable both-stack examples, all public. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Scan whichever is useful; both are on the Pattern Catalyst GitHub organization.");
+}
+
+
 pres.writeFile({ fileName: OUT })
   .then(p => console.log("WROTE", p, "slides:", pageNum, "main:", mainCount, "appendix:", pageNum - mainCount))
   .catch(e => { console.error(e); process.exit(1); });
