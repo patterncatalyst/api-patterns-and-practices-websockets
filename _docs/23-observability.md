@@ -159,6 +159,14 @@ This chapter turned the lights on: a manual span bridging the gap auto-instrumen
 
 <div class="callout callout--safe"><p class="callout__title">Decision</p><p>Give a long-lived connection an explicit span boundary instead of inheriting request/response's one-span-per-call default: this example scopes <code>ws.handling-events.connection</code> to the whole fixture-replay push, a choice made for what this channel does, not a universal rule for every socket. Let auto-instrumentation cover whatever it already reaches (Quarkus's HTTP-upgrade span, FastAPI's HTTP routes) and reserve manual spans for the gap it leaves: here, the entire WebSocket push on Python, where no <code>opentelemetry-instrumentation-websockets</code> package exists, and a child span on Quarkus, where the gap is narrower because the upgrade itself is already traced. Know which signals leave the process at all: this example pushes traces over OTLP to Tempo, but both stacks' metrics stay a local Prometheus-format pull scrape and both stacks' trace-id log line stays on local stdout: neither reaches Mimir or Loki here, and a team extending this example toward production needs to add that plumbing explicitly rather than assume the bundled LGTM image wires it up on its own. Correlate a log line to a trace by printing the trace id itself in the log line: a value match needs no shared infrastructure to stay in sync. And verify observability the way <code>verify.sh</code> does: gate a build on what's deterministic and local (the trace id in the app's own log, the counter on the app's own metrics endpoint) and let a cold multi-process ingestion pipeline's lag show up as a non-fatal warning, not a flaky failure.</p></div>
 
+## Build, run, observe
+
+```bash
+cd examples/part6-observability && ./verify.sh
+```
+
+Brings up both stacks alongside the LGTM stack and asserts, for each, that its own structured log line carries the connection's trace id and its own metrics endpoint shows `handling_events_delivered_total` above zero, then polls Tempo for the matching span as a non-fatal check. It prints PASS once the hard assertions hold on both stacks; see `examples/part6-observability/README.md` for full output.
+
 ## For deeper coverage
 
 - Charity Majors, Liz Fong-Jones & George Miranda, *Observability Engineering* (O'Reilly, 2022): the three-pillars model this chapter applies unevenly by design, pushing only traces to Tempo while metrics and logs stay local.
