@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Figures for Chapter 2 — Choosing the Right Tool.
+"""Figures for Chapter 2: Choosing the Right Tool.
 
-02-transport-decision : the decision tree that routes an interaction to one
+02-transport-decision: the decision tree that routes an interaction to one
                          of the five transports (or to plain request/response).
-02-duplex-comparison  : five bands, one per transport, showing who may send
-                         and when — the duplex/direction dimension made visual.
+02-duplex-comparison : five bands, one per transport, showing who may send
+                         and when: the duplex/direction dimension made visual.
 """
 import sys, os
 sys.path.insert(0, "scripts")
@@ -14,14 +14,14 @@ gd.OUT = "assets/diagrams"
 os.makedirs(gd.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 2.1 — decision tree
+# Figure 2.1: decision tree
 # ---------------------------------------------------------------------------
 gd.emit(
     "02-transport-decision", 900, 480,
     nodes=[
         {"x":350,"y":16,"w":200,"h":52,"lines":["Need live updates","at all?"],"style":"accent"},
         {"x":20,"y":118,"w":230,"h":56,"lines":["Plain request/response","ask again when you need to"],"style":"ghost"},
-        {"x":345,"y":118,"w":230,"h":52,"lines":["Who needs to send —","one side or both?"],"style":"accent"},
+        {"x":345,"y":118,"w":230,"h":52,"lines":["Who needs to send","one side or both?"],"style":"accent"},
         {"x":640,"y":208,"w":210,"h":58,"lines":["WebSocket","full duplex, one connection"],"style":"ink"},
         {"x":225,"y":208,"w":250,"h":52,"lines":["Receiver is a browser","tab you control?"],"style":"accent"},
         {"x":50,"y":300,"w":240,"h":52,"lines":["Network path keeps a","streaming response open?"],"style":"accent"},
@@ -46,16 +46,16 @@ gd.emit(
 )
 
 # ---------------------------------------------------------------------------
-# Figure 2.2 — duplex / direction comparison
+# Figure 2.2: duplex / direction comparison
 # ---------------------------------------------------------------------------
 gd.emit(
     "02-duplex-comparison", 900, 500,
     bands=[
-        {"x":20,"y":16,"w":860,"h":84,"label":"WebSocket — full duplex over one connection","fill":"#fff3e0"},
-        {"x":20,"y":108,"w":860,"h":84,"label":"SSE — server to client only, one HTTP response","fill":"#fafafa"},
-        {"x":20,"y":200,"w":860,"h":84,"label":"Long-polling — repeated request/response cycles","fill":"#fafafa"},
-        {"x":20,"y":292,"w":860,"h":84,"label":"Webhook — event source calls your endpoint","fill":"#fafafa"},
-        {"x":20,"y":384,"w":860,"h":84,"label":"gRPC server-streaming — one HTTP/2 stream, server writes","fill":"#fafafa"},
+        {"x":20,"y":16,"w":860,"h":84,"label":"WebSocket: full duplex over one connection","fill":"#fff3e0"},
+        {"x":20,"y":108,"w":860,"h":84,"label":"SSE: server to client only, one HTTP response","fill":"#fafafa"},
+        {"x":20,"y":200,"w":860,"h":84,"label":"Long-polling: repeated request/response cycles","fill":"#fafafa"},
+        {"x":20,"y":292,"w":860,"h":84,"label":"Webhook: event source calls your endpoint","fill":"#fafafa"},
+        {"x":20,"y":384,"w":860,"h":84,"label":"gRPC server-streaming: one HTTP/2 stream, server writes","fill":"#fafafa"},
     ],
     nodes=[
         {"x":50,"y":50,"w":160,"h":40,"lines":["Browser tab"],"style":"user"},

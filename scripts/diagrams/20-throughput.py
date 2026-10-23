@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Fig 20.1/20.2 — Ch20: the real k6/benchmark.js numbers (examples/
-part5-performance/README.md, 2026-10-19 capture) — bytes/frame for JSON
+"""Fig 20.1/20.2: Ch20: the real k6/benchmark.js numbers (examples/
+part5-performance/README.md, 2026-10-19 capture): bytes/frame for JSON
 vs. Protobuf vs. JSON+permessage-deflate, with the k6/ws measurement
 blind spot marked on the deflate bar; and the four throughput levers
 (encoding, batching, compression, limits) mapped against where each one
@@ -11,13 +11,13 @@ import generate_diagram
 generate_diagram.OUT = "assets/diagrams"
 
 # ---------------------------------------------------------------------------
-# Figure 20.1 — measured bytes/frame, three encodings, one caveat
+# Figure 20.1: measured bytes/frame, three encodings, one caveat
 # ---------------------------------------------------------------------------
 W1, H1 = 900, 480
 
 nodes_1 = [
     {"x": 260, "y": 10, "w": 380, "h": 50,
-     "lines": ["k6/benchmark.js — 3 scenarios, same channel, same fixture"],
+     "lines": ["k6/benchmark.js: 3 scenarios, same channel, same fixture"],
      "style": "user"},
 
     {"x": 40, "y": 90, "w": 250, "h": 90,
@@ -32,21 +32,21 @@ nodes_1 = [
 
     {"x": 610, "y": 200, "w": 250, "h": 80,
      "lines": ["k6/ws inflates compressed frames",
-               "before the script sees the bytes —",
+               "before the script sees the bytes",
                "this row can't show the win"],
      "style": "ghost"},
 
     {"x": 40, "y": 310, "w": 390, "h": 70,
-     "lines": ["Python :8091 (websockets)",
+     "lines": ["Python:8091 (websockets)",
                "permessage-deflate negotiated: 7908/7908 (100%)"],
      "style": "sub"},
     {"x": 470, "y": 310, "w": 390, "h": 70,
-     "lines": ["Quarkus :8090 (WebSockets Next / Undertow)",
+     "lines": ["Quarkus:8090 (WebSockets Next / Undertow)",
                "permessage-deflate negotiated: 0/11806-18292 (0%)"],
      "style": "sub"},
 
     {"x": 180, "y": 405, "w": 540, "h": 55,
-     "lines": ["same stack difference, reproduced across every run —",
+     "lines": ["same stack difference, reproduced across every run",
                "not proof deflate doesn't help, proof k6/ws can't see it"],
      "style": "ghost"},
 ]
@@ -62,13 +62,13 @@ edges_1 = [
 
 notes_1 = [
     {"x": 450, "y": 470, "size": 11, "color": "#555555", "anchor": "middle",
-     "text": "Bytes/frame numbers are the fixture's size, not a function of load — the only row that changes with load is connects/sec."},
+     "text": "Bytes/frame numbers are the fixture's size, not a function of load: the only row that changes with load is connects/sec."},
 ]
 
 generate_diagram.emit("20-bytes-per-frame", W1, H1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 20.2 — the four throughput levers and where each applies
+# Figure 20.2: the four throughput levers and where each applies
 # ---------------------------------------------------------------------------
 W2, H2 = 900, 460
 
@@ -78,12 +78,12 @@ bands_2 = [
 
 nodes_2 = [
     {"x": 45, "y": 75, "w": 380, "h": 80,
-     "lines": ["1. Encoding (Ch19)", "JSON vs. Protobuf — fixed per-frame cost",
+     "lines": ["1. Encoding (Ch19)", "JSON vs. Protobuf: fixed per-frame cost",
                "40.7% smaller, deterministic"],
      "style": "accent"},
     {"x": 475, "y": 75, "w": 380, "h": 80,
      "lines": ["2. Batching / coalescing", "amortize per-frame overhead",
-               "fewer, larger frames — adds latency"],
+               "fewer, larger frames, adds latency"],
      "style": "box"},
 
     {"x": 45, "y": 185, "w": 380, "h": 90,
@@ -99,7 +99,7 @@ nodes_2 = [
 
     {"x": 160, "y": 310, "w": 580, "h": 70,
      "lines": ["5. Backpressure (Ch12) bounds all of the above",
-               "under a slow consumer — a full queue or a stalled sendText",
+               "under a slow consumer: a full queue or a stalled sendText",
                "caps effective throughput regardless of encoding or compression"],
      "style": "ink"},
 

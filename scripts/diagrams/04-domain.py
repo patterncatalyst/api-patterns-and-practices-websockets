@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fig 4.1/4.2 — Ch4: the shipping/cargo domain nouns this socket pushes and
+"""Fig 4.1/4.2: Ch4: the shipping/cargo domain nouns this socket pushes and
 their relations, and the handling-event feed flow from the REST booking
 service's write path through to a watching client's socket."""
 import sys
@@ -8,7 +8,7 @@ import generate_diagram
 generate_diagram.OUT = "assets/diagrams"
 
 # ---------------------------------------------------------------------------
-# Figure 4.1 — the domain model: nouns + relations
+# Figure 4.1: the domain model: nouns + relations
 # ---------------------------------------------------------------------------
 W1, H1 = 820, 440
 
@@ -54,7 +54,7 @@ notes_1 = [
 generate_diagram.emit("04-domain-model", W1, H1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 4.2 — the handling-event feed flow
+# Figure 4.2: the handling-event feed flow
 # ---------------------------------------------------------------------------
 W2, H2 = 820, 340
 

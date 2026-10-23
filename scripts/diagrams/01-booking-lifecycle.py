@@ -35,7 +35,7 @@ for i in range(3):
 
 # --- handling-event feed (bottom lane) ---
 band = [{"x": 20, "y": 250, "w": 815, "h": 120,
-         "label": "Handling-event feed — each event pushed over the WebSocket, not polled for",
+         "label": "Handling-event feed: each event pushed over the WebSocket, not polled for",
          "fill": "#fff8ef"}]
 
 ey, eh, ew = 290, 52, 150

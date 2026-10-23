@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Part 6 "Observability" example — architecture diagram. A WS client opens
+"""Part 6 "Observability" example: architecture diagram. A WS client opens
 the `handlingEvents` channel against EACH stack; Quarkus auto-traces the
 HTTP upgrade and adds a manual CHILD span for the fixture-replay push,
 Python has no auto-instrumentation for native `websockets` so its connection
@@ -22,7 +22,7 @@ nodes = [
      "style": "user"},
 
     {"x": 40, "y": 110, "w": 420, "h": 165,
-     "lines": ["Quarkus — WebSockets Next (:8080)",
+     "lines": ["Quarkus: WebSockets Next (:8080)",
                "quarkus-opentelemetry auto-traces the HTTP upgrade",
                "@WithSpan onOpen -> CHILD span ws.handling-events.connection",
                "Log.infof otel.trace_id=... instance=part6-observability-quarkus",
@@ -30,11 +30,11 @@ nodes = [
      "style": "accent"},
 
     {"x": 500, "y": 110, "w": 440, "h": 165,
-     "lines": ["Python — native websockets + FastAPI (:8081 / :8082)",
+     "lines": ["Python: native websockets + FastAPI (:8081 /:8082)",
                "NO opentelemetry-instrumentation-websockets exists",
-               "tracer.start_as_current_span(ws.handling-events.connection) — MANUAL",
+               "tracer.start_as_current_span(ws.handling-events.connection): MANUAL",
                "logger.info otel.trace_id=... instance=part6-observability-python",
-               "prometheus_client Counter handling_events_delivered_total -> :8082/metrics"],
+               "prometheus_client Counter handling_events_delivered_total ->:8082/metrics"],
      "style": "box"},
 
     {"x": 300, "y": 320, "w": 360, "h": 55,
@@ -42,9 +42,9 @@ nodes = [
      "style": "ink"},
 
     {"x": 170, "y": 420, "w": 620, "h": 110,
-     "lines": ["lgtm (grafana/otel-lgtm:0.36.0) — HARD dependency, no profiles: guard",
-               "OTel Collector -> Tempo (traces, :3200 query) / Mimir (metrics, :9090) / Loki (logs, :3100)",
-               "Grafana UI :3000 (anonymous admin)"],
+     "lines": ["lgtm (grafana/otel-lgtm:0.36.0): HARD dependency, no profiles: guard",
+               "OTel Collector -> Tempo (traces,:3200 query) / Mimir (metrics,:9090) / Loki (logs,:3100)",
+               "Grafana UI:3000 (anonymous admin)"],
      "style": "kernel"},
 
     {"x": 40, "y": 565, "w": 420, "h": 40,

@@ -1518,13 +1518,13 @@
    "updated": 1,
    "link": null,
    "locked": false,
-   "text": "One generated model does both jobs: validate the fixture in, serialize the wire frame out \u2014 nothing hand-written in between to drift from the contract.",
+   "text": "One generated model does both jobs: validate the fixture in, serialize the wire frame out, nothing hand-written in between to drift from the contract.",
    "fontSize": 12,
    "fontFamily": 1,
    "textAlign": "left",
    "verticalAlign": "top",
    "containerId": null,
-   "originalText": "One generated model does both jobs: validate the fixture in, serialize the wire frame out \u2014 nothing hand-written in between to drift from the contract.",
+   "originalText": "One generated model does both jobs: validate the fixture in, serialize the wire frame out, nothing hand-written in between to drift from the contract.",
    "lineHeight": 1.25,
    "baseline": 12
   }

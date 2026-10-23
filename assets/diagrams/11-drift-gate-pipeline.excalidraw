@@ -1382,13 +1382,13 @@
    "updated": 1,
    "link": null,
    "locked": false,
-   "text": "asyncapi diff's own -t breaking misses payload-schema changes \u2014 the breaking job's jq filter closes that gap itself.",
+   "text": "asyncapi diff's own -t breaking misses payload-schema changes: the breaking job's jq filter closes that gap itself.",
    "fontSize": 12,
    "fontFamily": 1,
    "textAlign": "left",
    "verticalAlign": "top",
    "containerId": null,
-   "originalText": "asyncapi diff's own -t breaking misses payload-schema changes \u2014 the breaking job's jq filter closes that gap itself.",
+   "originalText": "asyncapi diff's own -t breaking misses payload-schema changes: the breaking job's jq filter closes that gap itself.",
    "lineHeight": 1.25,
    "baseline": 12
   }

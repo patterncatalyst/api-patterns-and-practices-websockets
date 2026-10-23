@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Fig 17.1/17.2 — Ch17: the JWT auth-at-upgrade flow (token on the query
+"""Fig 17.1/17.2: Ch17: the JWT auth-at-upgrade flow (token on the query
 string, validated right after the handshake completes, not inside
-`process_request`/before it — see app/ws_server.py's and
+`process_request`/before it: see app/ws_server.py's and
 HandlingEventConnectionWebSocket#onOpen's docstrings) and the teaching
 HS256-shared-secret shape this example uses vs. the Keycloak/OIDC RS256+JWKS
 shape named as the production path (DRQ-021)."""
@@ -13,13 +13,13 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 17.1 — auth-at-upgrade flow: token -> validate -> accept/1008
+# Figure 17.1: auth-at-upgrade flow: token -> validate -> accept/1008
 # ---------------------------------------------------------------------------
 W1, H1 = 980, 520
 
 bands_1 = [
     {"x": 20, "y": 20, "w": 940, "h": 480,
-     "label": "ws_server.py handler() / HandlingEventConnectionWebSocket#onOpen — both stacks validate AFTER accept, not before",
+     "label": "ws_server.py handler() / HandlingEventConnectionWebSocket#onOpen: both stacks validate AFTER accept, not before",
      "fill": "#fafafa"},
 ]
 
@@ -33,7 +33,7 @@ nodes_1 = [
      "style": "box"},
 
     {"x": 700, "y": 60, "w": 250, "h": 95,
-     "lines": ["process_request hook (Python)", "runs BEFORE handshake completes —", "can only return an HTTP response,", "no WS close code exists yet"],
+     "lines": ["process_request hook (Python)", "runs BEFORE handshake completes", "can only return an HTTP response,", "no WS close code exists yet"],
      "style": "ghost"},
 
     {"x": 360, "y": 210, "w": 250, "h": 60,
@@ -49,7 +49,7 @@ nodes_1 = [
      "style": "user"},
 
     {"x": 660, "y": 440, "w": 290, "h": 60,
-     "lines": ["REJECT — close(1008)", "no data sent, no reason echoed"],
+     "lines": ["REJECT: close(1008)", "no data sent, no reason echoed"],
      "style": "ink"},
 ]
 
@@ -70,7 +70,7 @@ notes_1 = [
 generate_diagram.emit("17-auth-upgrade-flow", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 17.2 — teaching HS256 shared secret vs. production Keycloak/JWKS
+# Figure 17.2: teaching HS256 shared secret vs. production Keycloak/JWKS
 # ---------------------------------------------------------------------------
 W2, H2 = 980, 440
 

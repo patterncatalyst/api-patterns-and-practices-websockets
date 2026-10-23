@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fig 3.1/3.2 — Ch3: the RFC 6455 upgrade handshake as a client/server
+"""Fig 3.1/3.2: Ch3: the RFC 6455 upgrade handshake as a client/server
 sequence, and the anatomy of a single WebSocket frame, annotated with the
 real bytes this chapter decodes in "On the wire" (a masked text frame
 carrying a handling-event payload)."""
@@ -9,7 +9,7 @@ import generate_diagram
 generate_diagram.OUT = "assets/diagrams"
 
 # ---------------------------------------------------------------------------
-# Figure 3.1 — the upgrade handshake sequence
+# Figure 3.1: the upgrade handshake sequence
 # ---------------------------------------------------------------------------
 W1, H1 = 860, 500
 
@@ -61,7 +61,7 @@ notes_1 = [
 generate_diagram.emit("03-upgrade-handshake", W1, H1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 3.2 — frame anatomy, with the real captured bytes underneath
+# Figure 3.2: frame anatomy, with the real captured bytes underneath
 # ---------------------------------------------------------------------------
 W2, H2 = 860, 400
 
@@ -96,7 +96,7 @@ edges_2 = [
 
 notes_2 = [
     {"x": 430, "y": 25, "size": 13, "color": "#1d1d1d", "anchor": "middle", "bold": True,
-     "text": "RFC 6455 frame format — a client→server frame carrying one handling-event message"},
+     "text": "RFC 6455 frame format: a client→server frame carrying one handling-event message"},
     {"x": 430, "y": 345, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
      "text": "Real capture: 81 93 8a a4 58 27 f1 86 3d 51 ef ca 2c 05 b0 86 19 75 d8 ed 0e 62 ce 86 25"},
     {"x": 430, "y": 365, "size": 11, "color": "#555555", "anchor": "middle",

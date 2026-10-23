@@ -3,27 +3,27 @@
 <rect x="20" y="55" width="430" height="55" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
 <text x="235.0" y="73.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Quarkus</text>
 <text x="235.0" y="90.0" font-size="11.5" fill="#555555" text-anchor="middle">quarkus-opentelemetry auto-traces the HTTP upgrade</text>
-<text x="235.0" y="105.0" font-size="11.5" fill="#555555" text-anchor="middle">— every request gets a span, zero code</text>
+<text x="235.0" y="105.0" font-size="11.5" fill="#555555" text-anchor="middle">every request gets a span, zero code</text>
 <rect x="490" y="55" width="430" height="55" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="705.0" y="73.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Python</text>
 <text x="705.0" y="90.0" font-size="11.5" fill="#555555" text-anchor="middle">native websockets: no opentelemetry-instrumentation-websockets</text>
-<text x="705.0" y="105.0" font-size="11.5" fill="#555555" text-anchor="middle">package exists — no auto layer at all</text>
+<text x="705.0" y="105.0" font-size="11.5" fill="#555555" text-anchor="middle">package exists: no auto layer at all</text>
 <rect x="20" y="160" width="430" height="90" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="235.0" y="188.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">@WithSpan(&quot;ws.handling-events.connection&quot;)</text>
-<text x="235.0" y="205.0" font-size="11.5" fill="#555555" text-anchor="middle">on onOpen — adds a CHILD span over the</text>
+<text x="235.0" y="205.0" font-size="11.5" fill="#555555" text-anchor="middle">on onOpen: adds a CHILD span over the</text>
 <text x="235.0" y="220.0" font-size="11.5" fill="#555555" text-anchor="middle">returned Multi; span.end() deferred until</text>
 <text x="235.0" y="235.0" font-size="11.5" fill="#555555" text-anchor="middle">the Multi completes</text>
 <rect x="490" y="160" width="430" height="90" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="705.0" y="188.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tracer.start_as_current_span(</text>
 <text x="705.0" y="205.0" font-size="11.5" fill="#555555" text-anchor="middle">  &quot;ws.handling-events.connection&quot;)</text>
-<text x="705.0" y="220.0" font-size="11.5" fill="#555555" text-anchor="middle">— the WHOLE span, hand-written with the</text>
+<text x="705.0" y="220.0" font-size="11.5" fill="#555555" text-anchor="middle">the WHOLE span, hand-written with the</text>
 <text x="705.0" y="235.0" font-size="11.5" fill="#555555" text-anchor="middle">SDK tracer directly; no parent to attach to</text>
 <rect x="490" y="280" width="430" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="705.0" y="305.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">opentelemetry-instrument still configures the</text>
-<text x="705.0" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">global TracerProvider + OTLP exporter — only the span itself is manual</text>
+<text x="705.0" y="322.5" font-size="11.5" fill="#555555" text-anchor="middle">global TracerProvider + OTLP exporter: only the span itself is manual</text>
 <rect x="170" y="385" width="600" height="70" rx="9" fill="#f4f4f4" stroke="#6a6e73" stroke-width="1.5"/>
 <text x="470.0" y="418.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Same span name, same otel.trace_id=... log line shape, same OTLP export to Tempo</text>
-<text x="470.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">— a convention the two stacks keep by discipline, not by shared code</text>
+<text x="470.0" y="435.0" font-size="11.5" fill="#555555" text-anchor="middle">a convention the two stacks keep by discipline, not by shared code</text>
 <path d="M235,110 L235,160" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
 <text x="241.0" y="129.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">parent -&gt; child</text>
 <text x="241.0" y="129.0" font-size="11" fill="#b8650a" text-anchor="middle">parent -&gt; child</text>

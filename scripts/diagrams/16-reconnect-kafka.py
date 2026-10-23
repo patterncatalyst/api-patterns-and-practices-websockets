@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fig 16.1/16.2 — Ch16: the Kafka-backed answer to Ch15's stateless gap.
+"""Fig 16.1/16.2: Ch16: the Kafka-backed answer to Ch15's stateless gap.
 16.1 mirrors Ch15's reconnect timeline layout row-for-row but contrasts the
 two outcomes directly: stateless loses the gap-era event (PROTOCOL.md
-"Resume parameter" — afterEventId ignored), kafka replays it exactly once
+"Resume parameter": afterEventId ignored), kafka replays it exactly once
 after reconnect. 16.2 is the topic/offset/resume model underneath that:
 the seed-direct path that never touches Kafka, the inject-to-topic path
 keyed by bookingId, subscribe's found/not-found replay-after logic
@@ -16,7 +16,7 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 16.1 — the gap: lost (Ch15) vs. filled by replay (Ch16)
+# Figure 16.1: the gap: lost (Ch15) vs. filled by replay (Ch16)
 # ---------------------------------------------------------------------------
 W1, H1 = 1000, 480
 

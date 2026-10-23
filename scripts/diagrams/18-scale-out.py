@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fig 18.1/18.2 — Ch18: the scale-out fan-out problem a sticky load balancer
+"""Fig 18.1/18.2: Ch18: the scale-out fan-out problem a sticky load balancer
 cannot solve by itself (a client pinned to instance A never sees an event
 injected through instance B unless something crosses instances for it), and
 the Kafka-vs-Redis contrast behind that crossing (DRQ-005). See
@@ -13,7 +13,7 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 18.1 — sticky sessions alone vs. the backplane closing the gap
+# Figure 18.1: sticky sessions alone vs. the backplane closing the gap
 # ---------------------------------------------------------------------------
 W1, H1 = 980, 560
 
@@ -68,7 +68,7 @@ notes_1 = [
 generate_diagram.emit("18-sticky-vs-backplane", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 18.2 — Kafka vs Redis backplane contrast (DRQ-005)
+# Figure 18.2: Kafka vs Redis backplane contrast (DRQ-005)
 # ---------------------------------------------------------------------------
 W2, H2 = 980, 460
 

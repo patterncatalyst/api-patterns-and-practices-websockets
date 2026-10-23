@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
 <rect x="20" y="16" width="860" height="84" rx="12" fill="#fff3e0" stroke="#ddd"/>
-<text x="32" y="36" font-size="12" font-weight="700" fill="#1d1d1d">WebSocket — full duplex over one connection</text>
+<text x="32" y="36" font-size="12" font-weight="700" fill="#1d1d1d">WebSocket: full duplex over one connection</text>
 <rect x="20" y="108" width="860" height="84" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="128" font-size="12" font-weight="700" fill="#1d1d1d">SSE — server to client only, one HTTP response</text>
+<text x="32" y="128" font-size="12" font-weight="700" fill="#1d1d1d">SSE: server to client only, one HTTP response</text>
 <rect x="20" y="200" width="860" height="84" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="220" font-size="12" font-weight="700" fill="#1d1d1d">Long-polling — repeated request/response cycles</text>
+<text x="32" y="220" font-size="12" font-weight="700" fill="#1d1d1d">Long-polling: repeated request/response cycles</text>
 <rect x="20" y="292" width="860" height="84" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="312" font-size="12" font-weight="700" fill="#1d1d1d">Webhook — event source calls your endpoint</text>
+<text x="32" y="312" font-size="12" font-weight="700" fill="#1d1d1d">Webhook: event source calls your endpoint</text>
 <rect x="20" y="384" width="860" height="84" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="404" font-size="12" font-weight="700" fill="#1d1d1d">gRPC server-streaming — one HTTP/2 stream, server writes</text>
+<text x="32" y="404" font-size="12" font-weight="700" fill="#1d1d1d">gRPC server-streaming: one HTTP/2 stream, server writes</text>
 <rect x="50" y="50" width="160" height="40" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
 <text x="130.0" y="75.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Browser tab</text>
 <rect x="690" y="50" width="160" height="40" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
