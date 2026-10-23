@@ -4,12 +4,12 @@
 <text x="32" y="60" font-size="12" font-weight="700" fill="#1d1d1d">One HandlingEvent, pushed over one connection</text>
 <rect x="45" y="75" width="380" height="80" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
 <text x="235.0" y="105.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">1. Encoding (Ch19)</text>
-<text x="235.0" y="122.5" font-size="11.5" fill="#555555" text-anchor="middle">JSON vs. Protobuf — fixed per-frame cost</text>
+<text x="235.0" y="122.5" font-size="11.5" fill="#555555" text-anchor="middle">JSON vs. Protobuf: fixed per-frame cost</text>
 <text x="235.0" y="137.5" font-size="11.5" fill="#555555" text-anchor="middle">40.7% smaller, deterministic</text>
 <rect x="475" y="75" width="380" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="665.0" y="105.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">2. Batching / coalescing</text>
 <text x="665.0" y="122.5" font-size="11.5" fill="#555555" text-anchor="middle">amortize per-frame overhead</text>
-<text x="665.0" y="137.5" font-size="11.5" fill="#555555" text-anchor="middle">fewer, larger frames — adds latency</text>
+<text x="665.0" y="137.5" font-size="11.5" fill="#555555" text-anchor="middle">fewer, larger frames, adds latency</text>
 <rect x="45" y="185" width="380" height="90" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="235.0" y="220.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">3. permessage-deflate (RFC 7692)</text>
 <text x="235.0" y="237.5" font-size="11.5" fill="#555555" text-anchor="middle">per-connection DEFLATE state, CPU per frame</text>
@@ -20,7 +20,7 @@
 <text x="665.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">max_size / max_queue (Python)</text>
 <rect x="160" y="310" width="580" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="450.0" y="335.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">5. Backpressure (Ch12) bounds all of the above</text>
-<text x="450.0" y="352.5" font-size="11.5" fill="#555555" text-anchor="middle">under a slow consumer — a full queue or a stalled sendText</text>
+<text x="450.0" y="352.5" font-size="11.5" fill="#555555" text-anchor="middle">under a slow consumer: a full queue or a stalled sendText</text>
 <text x="450.0" y="367.5" font-size="11.5" fill="#555555" text-anchor="middle">caps effective throughput regardless of encoding or compression</text>
 <rect x="260" y="400" width="380" height="40" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="450.0" y="425.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">k6 measures connection-churn here, not a sustained push rate</text>

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Part 4 "Connection Concerns" example — architecture diagram. A client
+"""Part 4 "Connection Concerns" example: architecture diagram. A client
 opens the `handlingEvents` channel against EACH stack with a JWT on the
 upgrade URL; both stacks gate the connection on that token BEFORE replaying
 the shared fixture, then apply the SAME four connection concerns (auth,
@@ -24,13 +24,13 @@ nodes = [
      "style": "ink"},
 
     {"x": 40, "y": 220, "w": 400, "h": 150,
-     "lines": ["Quarkus — WebSockets Next", "ws://localhost:8080/ws/v1/bookings/{id}/handling-events",
+     "lines": ["Quarkus: WebSockets Next", "ws://localhost:8080/ws/v1/bookings/{id}/handling-events",
                "OutboundBackpressureGuard -> fixture replay",
                "onTextMessage/onBinaryMessage -> 4400", "auto-ping-interval 20s + idle-timeout 40s"],
      "style": "accent"},
 
     {"x": 500, "y": 220, "w": 400, "h": 150,
-     "lines": ["Python — native websockets + FastAPI", "ws://localhost:8081/ws/v1/bookings/{id}/handling-events (+ :8082)",
+     "lines": ["Python: native websockets + FastAPI", "ws://localhost:8081/ws/v1/bookings/{id}/handling-events (+:8082)",
                "OutboundQueue -> fixture replay",
                "_receive_loop -> 4400", "ping_interval 20s + ping_timeout 20s"],
      "style": "box"},
@@ -69,7 +69,7 @@ edges = [
 
 notes = [
     {"x": 470, "y": 545, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Same shared JWT secret, same close codes on both stacks — verify.sh asserts a client can't tell them apart."},
+     "text": "Same shared JWT secret, same close codes on both stacks: verify.sh asserts a client can't tell them apart."},
 ]
 
 generate_diagram.emit("part4-connection-architecture", W, H, nodes=nodes, edges=edges, notes=notes)

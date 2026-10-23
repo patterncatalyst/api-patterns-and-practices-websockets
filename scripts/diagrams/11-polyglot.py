@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Chapter 11 "Polyglot: One Contract, Two Stacks" — two diagrams.
+"""Chapter 11 "Polyglot: One Contract, Two Stacks": two diagrams.
 
-1. 11-contract-to-identical-frames — the SAME `contracts/asyncapi.yaml`
+1. 11-contract-to-identical-frames: the SAME `contracts/asyncapi.yaml`
    reaches Quarkus and Python by two different mechanisms (hand-kept +
    conformance test vs. generated model), and `verify.sh` proves both
    converge on an identical first frame, field-by-field (JSON key order
    differs; values don't).
-2. 11-drift-gate-pipeline — the `.github/workflows/contracts.yml` gate:
+2. 11-drift-gate-pipeline: the `.github/workflows/contracts.yml` gate:
    a contract edit fans out to four jobs (validate, breaking, drift,
    examples), and the gate only allows a merge when all four are green.
 
@@ -21,7 +21,7 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Diagram 1 — contract -> two generation paths -> identical wire frame
+# Diagram 1: contract -> two generation paths -> identical wire frame
 # ---------------------------------------------------------------------------
 
 W1, H1 = 900, 460
@@ -36,13 +36,13 @@ nodes1 = [
      "style": "ghost"},
 
     {"x": 40, "y": 195, "w": 350, "h": 110,
-     "lines": ["Quarkus — hand-kept",
+     "lines": ["Quarkus: hand-kept",
                "HandlingEvent record + HandlingEventType enum",
                "checked by HandlingEventContractTest"],
      "style": "accent"},
 
     {"x": 510, "y": 195, "w": 350, "h": 110,
-     "lines": ["Python — generated",
+     "lines": ["Python: generated",
                "datamodel-codegen -> app/models_generated.py",
                "Pydantic v2 model, checked by test_contract.py"],
      "style": "box"},
@@ -50,7 +50,7 @@ nodes1 = [
     {"x": 225, "y": 345, "w": 450, "h": 95,
      "lines": ["verify.sh Step 3: cross-stack agreement",
                "same eventId / eventType / bookingId / cargoId / location / occurredAt / registeredAt",
-               "JSON key order differs (Jackson vs. Pydantic) — values are identical"],
+               "JSON key order differs (Jackson vs. Pydantic): values are identical"],
      "style": "ink"},
 ]
 
@@ -74,7 +74,7 @@ notes1 = [
 generate_diagram.emit("11-contract-to-identical-frames", W1, H1, nodes=nodes1, edges=edges1, notes=notes1)
 
 # ---------------------------------------------------------------------------
-# Diagram 2 — the contracts.yml drift gate
+# Diagram 2: the contracts.yml drift gate
 # ---------------------------------------------------------------------------
 
 W2, H2 = 980, 460
@@ -132,7 +132,7 @@ edges2 = [
 
 notes2 = [
     {"x": 490, "y": 440, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "asyncapi diff's own -t breaking misses payload-schema changes — the breaking job's jq filter closes that gap itself."},
+     "text": "asyncapi diff's own -t breaking misses payload-schema changes: the breaking job's jq filter closes that gap itself."},
 ]
 
 generate_diagram.emit("11-drift-gate-pipeline", W2, H2, nodes=nodes2, edges=edges2, notes=notes2)

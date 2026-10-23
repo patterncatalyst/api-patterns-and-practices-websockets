@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Fig 21.1/21.2 — Ch21: the WebSocket test pyramid (unit/conformance ->
+"""Fig 21.1/21.2: Ch21: the WebSocket test pyramid (unit/conformance ->
 live integration -> functional HTTP/close-code -> load), grounded in the
 real corpus (examples/*/verify.sh, examples/_lib/lib.sh, python
 tests/test_contract.py, the Quarkus HandlingEventContractTest /
 HandlingEventProtoRoundTripTest, examples/part6-testing/newman, and the k6
-smoke.js/benchmark.js split) — and what each layer can and can't observe
+smoke.js/benchmark.js split): and what each layer can and can't observe
 about a protocol a plain `curl` can't reach."""
 import sys
 sys.path.insert(0, "scripts")
@@ -12,7 +12,7 @@ import generate_diagram
 generate_diagram.OUT = "assets/diagrams"
 
 # ---------------------------------------------------------------------------
-# Figure 21.1 — the pyramid: four layers, narrow at the top
+# Figure 21.1: the pyramid: four layers, narrow at the top
 # ---------------------------------------------------------------------------
 W1, H1 = 900, 560
 
@@ -22,26 +22,26 @@ bands_1 = [
 
 nodes_1 = [
     {"x": 300, "y": 30, "w": 300, "h": 70,
-     "lines": ["Load — k6", "smoke.js GATED / benchmark.js local-only",
+     "lines": ["Load: k6", "smoke.js GATED / benchmark.js local-only",
                "DRQ-023, DRQ-027"],
      "style": "box"},
 
     {"x": 230, "y": 125, "w": 440, "h": 70,
-     "lines": ["Functional — Newman + python close-code probe",
+     "lines": ["Functional: Newman + python close-code probe",
                "12 assertions / 0 failed (DRQ-030); ws_close_probe for 4400/4290/1008",
                "the HTTP seam + the close codes websocat can't read"],
      "style": "box"},
 
     {"x": 140, "y": 220, "w": 620, "h": 90,
-     "lines": ["Live integration — verify.sh + lib.sh, both stacks, real containers",
+     "lines": ["Live integration: verify.sh + lib.sh, both stacks, real containers",
                "ws_first_frame / ws_frames_n / ws_connect_bg / assert_ws_rejected /",
-               "wait_for_log_count — docker compose up, assert, compose down"],
+               "wait_for_log_count: docker compose up, assert, compose down"],
      "style": "accent"},
 
     {"x": 60, "y": 330, "w": 780, "h": 90,
-     "lines": ["Unit / conformance — pytest test_contract.py + Quarkus HandlingEventContractTest",
+     "lines": ["Unit / conformance: pytest test_contract.py + Quarkus HandlingEventContractTest",
                "schema_validate against build/handling-event.schema.json, proto round-trip",
-               "(HandlingEventProtoRoundTripTest) — no socket, no container, runs in milliseconds"],
+               "(HandlingEventProtoRoundTripTest): no socket, no container, runs in milliseconds"],
      "style": "box"},
 
     {"x": 140, "y": 445, "w": 620, "h": 55,
@@ -72,7 +72,7 @@ notes_1 = [
 generate_diagram.emit("21-test-pyramid", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 21.2 — what each layer can and can't observe
+# Figure 21.2: what each layer can and can't observe
 # ---------------------------------------------------------------------------
 W2, H2 = 940, 520
 
@@ -87,7 +87,7 @@ nodes_2 = [
      "lines": ["Live integration (websocat via lib.sh)",
                "SEES: frame contents, field semantics, reconnect/",
                "resume, fan-out across instances, idle-hold",
-               "BLIND TO: close CODES — exit code alone can't tell",
+               "BLIND TO: close CODES: exit code alone can't tell",
                "\"rejected\" from \"accepted and still open\""],
      "style": "accent"},
 
@@ -100,29 +100,29 @@ nodes_2 = [
      "style": "box"},
     {"x": 470, "y": 150, "w": 450, "h": 110,
      "lines": ["Functional HTTP (Newman)",
-               "SEES: the HTTP seam around the socket — /healthz,",
-               "the inject endpoint's 202/400/422 — 12 assertions, 0 failed",
-               "BLIND TO: the WebSocket channel itself —",
+               "SEES: the HTTP seam around the socket: /healthz,",
+               "the inject endpoint's 202/400/422: 12 assertions, 0 failed",
+               "BLIND TO: the WebSocket channel itself",
                "contracts/asyncapi.yaml is WS-only"],
      "style": "box"},
 
     {"x": 20, "y": 290, "w": 450, "h": 110,
-     "lines": ["Load — k6 smoke.js (gated)",
+     "lines": ["Load: k6 smoke.js (gated)",
                "SEES: connect success, 3-frame shape, p(95) session time",
                "DETERMINISTIC: rate==1.0 threshold fails the PR",
                "on any failed check, every run, same host or not"],
      "style": "box"},
     {"x": 490, "y": 290, "w": 430, "h": 110,
-     "lines": ["Load — k6 benchmark.js (local-only)",
+     "lines": ["Load: k6 benchmark.js (local-only)",
                "SEES: bytes/frame, connects/sec, negotiation outcome",
                "TIMING-SENSITIVE: connects/sec moves with the host's",
-               "ephemeral-port state — never cited as a bare number"],
+               "ephemeral-port state: never cited as a bare number"],
      "style": "box"},
 
     {"x": 120, "y": 430, "w": 700, "h": 70,
      "lines": ["Deterministic across every run: schema validation, round-trips, close codes,",
                "frame field values, negotiation yes/no. Timing-sensitive: idle-hold windows,",
-               "heartbeat detection delay, raw connects/sec — bounded, never asserted exactly."],
+               "heartbeat detection delay, raw connects/sec: bounded, never asserted exactly."],
      "style": "ink"},
 ]
 
@@ -130,7 +130,7 @@ edges_2 = []
 
 notes_2 = [
     {"x": 470, "y": 495, "size": 11, "color": "#555555", "anchor": "middle",
-     "text": "Each layer's blind spot is why the next layer up exists — none of the five alone proves the channel correct."},
+     "text": "Each layer's blind spot is why the next layer up exists: none of the five alone proves the channel correct."},
 ]
 
 generate_diagram.emit("21-layer-visibility", W2, H2, nodes=nodes_2, edges=edges_2, notes=notes_2)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Part 4 "Production Concerns" backplane example — architecture diagram.
+"""Part 4 "Production Concerns" backplane example: architecture diagram.
 Two instances per stack share ONE backplane (Kafka topic or Redis channel);
 an event injected through instance B's internal endpoint fans out to a
 client connected to instance A (Ch18, DRQ-005). The inset at the bottom
@@ -25,12 +25,12 @@ nodes = [
      "style": "user"},
 
     {"x": 60, "y": 140, "w": 380, "h": 90,
-     "lines": ["Instance A", "quarkus-a :8080 / python-a :8081",
+     "lines": ["Instance A", "quarkus-a:8080 / python-a:8081",
                "own Kafka consumer group OR Redis subscribe"],
      "style": "accent"},
 
     {"x": 540, "y": 140, "w": 380, "h": 90,
-     "lines": ["Instance B", "quarkus-b :8083 / python-b :8084",
+     "lines": ["Instance B", "quarkus-b:8083 / python-b:8084",
                "publishes the injected event"],
      "style": "box"},
 

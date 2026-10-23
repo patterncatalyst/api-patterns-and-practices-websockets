@@ -9,17 +9,17 @@
 <rect x="40" y="200" width="370" height="100" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="225.0" y="240.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">handling-events.v1+json</text>
 <text x="225.0" y="257.5" font-size="11.5" fill="#555555" text-anchor="middle">sendText(event) / ws.send(str)</text>
-<text x="225.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x1 — TEXT frame</text>
+<text x="225.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x1: TEXT frame</text>
 <rect x="490" y="200" width="370" height="100" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
 <text x="675.0" y="240.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">handling-events.v1+protobuf</text>
 <text x="675.0" y="257.5" font-size="11.5" fill="#555555" text-anchor="middle">sendBinary(bytes) / ws.send(bytes)</text>
-<text x="675.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x2 — BINARY frame</text>
+<text x="675.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x2: BINARY frame</text>
 <rect x="40" y="330" width="370" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
 <text x="225.0" y="355.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">{&quot;eventId&quot;:&quot;evt_...&quot;,&quot;eventType&quot;:&quot;RECEIVE&quot;,...}</text>
 <text x="225.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">247 bytes on the wire</text>
 <rect x="490" y="330" width="370" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
 <text x="675.0" y="355.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">08 76 65 74 5f 2e 2e 2e 20 01 2a ...</text>
-<text x="675.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">149 bytes on the wire — 39.7% smaller</text>
+<text x="675.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">149 bytes on the wire: 39.7% smaller</text>
 <rect x="260" y="410" width="380" height="40" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="450.0" y="435.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">verify.sh decodes both -&gt; identical field values</text>
 <path d="M450,70 L450,100" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -33,5 +33,5 @@
 <path d="M675,300 L675,330" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M225,385 L400,410" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M675,385 L500,410" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="450" y="452" font-size="11" fill="#555555" text-anchor="middle">Same channel, same fixture event — only the frame opcode and the byte layout change.</text>
+<text x="450" y="452" font-size="11" fill="#555555" text-anchor="middle">Same channel, same fixture event: only the frame opcode and the byte layout change.</text>
 </svg>

@@ -22,7 +22,7 @@
 <text x="705.0" y="107.0" font-size="11.5" fill="#555555" text-anchor="middle">catches the change</text>
 <rect x="60" y="150" width="720" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="420.0" y="183.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">300 requests sent to watch one booking for 10 minutes</text>
-<text x="420.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">299 return a body identical to the one before it — 0 new information, full request/response cost</text>
+<text x="420.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">299 return a body identical to the one before it: 0 new information, full request/response cost</text>
 <rect x="60" y="250" width="340" height="60" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="230.0" y="278.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">1,000 clients, same interval</text>
 <text x="230.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">300,000 requests/10 min for 1,000 events total</text>

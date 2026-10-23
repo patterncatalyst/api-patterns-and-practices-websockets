@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fig 14.1/14.2 — Ch14: why relying on Vert.x idle-timeout alone never
+"""Fig 14.1/14.2: Ch14: why relying on Vert.x idle-timeout alone never
 detects a dead peer (the server's own outbound ping is write activity that
 resets the idle clock), versus HeartbeatLivenessSweep's pong-tracked sweep
 that actually closes a silent connection (CloseCodes.LIVENESS_TIMEOUT,
-4408) — and the real timeline from last pong to the TCP socket actually
+4408): and the real timeline from last pong to the TCP socket actually
 going away, including Vert.x's ~10s closing-handshake grace and the 1006
 HandlingEventConnectionWebSocket#onClose observes when that grace expires."""
 import sys
@@ -14,16 +14,16 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 14.1 — idle-timeout trap (BROKEN) vs pong-tracked sweep (WORKS)
+# Figure 14.1: idle-timeout trap (BROKEN) vs pong-tracked sweep (WORKS)
 # ---------------------------------------------------------------------------
 W1, H1 = 960, 520
 
 bands_1 = [
     {"x": 20, "y": 20, "w": 920, "h": 220,
-     "label": "BROKEN — auto-ping-interval + quarkus.http.idle-timeout alone",
+     "label": "BROKEN: auto-ping-interval + quarkus.http.idle-timeout alone",
      "fill": "#fafafa"},
     {"x": 20, "y": 270, "w": 920, "h": 230,
-     "label": "WORKS — HandlingEventConnectionWebSocket + HeartbeatLivenessSweep",
+     "label": "WORKS: HandlingEventConnectionWebSocket + HeartbeatLivenessSweep",
      "fill": "#fafafa"},
 ]
 
@@ -36,10 +36,10 @@ nodes_1 = [
      "lines": ["SERVER auto-ping", "sends PING every", "auto-ping-interval (20s)"],
      "style": "accent"},
     {"x": 610, "y": 70, "w": 300, "h": 75,
-     "lines": ["idle-timeout clock", "resets on this WRITE —", "read OR write both count"],
+     "lines": ["idle-timeout clock", "resets on this WRITE", "read OR write both count"],
      "style": "ink"},
     {"x": 610, "y": 170, "w": 300, "h": 55,
-     "lines": ["40s idle-timeout never expires —", "connection looks healthy forever"],
+     "lines": ["40s idle-timeout never expires", "connection looks healthy forever"],
      "style": "ink"},
 
     # works lane
@@ -47,13 +47,13 @@ nodes_1 = [
      "lines": ["SILENT PEER", "same peer,", "never pongs"],
      "style": "box"},
     {"x": 320, "y": 320, "w": 230, "h": 75,
-     "lines": ["LAST_PONG_AT", "stamped on open, never", "updated again — stays stale"],
+     "lines": ["LAST_PONG_AT", "stamped on open, never", "updated again: stays stale"],
      "style": "user"},
     {"x": 620, "y": 320, "w": 290, "h": 75,
      "lines": ["HeartbeatLivenessSweep", "ticks every sweep-interval (5s),", "compares now - LAST_PONG_AT"],
      "style": "user"},
     {"x": 620, "y": 420, "w": 290, "h": 60,
-     "lines": [">livenessTimeout (45s) —", "close(4408) requested"],
+     "lines": [">livenessTimeout (45s)", "close(4408) requested"],
      "style": "accent"},
 ]
 
@@ -69,13 +69,13 @@ edges_1 = [
 
 notes_1 = [
     {"x": 480, "y": 500, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "idle-timeout resets on the server's OWN outbound ping — a silent peer never trips it. Only an explicit pong-tracked sweep does."},
+     "text": "idle-timeout resets on the server's OWN outbound ping: a silent peer never trips it. Only an explicit pong-tracked sweep does."},
 ]
 
 generate_diagram.emit("14-idle-timeout-trap", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 14.2 — ping/pong + sweep timeline, last pong to TCP actually closing
+# Figure 14.2: ping/pong + sweep timeline, last pong to TCP actually closing
 # ---------------------------------------------------------------------------
 W2, H2 = 1180, 360
 
@@ -99,7 +99,7 @@ nodes_2 = [
      "lines": ["T+45s", "close(4408) requested,", "CLOSE_REQUESTED marked"],
      "style": "user"},
     {"x": 920, "y": 70, "w": 220, "h": 70,
-     "lines": ["T+45s..~55s", "Vert.x closing-handshake", "grace — peer never ACKs"],
+     "lines": ["T+45s..~55s", "Vert.x closing-handshake", "grace: peer never ACKs"],
      "style": "ink"},
     {"x": 920, "y": 190, "w": 220, "h": 70,
      "lines": ["T+~55s", "TCP forced closed;", "onClose sees code 1006"],
@@ -116,7 +116,7 @@ edges_2 = [
 
 notes_2 = [
     {"x": 590, "y": 310, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "verify.sh's Step 6 shrinks all three knobs for a fast test (~16s observed live, not ~55s) — the sequence of events is identical, only the durations shrink."},
+     "text": "verify.sh's Step 6 shrinks all three knobs for a fast test (~16s observed live, not ~55s): the sequence of events is identical, only the durations shrink."},
 ]
 
 generate_diagram.emit("14-pong-sweep-timeline", W2, H2, bands=bands_2, nodes=nodes_2, edges=edges_2, notes=notes_2)

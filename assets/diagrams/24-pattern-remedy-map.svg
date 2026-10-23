@@ -24,19 +24,19 @@
 <text x="310.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a backplane with N instances does N</text>
 <text x="310.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">times the discard work per event (Ch18)</text>
 <rect x="620" y="275" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-<text x="880.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">key/partition the broadcast domain —</text>
+<text x="880.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">key/partition the broadcast domain</text>
 <text x="880.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">don&#x27;t treat it as unbounded</text>
 <rect x="50" y="395" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">four token failures answered</text>
 <text x="310.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">differently is a signature oracle (Ch17)</text>
 <rect x="620" y="395" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="880.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">collapse every failure to one close code,</text>
-<text x="880.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">1008 — reason logged server-side only</text>
+<text x="880.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">1008: reason logged server-side only</text>
 <rect x="50" y="525" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="563.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a reused Protobuf field number is a</text>
 <text x="310.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">silent misread, not a parse error (Ch19)</text>
 <rect x="620" y="525" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-<text x="880.0" y="563.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">field numbers are additive-only — buf</text>
+<text x="880.0" y="563.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">field numbers are additive-only: buf</text>
 <text x="880.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">breaking + check-proto-parity.py gate it</text>
 <rect x="50" y="615" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="653.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">rejecting a client that offers no</text>

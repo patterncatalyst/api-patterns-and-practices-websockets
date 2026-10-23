@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fig 7.1/7.2 — Ch7: classifying a change to the handling-event contract as
+"""Fig 7.1/7.2: Ch7: classifying a change to the handling-event contract as
 safe or breaking, column by topic, and what happens to a v1 client that is
 already connected when a breaking change ships behind a dual-publish
 window."""
@@ -9,7 +9,7 @@ import generate_diagram
 generate_diagram.OUT = "assets/diagrams"
 
 # ---------------------------------------------------------------------------
-# Figure 7.1 — the evolution gate: safe vs. breaking, aligned by topic
+# Figure 7.1: the evolution gate: safe vs. breaking, aligned by topic
 # ---------------------------------------------------------------------------
 W1, H1 = 820, 420
 
@@ -54,9 +54,9 @@ notes_1 = [
     {"x": 410, "y": 30, "size": 13, "color": "#1d1d1d", "anchor": "middle", "bold": True,
      "text": "Classifying a change to the handling-event contract"},
     {"x": 20, "y": 55, "size": 12, "color": "#b8650a", "anchor": "start", "bold": True,
-     "text": "SAFE — an old client's deserializer never has to look at the new part"},
+     "text": "SAFE: an old client's deserializer never has to look at the new part"},
     {"x": 20, "y": 245, "size": 12, "color": "#555555", "anchor": "start", "bold": True,
-     "text": "BREAKING — an old client misreads bytes it already expected to understand"},
+     "text": "BREAKING: an old client misreads bytes it already expected to understand"},
     {"x": 410, "y": 400, "size": 11, "color": "#555555", "anchor": "middle",
      "text": "Each dashed line pairs the same kind of change: safe addition above, breaking mutation of the same thing below."},
 ]
@@ -64,7 +64,7 @@ notes_1 = [
 generate_diagram.emit("07-evolution-gate", W1, H1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 7.2 — connected-client migration across a dual-publish window
+# Figure 7.2: connected-client migration across a dual-publish window
 # ---------------------------------------------------------------------------
 W2, H2 = 820, 360
 
@@ -74,8 +74,8 @@ TCOL_W = 250
 
 bands_2 = [
     {"x": BAND_X, "y": 40, "w": BAND_W, "h": 90, "label": "Server", "fill": "#fff3e0"},
-    {"x": BAND_X, "y": 140, "w": BAND_W, "h": 90, "label": "v1 client — already connected before the change ships", "fill": "#fafafa"},
-    {"x": BAND_X, "y": 240, "w": BAND_W, "h": 90, "label": "v2 client — connects after the change ships", "fill": "#eef4fb"},
+    {"x": BAND_X, "y": 140, "w": BAND_W, "h": 90, "label": "v1 client: already connected before the change ships", "fill": "#fafafa"},
+    {"x": BAND_X, "y": 240, "w": BAND_W, "h": 90, "label": "v2 client: connects after the change ships", "fill": "#eef4fb"},
 ]
 
 nodes_2 = [
@@ -91,7 +91,7 @@ nodes_2 = [
     {"x": TCOLS[1], "y": 165, "w": TCOL_W, "h": 55,
      "lines": ["still connected", "ignores the new field/member"], "style": "ghost"},
     {"x": TCOLS[2], "y": 165, "w": TCOL_W, "h": 55,
-     "lines": ["closed with a deprecation", "code — must reconnect on v2"], "style": "ink"},
+     "lines": ["closed with a deprecation", "code: must reconnect on v2"], "style": "ink"},
 
     {"x": TCOLS[0], "y": 265, "w": TCOL_W, "h": 55,
      "lines": ["not yet connected"], "style": "ghost"},

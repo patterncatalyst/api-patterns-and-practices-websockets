@@ -30,7 +30,7 @@
 <text x="655.0" y="235.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">DevTools binary/text icon,</text>
 <text x="655.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">websocat -b | xxd</text>
 <rect x="550" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-<text x="655.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Opcode mismatch —</text>
+<text x="655.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Opcode mismatch</text>
 <text x="655.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">binary negotiated, client</text>
 <text x="655.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">expects text (Ch19)</text>
 <rect x="810" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
@@ -40,7 +40,7 @@
 <text x="915.0" y="235.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">python ws_close_probe</text>
 <text x="915.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">+ server trace-id logs</text>
 <rect x="810" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-<text x="915.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">close_code says WHY —</text>
+<text x="915.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">close_code says WHY</text>
 <text x="915.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">4400/4290/4408/1008;</text>
 <text x="915.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">1006 = no code arrived</text>
 <rect x="1070" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
@@ -68,5 +68,5 @@
 <path d="M1175.0,85 L1175.0,115" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1175.0,180 L1175.0,205" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1175.0,270 L1175.0,295" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
-<text x="650" y="420" font-size="12" fill="#555555" text-anchor="middle">Reach for the cheapest tool that taps the right layer first — curl before websocat, websocat before tcpdump.</text>
+<text x="650" y="420" font-size="12" fill="#555555" text-anchor="middle">Reach for the cheapest tool that taps the right layer first: curl before websocat, websocat before tcpdump.</text>
 </svg>

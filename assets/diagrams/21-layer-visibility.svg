@@ -9,7 +9,7 @@
 <text x="695.0" y="40.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Live integration (websocat via lib.sh)</text>
 <text x="695.0" y="57.5" font-size="11.5" fill="#555555" text-anchor="middle">SEES: frame contents, field semantics, reconnect/</text>
 <text x="695.0" y="72.5" font-size="11.5" fill="#555555" text-anchor="middle">resume, fan-out across instances, idle-hold</text>
-<text x="695.0" y="87.5" font-size="11.5" fill="#555555" text-anchor="middle">BLIND TO: close CODES — exit code alone can&#x27;t tell</text>
+<text x="695.0" y="87.5" font-size="11.5" fill="#555555" text-anchor="middle">BLIND TO: close CODES: exit code alone can&#x27;t tell</text>
 <text x="695.0" y="102.5" font-size="11.5" fill="#555555" text-anchor="middle">&quot;rejected&quot; from &quot;accepted and still open&quot;</text>
 <rect x="20" y="150" width="430" height="110" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="235.0" y="180.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Functional close-code probe (python + websockets lib)</text>
@@ -19,23 +19,23 @@
 <text x="235.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">websocat has no equivalent flag</text>
 <rect x="470" y="150" width="450" height="110" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="695.0" y="180.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Functional HTTP (Newman)</text>
-<text x="695.0" y="197.5" font-size="11.5" fill="#555555" text-anchor="middle">SEES: the HTTP seam around the socket — /healthz,</text>
-<text x="695.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">the inject endpoint&#x27;s 202/400/422 — 12 assertions, 0 failed</text>
-<text x="695.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">BLIND TO: the WebSocket channel itself —</text>
+<text x="695.0" y="197.5" font-size="11.5" fill="#555555" text-anchor="middle">SEES: the HTTP seam around the socket: /healthz,</text>
+<text x="695.0" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">the inject endpoint&#x27;s 202/400/422: 12 assertions, 0 failed</text>
+<text x="695.0" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">BLIND TO: the WebSocket channel itself</text>
 <text x="695.0" y="242.5" font-size="11.5" fill="#555555" text-anchor="middle">contracts/asyncapi.yaml is WS-only</text>
 <rect x="20" y="290" width="450" height="110" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
-<text x="245.0" y="328.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Load — k6 smoke.js (gated)</text>
+<text x="245.0" y="328.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Load: k6 smoke.js (gated)</text>
 <text x="245.0" y="345.0" font-size="11.5" fill="#555555" text-anchor="middle">SEES: connect success, 3-frame shape, p(95) session time</text>
 <text x="245.0" y="360.0" font-size="11.5" fill="#555555" text-anchor="middle">DETERMINISTIC: rate==1.0 threshold fails the PR</text>
 <text x="245.0" y="375.0" font-size="11.5" fill="#555555" text-anchor="middle">on any failed check, every run, same host or not</text>
 <rect x="490" y="290" width="430" height="110" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
-<text x="705.0" y="328.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Load — k6 benchmark.js (local-only)</text>
+<text x="705.0" y="328.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Load: k6 benchmark.js (local-only)</text>
 <text x="705.0" y="345.0" font-size="11.5" fill="#555555" text-anchor="middle">SEES: bytes/frame, connects/sec, negotiation outcome</text>
 <text x="705.0" y="360.0" font-size="11.5" fill="#555555" text-anchor="middle">TIMING-SENSITIVE: connects/sec moves with the host&#x27;s</text>
-<text x="705.0" y="375.0" font-size="11.5" fill="#555555" text-anchor="middle">ephemeral-port state — never cited as a bare number</text>
+<text x="705.0" y="375.0" font-size="11.5" fill="#555555" text-anchor="middle">ephemeral-port state: never cited as a bare number</text>
 <rect x="120" y="430" width="700" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="470.0" y="455.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Deterministic across every run: schema validation, round-trips, close codes,</text>
 <text x="470.0" y="472.5" font-size="11.5" fill="#555555" text-anchor="middle">frame field values, negotiation yes/no. Timing-sensitive: idle-hold windows,</text>
-<text x="470.0" y="487.5" font-size="11.5" fill="#555555" text-anchor="middle">heartbeat detection delay, raw connects/sec — bounded, never asserted exactly.</text>
-<text x="470" y="495" font-size="11" fill="#555555" text-anchor="middle">Each layer&#x27;s blind spot is why the next layer up exists — none of the five alone proves the channel correct.</text>
+<text x="470.0" y="487.5" font-size="11.5" fill="#555555" text-anchor="middle">heartbeat detection delay, raw connects/sec: bounded, never asserted exactly.</text>
+<text x="470" y="495" font-size="11" fill="#555555" text-anchor="middle">Each layer&#x27;s blind spot is why the next layer up exists: none of the five alone proves the channel correct.</text>
 </svg>

@@ -696,13 +696,13 @@
    "updated": 1,
    "link": null,
    "locked": false,
-   "text": "Neither stack reads the other's source \u2014 both answer to the one contract, checked by asyncapi validate.",
+   "text": "Neither stack reads the other's source: both answer to the one contract, checked by asyncapi validate.",
    "fontSize": 12,
    "fontFamily": 1,
    "textAlign": "left",
    "verticalAlign": "top",
    "containerId": null,
-   "originalText": "Neither stack reads the other's source \u2014 both answer to the one contract, checked by asyncapi validate.",
+   "originalText": "Neither stack reads the other's source: both answer to the one contract, checked by asyncapi validate.",
    "lineHeight": 1.25,
    "baseline": 12
   }

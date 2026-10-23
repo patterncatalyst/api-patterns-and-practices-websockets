@@ -4,24 +4,24 @@
 <text x="490.0" y="40.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">WS client</text>
 <text x="490.0" y="57.5" font-size="11.5" fill="#555555" text-anchor="middle">opens handlingEvents channel</text>
 <rect x="40" y="110" width="420" height="165" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
-<text x="250.0" y="168.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Quarkus — WebSockets Next (:8080)</text>
+<text x="250.0" y="168.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Quarkus: WebSockets Next (:8080)</text>
 <text x="250.0" y="185.0" font-size="11.5" fill="#555555" text-anchor="middle">quarkus-opentelemetry auto-traces the HTTP upgrade</text>
 <text x="250.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">@WithSpan onOpen -&gt; CHILD span ws.handling-events.connection</text>
 <text x="250.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">Log.infof otel.trace_id=... instance=part6-observability-quarkus</text>
 <text x="250.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle">Micrometer Counter handling_events_delivered_total -&gt; /q/metrics</text>
 <rect x="500" y="110" width="440" height="165" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
-<text x="720.0" y="168.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Python — native websockets + FastAPI (:8081 / :8082)</text>
+<text x="720.0" y="168.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Python: native websockets + FastAPI (:8081 /:8082)</text>
 <text x="720.0" y="185.0" font-size="11.5" fill="#555555" text-anchor="middle">NO opentelemetry-instrumentation-websockets exists</text>
-<text x="720.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">tracer.start_as_current_span(ws.handling-events.connection) — MANUAL</text>
+<text x="720.0" y="200.0" font-size="11.5" fill="#555555" text-anchor="middle">tracer.start_as_current_span(ws.handling-events.connection): MANUAL</text>
 <text x="720.0" y="215.0" font-size="11.5" fill="#555555" text-anchor="middle">logger.info otel.trace_id=... instance=part6-observability-python</text>
-<text x="720.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle">prometheus_client Counter handling_events_delivered_total -&gt; :8082/metrics</text>
+<text x="720.0" y="230.0" font-size="11.5" fill="#555555" text-anchor="middle">prometheus_client Counter handling_events_delivered_total -&gt;:8082/metrics</text>
 <rect x="300" y="320" width="360" height="55" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="480.0" y="345.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">OTLP export (gRPC)</text>
 <text x="480.0" y="362.5" font-size="11.5" fill="#555555" text-anchor="middle">OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317</text>
 <rect x="170" y="420" width="620" height="110" rx="9" fill="#f4f4f4" stroke="#6a6e73" stroke-width="1.5"/>
-<text x="480.0" y="465.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">lgtm (grafana/otel-lgtm:0.36.0) — HARD dependency, no profiles: guard</text>
-<text x="480.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">OTel Collector -&gt; Tempo (traces, :3200 query) / Mimir (metrics, :9090) / Loki (logs, :3100)</text>
-<text x="480.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">Grafana UI :3000 (anonymous admin)</text>
+<text x="480.0" y="465.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">lgtm (grafana/otel-lgtm:0.36.0): HARD dependency, no profiles: guard</text>
+<text x="480.0" y="482.5" font-size="11.5" fill="#555555" text-anchor="middle">OTel Collector -&gt; Tempo (traces,:3200 query) / Mimir (metrics,:9090) / Loki (logs,:3100)</text>
+<text x="480.0" y="497.5" font-size="11.5" fill="#555555" text-anchor="middle">Grafana UI:3000 (anonymous admin)</text>
 <rect x="40" y="565" width="420" height="40" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
 <text x="250.0" y="583.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">HARD: trace id in the app&#x27;s OWN log line</text>
 <text x="250.0" y="600.0" font-size="11.5" fill="#555555" text-anchor="middle">+ app&#x27;s OWN metric scrape &gt; 0</text>

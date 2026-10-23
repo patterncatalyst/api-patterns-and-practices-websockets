@@ -1076,13 +1076,13 @@
    "updated": 1,
    "link": null,
    "locked": false,
-   "text": "Four top-level sections, never nested: servers, channels, operations, components \u2014 AsyncAPI 3's object model.",
+   "text": "Four top-level sections, never nested: servers, channels, operations, components. AsyncAPI 3's object model.",
    "fontSize": 12,
    "fontFamily": 1,
    "textAlign": "left",
    "verticalAlign": "top",
    "containerId": null,
-   "originalText": "Four top-level sections, never nested: servers, channels, operations, components \u2014 AsyncAPI 3's object model.",
+   "originalText": "Four top-level sections, never nested: servers, channels, operations, components. AsyncAPI 3's object model.",
    "lineHeight": 1.25,
    "baseline": 12
   }

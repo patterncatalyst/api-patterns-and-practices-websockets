@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Figures for Chapter 1 — The Real-Time Problem.
+"""Figures for Chapter 1: The Real-Time Problem.
 
 Run from repo root:
     python3 -I scripts/diagrams/01-realtime.py
@@ -12,7 +12,7 @@ gd.OUT = "assets/diagrams"
 os.makedirs(gd.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 1.1 — Poll loop vs. push: the same booking, two delivery models.
+# Figure 1.1: Poll loop vs. push: the same booking, two delivery models.
 # ---------------------------------------------------------------------------
 gd.emit(
     "01-poll-vs-push",
@@ -44,7 +44,7 @@ gd.emit(
 )
 
 # ---------------------------------------------------------------------------
-# Figure 1.2 — The cost of polling, visualized as wasted requests.
+# Figure 1.2: The cost of polling, visualized as wasted requests.
 # ---------------------------------------------------------------------------
 gd.emit(
     "01-polling-cost",
@@ -62,7 +62,7 @@ gd.emit(
 
         {"x": 60, "y": 150, "w": 720, "h": 70, "lines": [
             "300 requests sent to watch one booking for 10 minutes",
-            "299 return a body identical to the one before it — 0 new information, full request/response cost",
+            "299 return a body identical to the one before it: 0 new information, full request/response cost",
         ], "style": "ink"},
 
         {"x": 60, "y": 250, "w": 340, "h": 60, "lines": [

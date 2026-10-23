@@ -21,7 +21,7 @@
 <rect x="920" y="70" width="220" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="1030.0" y="95.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">T+45s..~55s</text>
 <text x="1030.0" y="112.5" font-size="11.5" fill="#555555" text-anchor="middle">Vert.x closing-handshake</text>
-<text x="1030.0" y="127.5" font-size="11.5" fill="#555555" text-anchor="middle">grace — peer never ACKs</text>
+<text x="1030.0" y="127.5" font-size="11.5" fill="#555555" text-anchor="middle">grace: peer never ACKs</text>
 <rect x="920" y="190" width="220" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="1030.0" y="215.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">T+~55s</text>
 <text x="1030.0" y="232.5" font-size="11.5" fill="#555555" text-anchor="middle">TCP forced closed;</text>
@@ -39,5 +39,5 @@
 <path d="M1030,140 L1030,190" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
 <text x="1036.0" y="159.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">~10s with no reply</text>
 <text x="1036.0" y="159.0" font-size="11" fill="#b8650a" text-anchor="middle">~10s with no reply</text>
-<text x="590" y="310" font-size="12" fill="#555555" text-anchor="middle">verify.sh&#x27;s Step 6 shrinks all three knobs for a fast test (~16s observed live, not ~55s) — the sequence of events is identical, only the durations shrink.</text>
+<text x="590" y="310" font-size="12" fill="#555555" text-anchor="middle">verify.sh&#x27;s Step 6 shrinks all three knobs for a fast test (~16s observed live, not ~55s): the sequence of events is identical, only the durations shrink.</text>
 </svg>

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Part 3 "Handling It" example — architecture diagram. A client opens the
+"""Part 3 "Handling It" example: architecture diagram. A client opens the
 `handlingEvents` channel against EACH stack on its own port; both stacks
 read the same `contracts/asyncapi.yaml` and replay the same shared fixture
 (`examples/part3-handling-events/fixtures/handling-events.json`) in order.
@@ -23,13 +23,13 @@ nodes = [
      "style": "ink"},
 
     {"x": 50, "y": 240, "w": 320, "h": 120,
-     "lines": ["Quarkus — WebSockets Next", "ws://localhost:8080/ws/v1/bookings/{id}/handling-events",
+     "lines": ["Quarkus: WebSockets Next", "ws://localhost:8080/ws/v1/bookings/{id}/handling-events",
                "@OnOpen returns Multi<HandlingEvent>", "hand-kept to the contract schema"],
      "style": "accent"},
 
     {"x": 490, "y": 240, "w": 320, "h": 120,
-     "lines": ["Python — native websockets + FastAPI", "ws://localhost:8081/ws/v1/bookings/{id}/handling-events",
-               "(+ :8082 /healthz)", "Pydantic model generated from the contract"],
+     "lines": ["Python: native websockets + FastAPI", "ws://localhost:8081/ws/v1/bookings/{id}/handling-events",
+               "(+:8082 /healthz)", "Pydantic model generated from the contract"],
      "style": "box"},
 
     {"x": 605, "y": 15, "w": 230, "h": 65,
@@ -54,7 +54,7 @@ edges = [
 
 notes = [
     {"x": 430, "y": 400, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Neither stack reads the other's source — both push the identical RECEIVE/LOAD/CUSTOMS sequence, verified by verify.sh."},
+     "text": "Neither stack reads the other's source: both push the identical RECEIVE/LOAD/CUSTOMS sequence, verified by verify.sh."},
 ]
 
 generate_diagram.emit("part3-architecture", W, H, nodes=nodes, edges=edges, notes=notes)
