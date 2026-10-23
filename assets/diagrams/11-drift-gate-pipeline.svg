@@ -40,5 +40,5 @@
 <path d="M760,250 L830,310" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <text x="801.0" y="274.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">any red</text>
 <text x="801.0" y="274.0" font-size="11" fill="#555" text-anchor="middle">any red</text>
-<text x="490" y="440" font-size="12" fill="#555555" text-anchor="middle">asyncapi diff&#x27;s own -t breaking misses payload-schema changes — the breaking job&#x27;s jq filter closes that gap itself.</text>
+<text x="490" y="440" font-size="12" fill="#555555" text-anchor="middle">asyncapi diff&#x27;s own -t breaking misses payload-schema changes: the breaking job&#x27;s jq filter closes that gap itself.</text>
 </svg>

@@ -8,14 +8,14 @@
 <text x="470.0" y="160.0" font-size="11.5" fill="#555555" text-anchor="middle">server picks the first offered value it also supports, echoes it back</text>
 <rect x="40" y="220" width="400" height="120" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
 <text x="240.0" y="263.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">handling-events.v1+json</text>
-<text x="240.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">Quarkus :8090 / Python :8091</text>
+<text x="240.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">Quarkus:8090 / Python:8091</text>
 <text x="240.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">sendText(toJson(event))</text>
-<text x="240.0" y="310.0" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x1 — JSON TEXT frame</text>
+<text x="240.0" y="310.0" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x1: JSON TEXT frame</text>
 <rect x="500" y="220" width="400" height="120" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="700.0" y="263.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">handling-events.v1+protobuf</text>
-<text x="700.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">Quarkus :8090 / Python :8091</text>
+<text x="700.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">Quarkus:8090 / Python:8091</text>
 <text x="700.0" y="295.0" font-size="11.5" fill="#555555" text-anchor="middle">sendBinary(event.toProto().toByteArray())</text>
-<text x="700.0" y="310.0" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x2 — Protobuf BINARY frame</text>
+<text x="700.0" y="310.0" font-size="11.5" fill="#555555" text-anchor="middle">opcode 0x2: Protobuf BINARY frame</text>
 <rect x="60" y="380" width="360" height="55" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
 <text x="240.0" y="405.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">RECEIVE event, e.g. 247 bytes</text>
 <text x="240.0" y="422.5" font-size="11.5" fill="#555555" text-anchor="middle">eventId/bookingId/eventType/occurredAt/...</text>
@@ -38,5 +38,5 @@
 <path d="M700,340 L700,380" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M240,435 L440,475" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M700,435 L640,475" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="470" y="545" font-size="12" fill="#555555" text-anchor="middle">Same contract, same fixture, two wire encodings — verify.sh proves field equality and the Protobuf size win live on both stacks.</text>
+<text x="470" y="545" font-size="12" fill="#555555" text-anchor="middle">Same contract, same fixture, two wire encodings: verify.sh proves field equality and the Protobuf size win live on both stacks.</text>
 </svg>

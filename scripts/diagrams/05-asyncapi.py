@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fig 5.1/5.2 — Ch5: the AsyncAPI 3 object model as it appears in
+"""Fig 5.1/5.2: Ch5: the AsyncAPI 3 object model as it appears in
 contracts/asyncapi.yaml (servers -> channels -> operations -> messages ->
 components), and the one-contract-to-two-stacks shape this chapter commits
 both the Quarkus and Python examples to."""
@@ -11,7 +11,7 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 5.1 — the AsyncAPI 3 object model, walked against our own contract
+# Figure 5.1: the AsyncAPI 3 object model, walked against our own contract
 # ---------------------------------------------------------------------------
 W1, H1 = 820, 440
 
@@ -57,13 +57,13 @@ edges_1 = [
 
 notes_1 = [
     {"x": 410, "y": 420, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "Four top-level sections, never nested: servers, channels, operations, components — AsyncAPI 3's object model."},
+     "text": "Four top-level sections, never nested: servers, channels, operations, components. AsyncAPI 3's object model."},
 ]
 
 generate_diagram.emit("05-asyncapi-object-model", W1, H1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 5.2 — one contract, two stacks
+# Figure 5.2: one contract, two stacks
 # ---------------------------------------------------------------------------
 W2, H2 = 820, 340
 
@@ -93,7 +93,7 @@ edges_2 = [
 
 notes_2 = [
     {"x": 410, "y": 315, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Neither stack reads the other's source — both answer to the one contract, checked by asyncapi validate."},
+     "text": "Neither stack reads the other's source: both answer to the one contract, checked by asyncapi validate."},
 ]
 
 generate_diagram.emit("05-contract-to-two-stacks", W2, H2, nodes=nodes_2, edges=edges_2, notes=notes_2)

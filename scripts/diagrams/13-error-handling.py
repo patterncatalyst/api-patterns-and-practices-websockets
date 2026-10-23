@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fig 13.1/13.2 — Ch13: the close-code-vs-envelope decision (CloseCodes.java /
+"""Fig 13.1/13.2: Ch13: the close-code-vs-envelope decision (CloseCodes.java /
 ws_server.py's docstring) and the bad-frame error flow proven live by
 verify.sh's Ch13 step, contrasted with the 1006 abnormal closure a client
 synthesizes locally when a peer disappears without a close handshake at all
@@ -12,13 +12,13 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 13.1 — envelope vs close-code-alone decision tree
+# Figure 13.1: envelope vs close-code-alone decision tree
 # ---------------------------------------------------------------------------
 W1, H1 = 980, 520
 
 bands_1 = [
     {"x": 20, "y": 20, "w": 940, "h": 480,
-     "label": "CloseCodes.java / ws_server.py docstring — one decision, applied per failure",
+     "label": "CloseCodes.java / ws_server.py docstring: one decision, applied per failure",
      "fill": "#fafafa"},
 ]
 
@@ -32,11 +32,11 @@ nodes_1 = [
      "style": "ink"},
 
     {"x": 60, "y": 310, "w": 320, "h": 110,
-     "lines": ["YES — e.g. a malformed client frame", "1. send ErrorEnvelope (still open)", "2. THEN close(BAD_REQUEST / 4400)"],
+     "lines": ["YES: e.g. a malformed client frame", "1. send ErrorEnvelope (still open)", "2. THEN close(BAD_REQUEST / 4400)"],
      "style": "user"},
 
     {"x": 600, "y": 300, "w": 340, "h": 150,
-     "lines": ["NO — no single frame to blame,", "or the socket is already gone", "close code ALONE is the signal:",
+     "lines": ["NO: no single frame to blame,", "or the socket is already gone", "close code ALONE is the signal:",
                 "AUTH_FAILURE 1008 · SLOW_CONSUMER 4290",
                 "LIVENESS_TIMEOUT 4408 · UNEXPECTED 1011"],
      "style": "box"},
@@ -55,26 +55,26 @@ edges_1 = [
 
 notes_1 = [
     {"x": 490, "y": 500, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "A close code alone arrives as the socket is going away — too late to carry detail. The envelope is sent FIRST, while the connection is still open."},
+     "text": "A close code alone arrives as the socket is going away: too late to carry detail. The envelope is sent FIRST, while the connection is still open."},
 ]
 
 generate_diagram.emit("13-error-decision-tree", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 13.2 — bad-frame error flow vs. 1006 abnormal closure
+# Figure 13.2: bad-frame error flow vs. 1006 abnormal closure
 # ---------------------------------------------------------------------------
 W2, H2 = 1000, 460
 
 bands_2 = [
     {"x": 20, "y": 20, "w": 460, "h": 420,
-     "label": "Protocol error — verify.sh Ch13 step, both stacks", "fill": "#fafafa"},
+     "label": "Protocol error: verify.sh Ch13 step, both stacks", "fill": "#fafafa"},
     {"x": 510, "y": 20, "w": 470, "h": 420,
-     "label": "Peer disappears — no close handshake at all", "fill": "#fafafa"},
+     "label": "Peer disappears: no close handshake at all", "fill": "#fafafa"},
 ]
 
 nodes_2 = [
     {"x": 50, "y": 60, "w": 400, "h": 55,
-     "lines": ["Client sends a client-to-server frame", "(channel defines none — any frame is invalid)"],
+     "lines": ["Client sends a client-to-server frame", "(channel defines none: any frame is invalid)"],
      "style": "accent"},
 
     {"x": 50, "y": 150, "w": 400, "h": 60,
@@ -91,11 +91,11 @@ nodes_2 = [
      "style": "box"},
 
     {"x": 540, "y": 60, "w": 400, "h": 55,
-     "lines": ["Process killed / network partition /", "cable pulled — no FIN, no close frame"],
+     "lines": ["Process killed / network partition /", "cable pulled: no FIN, no close frame"],
      "style": "accent"},
 
     {"x": 540, "y": 150, "w": 400, "h": 60,
-     "lines": ["No ErrorEnvelope possible — the server", "never got a chance to send one"],
+     "lines": ["No ErrorEnvelope possible: the server", "never got a chance to send one"],
      "style": "ink"},
 
     {"x": 540, "y": 245, "w": 400, "h": 60,
@@ -103,7 +103,7 @@ nodes_2 = [
      "style": "box"},
 
     {"x": 540, "y": 335, "w": 400, "h": 85,
-     "lines": ["Client runtime SYNTHESIZES onclose", "code=1006 \"abnormal closure\" locally —", "never sent on the wire by either peer"],
+     "lines": ["Client runtime SYNTHESIZES onclose", "code=1006 \"abnormal closure\" locally", "never sent on the wire by either peer"],
      "style": "ghost"},
 ]
 
@@ -118,7 +118,7 @@ edges_2 = [
 
 notes_2 = [
     {"x": 500, "y": 445, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "1006 is a reserved RFC 6455 value an implementation must never put in an actual close frame — it exists only for a local API to report \"the connection ended with no handshake.\""},
+     "text": "1006 is a reserved RFC 6455 value an implementation must never put in an actual close frame: it exists only for a local API to report \"the connection ended with no handshake.\""},
 ]
 
 generate_diagram.emit("13-error-flow-vs-1006", W2, H2, bands=bands_2, nodes=nodes_2, edges=edges_2, notes=notes_2)

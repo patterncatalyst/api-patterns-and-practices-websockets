@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Part 5 "Performance" example — architecture diagram. One `HandlingEvent`
+"""Part 5 "Performance" example: architecture diagram. One `HandlingEvent`
 negotiates a wire encoding via `Sec-WebSocket-Protocol` (DRQ-026): a client
 offering `+json` gets a JSON TEXT frame (opcode 0x1); a client offering
 `+protobuf` gets a Protobuf BINARY frame (opcode 0x2). Both encodings decode
-to the SAME field values — only the bytes on the wire differ, and the
+to the SAME field values: only the bytes on the wire differ, and the
 Protobuf bytes are smaller. See examples/part5-performance/README.md."""
 import sys
 sys.path.insert(0, "scripts")
@@ -24,13 +24,13 @@ nodes = [
      "style": "ink"},
 
     {"x": 40, "y": 220, "w": 400, "h": 120,
-     "lines": ["handling-events.v1+json", "Quarkus :8090 / Python :8091",
-               "sendText(toJson(event))", "opcode 0x1 — JSON TEXT frame"],
+     "lines": ["handling-events.v1+json", "Quarkus:8090 / Python:8091",
+               "sendText(toJson(event))", "opcode 0x1: JSON TEXT frame"],
      "style": "accent"},
 
     {"x": 500, "y": 220, "w": 400, "h": 120,
-     "lines": ["handling-events.v1+protobuf", "Quarkus :8090 / Python :8091",
-               "sendBinary(event.toProto().toByteArray())", "opcode 0x2 — Protobuf BINARY frame"],
+     "lines": ["handling-events.v1+protobuf", "Quarkus:8090 / Python:8091",
+               "sendBinary(event.toProto().toByteArray())", "opcode 0x2: Protobuf BINARY frame"],
      "style": "box"},
 
     {"x": 60, "y": 380, "w": 360, "h": 55,
@@ -65,7 +65,7 @@ edges = [
 
 notes = [
     {"x": 470, "y": 545, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Same contract, same fixture, two wire encodings — verify.sh proves field equality and the Protobuf size win live on both stacks."},
+     "text": "Same contract, same fixture, two wire encodings: verify.sh proves field equality and the Protobuf size win live on both stacks."},
 ]
 
 generate_diagram.emit("part5-performance-architecture", W, H, nodes=nodes, edges=edges, notes=notes)

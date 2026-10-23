@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Fig 12.1/12.2 — Ch12: the server's SERVER-side outbound backpressure
+"""Fig 12.1/12.2: Ch12: the server's SERVER-side outbound backpressure
 guard (OutboundBackpressureGuard.java / app/outbound.py's bounded
-asyncio.Queue) — the bounded buffer with its CLOSE-vs-DROP branches, and a
+asyncio.Queue): the bounded buffer with its CLOSE-vs-DROP branches, and a
 producer-faster-than-consumer timeline showing where the two detection
 signals (buffer full, send() timeout) fire and the 4290 close that follows
 under the CLOSE policy."""
@@ -13,13 +13,13 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 12.1 — bounded outbound buffer: CLOSE vs DROP
+# Figure 12.1: bounded outbound buffer: CLOSE vs DROP
 # ---------------------------------------------------------------------------
 W1, H1 = 960, 460
 
 bands_1 = [
     {"x": 20, "y": 20, "w": 920, "h": 420,
-     "label": "OutboundBackpressureGuard.java / OutboundQueue in app/outbound.py — decouples the producer from the slow socket write",
+     "label": "OutboundBackpressureGuard.java / OutboundQueue in app/outbound.py: decouples the producer from the slow socket write",
      "fill": "#fafafa"},
 ]
 
@@ -33,11 +33,11 @@ nodes_1 = [
      "style": "ink"},
 
     {"x": 700, "y": 160, "w": 210, "h": 85,
-     "lines": ["connection.sendText() /", "websocket.send()", "— the slow client's socket"],
+     "lines": ["connection.sendText() /", "websocket.send()", "the slow client's socket"],
      "style": "user"},
 
     {"x": 90, "y": 300, "w": 300, "h": 80,
-     "lines": ["CLOSE (default)", "close(4290 SLOW_CONSUMER) —", "stop sending, safe default"],
+     "lines": ["CLOSE (default)", "close(4290 SLOW_CONSUMER)", "stop sending, safe default"],
      "style": "box"},
 
     {"x": 510, "y": 300, "w": 300, "h": 80,
@@ -51,7 +51,7 @@ edges_1 = [
     {"x1": 500, "y1": 245, "x2": 260, "y2": 300, "label": "full, or send() > timeout", "dashed": True},
     {"x1": 560, "y1": 245, "x2": 630, "y2": 300, "label": "full, or send() > timeout", "dashed": True},
     {"x1": 240, "y1": 300, "x2": 500, "y2": 202,
-     "label": "connection torn down — no more frames", "amber": True, "dashed": True},
+     "label": "connection torn down: no more frames", "amber": True, "dashed": True},
     {"x1": 660, "y1": 300, "x2": 700, "y2": 245,
      "label": "next event still enqueued", "amber": True},
 ]
@@ -64,13 +64,13 @@ notes_1 = [
 generate_diagram.emit("12-outbound-buffer-policy", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 12.2 — producer-faster-than-consumer timeline
+# Figure 12.2: producer-faster-than-consumer timeline
 # ---------------------------------------------------------------------------
 W2, H2 = 980, 440
 
 bands_2 = [
     {"x": 20, "y": 20, "w": 940, "h": 400,
-     "label": "Time flows left to right — the client's TCP receive window fills, then the server's own buffer fills behind it",
+     "label": "Time flows left to right: the client's TCP receive window fills, then the server's own buffer fills behind it",
      "fill": "#fafafa"},
 ]
 
@@ -84,15 +84,15 @@ nodes_2 = [
      "style": "box"},
 
     {"x": 510, "y": 70, "w": 190, "h": 70,
-     "lines": ["t2: sendText/send()", "stays pending — socket", "write itself blocks"],
+     "lines": ["t2: sendText/send()", "stays pending: socket", "write itself blocks"],
      "style": "box"},
 
     {"x": 740, "y": 70, "w": 200, "h": 70,
-     "lines": ["t3: buffer fills OR", "send() exceeds timeout", "— policy trips"],
+     "lines": ["t3: buffer fills OR", "send() exceeds timeout", "policy trips"],
      "style": "ink"},
 
     {"x": 740, "y": 220, "w": 200, "h": 80,
-     "lines": ["t4 (CLOSE): 4290", "SLOW_CONSUMER —", "remaining events dropped"],
+     "lines": ["t4 (CLOSE): 4290", "SLOW_CONSUMER", "remaining events dropped"],
      "style": "user"},
 
     {"x": 480, "y": 220, "w": 200, "h": 80,

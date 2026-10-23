@@ -13,7 +13,7 @@ gd.OUT = "assets/diagrams"
 os.makedirs(gd.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 0.1 — the Compose lab topology this chapter's examples iteration
+# Figure 0.1: the Compose lab topology this chapter's examples iteration
 # will ship: one contract, two servers, LGTM gated behind a profile.
 # ---------------------------------------------------------------------------
 gd.emit(
@@ -26,10 +26,10 @@ gd.emit(
     ],
     nodes=[
         {"x": 50, "y": 70, "w": 190, "h": 70, "lines": ["wscat / browser", "dev console"], "style": "user"},
-        {"x": 330, "y": 60, "w": 220, "h": 80, "lines": ["quarkus :8080", "WebSockets Next", "/events (upgrade)"], "style": "box"},
-        {"x": 330, "y": 170, "w": 220, "h": 80, "lines": ["python :8081", "FastAPI + websockets", "/events (upgrade)"], "style": "box"},
+        {"x": 330, "y": 60, "w": 220, "h": 80, "lines": ["quarkus:8080", "WebSockets Next", "/events (upgrade)"], "style": "box"},
+        {"x": 330, "y": 170, "w": 220, "h": 80, "lines": ["python:8081", "FastAPI + websockets", "/events (upgrade)"], "style": "box"},
         {"x": 620, "y": 115, "w": 170, "h": 70, "lines": ["contracts/", "asyncapi.yaml", "one channel, one schema"], "style": "accent"},
-        {"x": 330, "y": 370, "w": 220, "h": 55, "lines": ["grafana/otel-lgtm :3000", "Loki · Tempo · Mimir"], "style": "ghost"},
+        {"x": 330, "y": 370, "w": 220, "h": 55, "lines": ["grafana/otel-lgtm:3000", "Loki · Tempo · Mimir"], "style": "ghost"},
     ],
     edges=[
         {"x1": 240, "y1": 95, "x2": 330, "y2": 95, "label": "wss:// upgrade"},
@@ -45,7 +45,7 @@ gd.emit(
 )
 
 # ---------------------------------------------------------------------------
-# Figure 0.2 — the three runtime tiers this site climbs through, in order.
+# Figure 0.2: the three runtime tiers this site climbs through, in order.
 # ---------------------------------------------------------------------------
 gd.emit(
     "00-tier-progression",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fig 9.1/9.2 — Ch9: the Python example's two-listeners-one-event-loop
+"""Fig 9.1/9.2: Ch9: the Python example's two-listeners-one-event-loop
 architecture (app/main.py), and the build-time model-generation flow that
 turns contracts/asyncapi.yaml into the Pydantic v2 model app/feed.py
 imports (scripts/generate-models.sh / Containerfile)."""
@@ -11,13 +11,13 @@ import os
 os.makedirs(generate_diagram.OUT, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Figure 9.1 — two listeners, one asyncio event loop (app/main.py)
+# Figure 9.1: two listeners, one asyncio event loop (app/main.py)
 # ---------------------------------------------------------------------------
 W1, H1 = 860, 420
 
 bands_1 = [
     {"x": 20, "y": 20, "w": 820, "h": 380,
-     "label": "app/main.py — asyncio.run(main()): one process, one event loop",
+     "label": "app/main.py, asyncio.run(main()): one process, one event loop",
      "fill": "#fafafa"},
 ]
 
@@ -27,16 +27,16 @@ nodes_1 = [
      "style": "ink"},
 
     {"x": 70, "y": 165, "w": 320, "h": 100,
-     "lines": ["_run_ws()  —  app/ws_server.py",
+     "lines": ["_run_ws(): app/ws_server.py",
                "websockets.asyncio.server.serve(handler, ...)",
-               "WS_HOST:WS_PORT — 0.0.0.0:8081",
+               "WS_HOST:WS_PORT: 0.0.0.0:8081",
                "one handler() coroutine per connection"],
      "style": "accent"},
 
     {"x": 470, "y": 165, "w": 320, "h": 100,
-     "lines": ["_run_http()  —  app/http_app.py",
+     "lines": ["_run_http(): app/http_app.py",
                "uvicorn.Server(Config(http_app, ...))",
-               "HTTP_HOST:HTTP_PORT — 0.0.0.0:8082",
+               "HTTP_HOST:HTTP_PORT: 0.0.0.0:8082",
                "FastAPI: GET /healthz, GET /"],
      "style": "user"},
 
@@ -64,7 +64,7 @@ notes_1 = [
 generate_diagram.emit("09-two-listeners-one-loop", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 9.2 — build-time model generation: contract -> schema -> Pydantic
+# Figure 9.2: build-time model generation: contract -> schema -> Pydantic
 # ---------------------------------------------------------------------------
 W2, H2 = 900, 380
 
@@ -114,7 +114,7 @@ edges_2 = [
 
 notes_2 = [
     {"x": 450, "y": 370, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "One generated model does both jobs: validate the fixture in, serialize the wire frame out — nothing hand-written in between to drift from the contract."},
+     "text": "One generated model does both jobs: validate the fixture in, serialize the wire frame out, nothing hand-written in between to drift from the contract."},
 ]
 
 generate_diagram.emit("09-model-generation-flow", W2, H2, bands=bands_2, nodes=nodes_2, edges=edges_2, notes=notes_2)

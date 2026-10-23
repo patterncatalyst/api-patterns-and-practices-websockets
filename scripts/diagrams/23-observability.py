@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Fig 23.1/23.2 — Ch23 (DRQ-028/DRQ-029): the two things this chapter's
+"""Fig 23.1/23.2: Ch23 (DRQ-028/DRQ-029): the two things this chapter's
 `examples/part6-observability/` example demonstrates live. 23.2 shows the
-signal flow for one connection — a manual span wrapping the fixture-replay
+signal flow for one connection: a manual span wrapping the fixture-replay
 push, exported over OTLP to Tempo, with the delivery counter and the
 trace-id log line BOTH staying local to the process rather than also
 landing in Mimir/Loki (see app/ws_server.py's OTEL_METRICS_EXPORTER=none /
@@ -17,7 +17,7 @@ import generate_diagram
 generate_diagram.OUT = "assets/diagrams"
 
 # ---------------------------------------------------------------------------
-# Figure 23.1 — auto vs. manual instrumentation, two different paths to the
+# Figure 23.1: auto vs. manual instrumentation, two different paths to the
 # same span name
 # ---------------------------------------------------------------------------
 W1, H1 = 940, 480
@@ -25,34 +25,34 @@ W1, H1 = 940, 480
 nodes_1 = [
     {"x": 20, "y": 55, "w": 430, "h": 55,
      "lines": ["Quarkus", "quarkus-opentelemetry auto-traces the HTTP upgrade",
-               "— every request gets a span, zero code"],
+               "every request gets a span, zero code"],
      "style": "accent"},
     {"x": 490, "y": 55, "w": 430, "h": 55,
      "lines": ["Python", "native websockets: no opentelemetry-instrumentation-websockets",
-               "package exists — no auto layer at all"],
+               "package exists: no auto layer at all"],
      "style": "box"},
 
     {"x": 20, "y": 160, "w": 430, "h": 90,
      "lines": ["@WithSpan(\"ws.handling-events.connection\")",
-               "on onOpen — adds a CHILD span over the",
+               "on onOpen: adds a CHILD span over the",
                "returned Multi; span.end() deferred until",
                "the Multi completes"],
      "style": "ink"},
     {"x": 490, "y": 160, "w": 430, "h": 90,
      "lines": ["tracer.start_as_current_span(",
                "  \"ws.handling-events.connection\")",
-               "— the WHOLE span, hand-written with the",
+               "the WHOLE span, hand-written with the",
                "SDK tracer directly; no parent to attach to"],
      "style": "ink"},
 
     {"x": 490, "y": 280, "w": 430, "h": 55,
      "lines": ["opentelemetry-instrument still configures the",
-               "global TracerProvider + OTLP exporter — only the span itself is manual"],
+               "global TracerProvider + OTLP exporter: only the span itself is manual"],
      "style": "ghost"},
 
     {"x": 170, "y": 385, "w": 600, "h": 70,
      "lines": ["Same span name, same otel.trace_id=... log line shape, same OTLP export to Tempo",
-               "— a convention the two stacks keep by discipline, not by shared code"],
+               "a convention the two stacks keep by discipline, not by shared code"],
      "style": "kernel"},
 ]
 
@@ -72,7 +72,7 @@ notes_1 = [
 generate_diagram.emit("23-auto-vs-manual", W1, H1, nodes=nodes_1, edges=edges_1, notes=notes_1)
 
 # ---------------------------------------------------------------------------
-# Figure 23.2 — one connection's signal flow: what gets pushed over OTLP
+# Figure 23.2: one connection's signal flow: what gets pushed over OTLP
 # and what stays local to the process
 # ---------------------------------------------------------------------------
 W2, H2 = 960, 620
@@ -109,7 +109,7 @@ nodes_2 = [
      "style": "ink"},
 
     {"x": 120, "y": 500, "w": 280, "h": 55,
-     "lines": ["Tempo (traces, :3200)", "the only signal pushed here"],
+     "lines": ["Tempo (traces,:3200)", "the only signal pushed here"],
      "style": "box"},
     {"x": 420, "y": 500, "w": 200, "h": 55,
      "lines": ["Mimir (:9090)", "not fed by this example"],

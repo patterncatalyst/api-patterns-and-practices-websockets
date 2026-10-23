@@ -32,6 +32,6 @@
 <path d="M715,100 L715,140" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M525,100 L525,220" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M715,100 L715,220" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="410" y="300" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Same seven event kinds either way — the difference is where the branching lives</text>
+<text x="410" y="300" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Same seven event kinds either way: the difference is where the branching lives</text>
 <text x="410" y="320" font-size="11" fill="#555555" text-anchor="middle">One schema: adding RECONSIGNED is one new enum value. Seven schemas: it&#x27;s a new channel message, in both stacks.</text>
 </svg>
