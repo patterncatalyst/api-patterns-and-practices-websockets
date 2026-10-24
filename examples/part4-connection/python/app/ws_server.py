@@ -24,7 +24,7 @@ Close-code-vs-envelope design choice (Ch13): a close code alone tells the
 client THAT something went wrong and roughly what category (standard codes
 only have ~15 values; this channel adds 4400/4290 for its own two cases),
 but carries no human-readable detail and arrives after the connection is
-already gone — too late for the client to log anything but "it closed".
+already gone; too late for the client to log anything but "it closed".
 An in-band JSON error envelope, sent BEFORE the close frame, lets the
 server explain WHAT was wrong with the specific message (useful for a
 client developer debugging their own framing bug) while the close code

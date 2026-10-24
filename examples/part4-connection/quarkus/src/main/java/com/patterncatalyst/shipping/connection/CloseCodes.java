@@ -62,8 +62,8 @@ public final class CloseCodes {
      * with its own hardcoded 1011 ("keepalive ping timeout") when a ping
      * goes unanswered, and wrapping that default to emit a matching
      * app-range code is out of scope for this chapter (see that app's
-     * README's Ch14 section). The two stacks therefore agree on WHEN a
-     * silent peer is closed, but not on the exact close code — documented
+     * README's Ch14 section). The two stacks therefore agree on when a
+     * silent peer is closed, but not on the exact close code; documented
      * here rather than silently left inconsistent.
      */
     public static final int LIVENESS_TIMEOUT = 4408;

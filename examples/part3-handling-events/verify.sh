@@ -78,7 +78,7 @@ wait_for_log_pattern() {
 # Polls <file> until it contains at least <min-count> lines matching
 # <grep-pattern> (fixed string), or fails loudly after timeout_secs (default
 # 30). Unlike wait_for_log_pattern, this distinguishes "already happened
-# once" from "happened again" — needed below to prove the client actually
+# once" from "happened again", needed below to prove the client actually
 # resumed receiving after reconnecting, not just that it received once
 # before the forced disconnect.
 wait_for_log_count() {
@@ -163,7 +163,7 @@ run_stack_tests "quarkus" "localhost:8080"
 run_stack_tests "python" "localhost:8081"
 
 echo
-echo "=== Step 3: cross-stack agreement (parsed fields, not raw bytes — key" \
+echo "=== Step 3: cross-stack agreement (parsed fields, not raw bytes; key" \
      "order differs between Jackson and Pydantic, and that's fine) ==="
 for field in eventId eventType bookingId cargoId location occurredAt registeredAt; do
   assert_eq "${FRAME_FIELD["quarkus $field"]}" "${FRAME_FIELD["python $field"]}" \

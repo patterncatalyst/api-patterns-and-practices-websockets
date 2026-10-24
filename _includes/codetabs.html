@@ -4,7 +4,7 @@
   Emits an empty marker; assets/js/codetabs.js absorbs the next N fenced
   code blocks (N = number of pipe-separated labels) into an accessible
   tab group. Because the code blocks stay ordinary Markdown fences, Rouge
-  still highlights them at build time — no plugin required.
+  still highlights them at build time; no plugin required.
 
   Usage (place the marker, then one fenced block per label, IN THIS ORDER):
 
@@ -17,7 +17,7 @@
       # Python
       ```
 
-  If `langs` is omitted it defaults to "Quarkus|Python" — the two stacks
+  If `langs` is omitted it defaults to "Quarkus|Python"; the two stacks
   this site ships against the shared Protobuf contract. The tab bar also
   admits Go and C++ later (langs="Quarkus|Python|Go|C++"). Selecting a tab
   syncs every group on the page and is remembered across pages.

@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>{@link WebSocketConnector} instances are not thread-safe and must not
  * be reused across connection attempts (WebSockets Next reference guide,
- * "Client connectors") — {@code connectors.get()} obtains a fresh one for
+ * "Client connectors"); {@code connectors.get()} obtains a fresh one for
  * every attempt.
  */
 @ApplicationScoped
