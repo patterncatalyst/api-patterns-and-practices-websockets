@@ -35,17 +35,17 @@ title: Home
     <p class="section-sub">
       A chapter-based, hands-on path to designing WebSocket APIs well, built around a
       single <a href="https://www.asyncapi.com/">AsyncAPI 3</a> contract for a shipping
-      and cargo domain. The socket here pushes a live <strong>handling-event feed</strong> —
-      the stream of container moves, customs holds, and delivery confirmations a shipment
-      generates as it moves — to any client watching a booking, instead of making that
+      and cargo domain. The socket here pushes a live <strong>handling-event feed</strong>
+      (the stream of container moves, customs holds, and delivery confirmations a shipment
+      generates as it moves) to any client watching a booking, instead of making that
       client poll the sibling
       <a href="https://github.com/patterncatalyst/api-patterns-and-practices-rest">REST</a>
       booking service for a status that hasn't changed. Every hands-on chapter ships the
       same example in <strong>both</strong> Quarkus WebSockets Next and Python
       (FastAPI/Starlette plus the native <code>websockets</code> library), generated
       against that one contract. You work through message design and versioning,
-      backpressure and flow control, heartbeats and reconnect — both stateless and
-      Kafka-backed — security, fan-out contrasted on Kafka and on Redis, binary Protobuf
+      backpressure and flow control, heartbeats and reconnect (both stateless and
+      Kafka-backed), security, fan-out contrasted on Kafka and on Redis, binary Protobuf
       framing, testing and debugging a protocol you can't just `curl`, and the anti-patterns
       that show up once a socket is in production. It assumes you can read Java and Python;
       it is not a tutorial in either language. The code tabs are built to admit Go and C++

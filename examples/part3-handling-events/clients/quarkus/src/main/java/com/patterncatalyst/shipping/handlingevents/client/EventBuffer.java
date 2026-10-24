@@ -29,7 +29,7 @@ import java.util.concurrent.BlockingQueue;
  *       frames under sustained backpressure.</li>
  * </ul>
  *
- * Neither policy is "correct" in the abstract — it is a deliberate
+ * Neither policy is "correct" in the abstract; it is a deliberate
  * trade-off the integrator makes per use case, which is why it is a
  * configuration property ({@code client.buffer.policy}) rather than a
  * hardcoded choice. {@code client.consumer.delay-ms} artificially slows

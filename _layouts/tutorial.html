@@ -30,7 +30,7 @@ layout: default
   {%- assign prev_index = current_index | minus: 1 -%}
   {%- assign next_index = current_index | plus: 1 -%}
   {%- comment -%} Guard against Liquid's negative-index wrap: tutorial_docs[-1]
-  returns the LAST item, so the first chapter's prev must not use index -1 —
+  returns the LAST item, so the first chapter's prev must not use index -1.
   send it back to the outline instead. {%- endcomment -%}
   {%- if prev_index >= 0 -%}
     {%- assign prev_doc = tutorial_docs[prev_index] -%}

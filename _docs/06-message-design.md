@@ -50,7 +50,7 @@ An explicit envelope pays for itself when a channel carries several distinct mes
 
 ## One message or many: the eventType discriminator
 
-`HandlingEventType` is a seven-member enum: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS`, `CLAIM`, `HOLD`, `DELIVERED`, plus the zero value, `HANDLING_EVENT_TYPE_UNSPECIFIED`, that the server never sends. Every one of those seven kinds rides the same `HandlingEvent` schema; `eventType` is what a consumer switches on to decide what the rest of the message means. `contracts/README.md` names this as a convention: "One reused message shape — `components.messages.HandlingEvent` is defined once and referenced (`$ref`) from both the channel and the operation — never duplicated inline."
+`HandlingEventType` is a seven-member enum: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS`, `CLAIM`, `HOLD`, `DELIVERED`, plus the zero value, `HANDLING_EVENT_TYPE_UNSPECIFIED`, that the server never sends. Every one of those seven kinds rides the same `HandlingEvent` schema; `eventType` is what a consumer switches on to decide what the rest of the message means. `contracts/README.md` names this as a convention: "One reused message shape. `components.messages.HandlingEvent` is defined once and referenced (`$ref`) from both the channel and the operation, never duplicated inline."
 
 The alternative, one AsyncAPI message schema per event kind, `ReceivedEvent`, `LoadedEvent`, `CustomsEvent`, and so on, is a real design, supported natively via multiple `messages` entries on one channel. It buys per-kind type safety: a `LoadedEvent` schema could make `voyageNumber` required since every LOAD event has one, while a `CustomsEvent` schema could omit the field entirely instead of leaving it nullable. Figure 6.2 puts the two approaches side by side.
 
