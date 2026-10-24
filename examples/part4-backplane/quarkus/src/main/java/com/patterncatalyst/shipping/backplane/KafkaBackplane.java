@@ -96,9 +96,9 @@ public class KafkaBackplane implements Backplane {
      *   <li>found — replay the suffix strictly after it, so nothing the client
      *       already saw is resent.</li>
      *   <li><b>not found — replay the ENTIRE snapshot.</b> This is the expected
-     *       outcome whenever {@code afterEventId} names a FIXTURE event (the
+     *       outcome whenever {@code afterEventId} names a fixture event (the
      *       Ch15 gap scenario: a client's last-seen id, right after connecting,
-     *       is one of the 3 seed events) — fixture ids never appear in this
+     *       is one of the 3 seed events); fixture ids never appear in this
      *       buffer at all, so the search always misses for them, and "the
      *       client's last known state predates anything this topic has ever
      *       carried" correctly means "replay everything", not "replay
