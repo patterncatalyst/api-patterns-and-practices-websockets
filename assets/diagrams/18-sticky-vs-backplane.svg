@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
 <rect x="20" y="20" width="940" height="520" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">Client pinned to instance A by the load balancer&#x27;s sticky session -- the event is injected at instance B</text>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">Client pinned to instance A by the load balancer&#x27;s sticky session: the event is injected at instance B</text>
 <rect x="40" y="60" width="230" height="70" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
 <text x="155.0" y="85.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">CLIENT</text>
 <text x="155.0" y="102.5" font-size="11.5" fill="#555555" text-anchor="middle">ws_connect_bg -&gt; instance A</text>
@@ -16,10 +16,10 @@
 <text x="820.0" y="203.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Instance B</text>
 <text x="820.0" y="220.0" font-size="11.5" fill="#555555" text-anchor="middle">quarkus-b:8083 / python-b:8084</text>
 <rect x="320" y="280" width="340" height="70" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="490.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">NO BACKPLANE (stateless, Ch15)</text>
-<text x="490.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">A&#x27;s local subscribers only -- B&#x27;s event never crosses</text>
+<text x="490.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">NO BACKPLANE (stateless)</text>
+<text x="490.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">A&#x27;s local subscribers only, B&#x27;s event never crosses</text>
 <rect x="240" y="400" width="500" height="90" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-<text x="490.0" y="435.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">BACKPLANE (Ch18, DRQ-005)</text>
+<text x="490.0" y="435.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">BACKPLANE</text>
 <text x="490.0" y="452.5" font-size="11.5" fill="#555555" text-anchor="middle">Kafka topic handling-events, per-instance consumer group (fan-out, not load-balanced)</text>
 <text x="490.0" y="467.5" font-size="11.5" fill="#555555" text-anchor="middle">Redis channel handling-events:{bookingId}, pub/sub</text>
 <path d="M155,130 L155,170" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
@@ -29,8 +29,8 @@
 <text x="826.0" y="144.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">202 Accepted</text>
 <text x="826.0" y="144.0" font-size="11" fill="#555" text-anchor="middle">202 Accepted</text>
 <path d="M270,205 L320,300" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="301.0" y="246.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">dropped -- same-instance only</text>
-<text x="301.0" y="246.5" font-size="11" fill="#555" text-anchor="middle">dropped -- same-instance only</text>
+<text x="301.0" y="246.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">dropped, same-instance only</text>
+<text x="301.0" y="246.5" font-size="11" fill="#555" text-anchor="middle">dropped, same-instance only</text>
 <path d="M700,205 L660,300" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <text x="686.0" y="246.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">publish() has nowhere local to go</text>
 <text x="686.0" y="246.5" font-size="11" fill="#555" text-anchor="middle">publish() has nowhere local to go</text>
@@ -40,5 +40,5 @@
 <path d="M700,240 L650,400" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="681.0" y="314.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">publish</text>
 <text x="681.0" y="314.0" font-size="11" fill="#555" text-anchor="middle">publish</text>
-<text x="490" y="535" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Sticky sessions keep a client on ONE instance -- they say nothing about where an event is produced. Only a shared backplane crosses that gap.</text>
+<text x="490" y="535" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">Sticky sessions keep a client on ONE instance. They say nothing about where an event is produced. Only a shared backplane crosses that gap.</text>
 </svg>

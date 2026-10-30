@@ -22,13 +22,12 @@ bands_1 = [
 
 nodes_1 = [
     {"x": 300, "y": 30, "w": 300, "h": 70,
-     "lines": ["Load: k6", "smoke.js GATED / benchmark.js local-only",
-               "DRQ-023, DRQ-027"],
+     "lines": ["Load: k6", "smoke.js GATED / benchmark.js local-only"],
      "style": "box"},
 
     {"x": 230, "y": 125, "w": 440, "h": 70,
      "lines": ["Functional: Newman + python close-code probe",
-               "12 assertions / 0 failed (DRQ-030); ws_close_probe for 4400/4290/1008",
+               "12 assertions / 0 failed; ws_close_probe for 4400/4290/1008",
                "the HTTP seam + the close codes websocat can't read"],
      "style": "box"},
 
@@ -66,7 +65,7 @@ edges_1 = [
 
 notes_1 = [
     {"x": 450, "y": 490, "size": 11, "color": "#555555", "anchor": "middle",
-     "text": "Ch21/22/24 are prose citing this existing corpus (DRQ-028); only Ch23 adds new runnable code."},
+     "text": "Most of this material is prose citing this existing corpus; only one part adds new runnable code."},
 ]
 
 generate_diagram.emit("21-test-pyramid", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)

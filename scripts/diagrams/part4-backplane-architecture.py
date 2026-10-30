@@ -35,15 +35,15 @@ nodes = [
      "style": "box"},
 
     {"x": 240, "y": 280, "w": 500, "h": 90,
-     "lines": ["Backplane (Ch18, DRQ-005)",
-               "Kafka topic handling-events -- durable, replay (Ch16)",
-               "Redis channel handling-events:{bookingId} -- live only, no replay"],
+     "lines": ["Backplane",
+               "Kafka topic handling-events: durable, replay",
+               "Redis channel handling-events:{bookingId} (live only, no replay)"],
      "style": "ink"},
 
     {"x": 140, "y": 420, "w": 700, "h": 110,
      "lines": ["Reconnect: GET .../handling-events?afterEventId=<last seen eventId>",
-               "stateless (Ch15): gap-era event LOST -- no broker, no history",
-               "kafka (Ch16): gap-era event REPLAYED after reconnect -- dedup by eventId, delivered once"],
+               "stateless: gap-era event LOST, no broker, no history",
+               "kafka: gap-era event REPLAYED after reconnect, dedup by eventId, delivered once"],
      "style": "ghost"},
 ]
 
@@ -62,7 +62,7 @@ edges = [
 
 notes = [
     {"x": 490, "y": 575, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Both stacks (Quarkus WebSockets Next, Python websockets+FastAPI) implement this identically -- PROTOCOL.md is the single source of truth."},
+     "text": "Both stacks (Quarkus WebSockets Next, Python websockets+FastAPI) implement this identically: PROTOCOL.md is the single source of truth."},
 ]
 
 generate_diagram.emit("part4-backplane-architecture", W, H, nodes=nodes, edges=edges, notes=notes)
