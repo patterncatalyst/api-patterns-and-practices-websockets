@@ -21,7 +21,7 @@ nodes_1 = [
      "style": "user"},
 
     {"x": 250, "y": 100, "w": 400, "h": 60,
-     "lines": ["Sec-WebSocket-Protocol negotiation (DRQ-026)",
+     "lines": ["Sec-WebSocket-Protocol negotiation",
                "+json or +protobuf, echoed back on the 101"],
      "style": "ink"},
 
@@ -107,7 +107,7 @@ notes_2 = [
     {"x": 225, "y": 25, "size": 12, "color": "#1d1d1d", "anchor": "middle", "bold": True,
      "text": "renaming a key is free; field NUMBERS never move or get reused"},
     {"x": 675, "y": 25, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "field numbers are the wire identity: additive-only, same as Ch7's JSON discipline"},
+     "text": "field numbers are the wire identity: additive-only, same discipline as the JSON contract"},
     {"x": 450, "y": 405, "size": 11, "color": "#555555", "anchor": "middle",
      "text": "check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn't also carry."},
 ]

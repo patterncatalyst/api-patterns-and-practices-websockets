@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 440" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
 <rect x="20" y="20" width="940" height="400" rx="12" fill="#fafafa" stroke="#ddd"/>
-<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">Same bearer-JWT shape at the upgrade -- different trust model behind it (DRQ-021)</text>
+<text x="32" y="40" font-size="12" font-weight="700" fill="#1d1d1d">Same bearer-JWT shape at the upgrade, different trust model behind it</text>
 <rect x="50" y="65" width="400" height="55" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
-<text x="250.0" y="98.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">THIS EXAMPLE -- teaching</text>
+<text x="250.0" y="98.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">THIS EXAMPLE: teaching</text>
 <rect x="530" y="65" width="400" height="55" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
-<text x="730.0" y="98.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">PRODUCTION PATH -- Keycloak / OIDC</text>
+<text x="730.0" y="98.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">PRODUCTION PATH: Keycloak / OIDC</text>
 <rect x="50" y="140" width="400" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="250.0" y="173.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">mint_token.py / TokenMinter</text>
 <text x="250.0" y="190.0" font-size="11.5" fill="#555555" text-anchor="middle">one process mints AND signs HS256</text>
@@ -13,7 +13,7 @@
 <text x="730.0" y="173.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Keycloak issues + signs RS256</text>
 <text x="730.0" y="190.0" font-size="11.5" fill="#555555" text-anchor="middle">token at a real OIDC token endpoint</text>
 <rect x="50" y="230" width="400" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-<text x="250.0" y="263.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">WS_JWT_SECRET -- one symmetric key</text>
+<text x="250.0" y="263.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">WS_JWT_SECRET: one symmetric key</text>
 <text x="250.0" y="280.0" font-size="11.5" fill="#555555" text-anchor="middle">shared by every minter AND verifier</text>
 <rect x="530" y="230" width="400" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="730.0" y="263.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">JWKS endpoint publishes public keys</text>
@@ -23,9 +23,9 @@
 <text x="250.0" y="370.0" font-size="11.5" fill="#555555" text-anchor="middle">time compare against the shared secret</text>
 <rect x="530" y="320" width="400" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="730.0" y="353.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Verify: RSA signature against the</text>
-<text x="730.0" y="370.0" font-size="11.5" fill="#555555" text-anchor="middle">rotating public key -- no shared secret</text>
+<text x="730.0" y="370.0" font-size="11.5" fill="#555555" text-anchor="middle">rotating public key, no shared secret</text>
 <path d="M450,92 L530,92" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
-<text x="496.0" y="86.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">DRQ-021: same shape, different trust model</text>
-<text x="496.0" y="86.0" font-size="11" fill="#b8650a" text-anchor="middle">DRQ-021: same shape, different trust model</text>
-<text x="490" y="410" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">A shared secret works for one teaching process minting and verifying its own tokens -- it does not survive a second verifier needing the same secret.</text>
+<text x="496.0" y="86.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">same shape, different trust model</text>
+<text x="496.0" y="86.0" font-size="11" fill="#b8650a" text-anchor="middle">same shape, different trust model</text>
+<text x="490" y="410" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">A shared secret works for one teaching process minting and verifying its own tokens. It does not survive a second verifier needing the same secret.</text>
 </svg>

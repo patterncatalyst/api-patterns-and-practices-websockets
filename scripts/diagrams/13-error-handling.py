@@ -67,7 +67,7 @@ W2, H2 = 1000, 460
 
 bands_2 = [
     {"x": 20, "y": 20, "w": 460, "h": 420,
-     "label": "Protocol error: verify.sh Ch13 step, both stacks", "fill": "#fafafa"},
+     "label": "Protocol error: verify.sh's close-code step, both stacks", "fill": "#fafafa"},
     {"x": 510, "y": 20, "w": 470, "h": 420,
      "label": "Peer disappears: no close handshake at all", "fill": "#fafafa"},
 ]

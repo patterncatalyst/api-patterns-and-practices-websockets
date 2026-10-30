@@ -22,10 +22,10 @@ W1, H1 = 1000, 480
 
 bands_1 = [
     {"x": 20, "y": 20, "w": 960, "h": 200,
-     "label": "Ch15 stateless (default profile) -- PROTOCOL.md \"Resume parameter\": afterEventId is ignored",
+     "label": "Stateless (default profile): afterEventId is ignored (PROTOCOL.md \"Resume parameter\")",
      "fill": "#fafafa"},
     {"x": 20, "y": 240, "w": 960, "h": 200,
-     "label": "Ch16 kafka (--profile kafka) -- the same topic the client never sees answers the gap",
+     "label": "Kafka (--profile kafka): the same topic the client never sees answers the gap",
      "fill": "#fafafa"},
 ]
 
@@ -35,14 +35,14 @@ nodes_1 = [
     {"x": 230, "y": 80, "w": 160, "h": 90, "style": "box",
      "lines": ["DISCONNECT", "client drops"]},
     {"x": 420, "y": 80, "w": 190, "h": 90, "style": "ghost",
-     "lines": ["gap event injected", "POST .../handling-events", "no broker -- nothing stores it"]},
+     "lines": ["gap event injected", "POST .../handling-events", "no broker, nothing stores it"]},
     {"x": 640, "y": 80, "w": 160, "h": 90, "style": "box",
      "lines": ["RECONNECT", "?afterEventId=", "<last seed eventId>"]},
     {"x": 830, "y": 80, "w": 140, "h": 90, "style": "ghost",
      "lines": ["LOST", "never arrives"]},
 
     {"x": 40, "y": 300, "w": 160, "h": 90, "style": "accent",
-     "lines": ["CONNECTED", "3 seed events", "(feed.py, same as Ch15)"]},
+     "lines": ["CONNECTED", "3 seed events", "(feed.py, same as the stateless path)"]},
     {"x": 230, "y": 300, "w": 160, "h": 90, "style": "box",
      "lines": ["DISCONNECT", "client drops"]},
     {"x": 420, "y": 300, "w": 190, "h": 90, "style": "ink",
@@ -50,7 +50,7 @@ nodes_1 = [
     {"x": 640, "y": 300, "w": 160, "h": 90, "style": "box",
      "lines": ["RECONNECT", "?afterEventId=", "<last seed eventId>"]},
     {"x": 830, "y": 300, "w": 140, "h": 90, "style": "accent",
-     "lines": ["FILLED", "replayed once --", "dedup by eventId"]},
+     "lines": ["FILLED", "replayed once,", "dedup by eventId"]},
 ]
 
 edges_1 = [
@@ -58,10 +58,10 @@ edges_1 = [
     {"x1": 390, "y1": 125, "x2": 420, "y2": 125, "label": "while disconnected"},
     {"x1": 610, "y1": 125, "x2": 640, "y2": 125, "label": "client retries"},
     {"x1": 800, "y1": 125, "x2": 830, "y2": 125,
-     "label": "afterEventId ignored -- live tail only", "dashed": True},
+     "label": "afterEventId ignored, live tail only", "dashed": True},
 
     {"x1": 200, "y1": 345, "x2": 230, "y2": 345, "label": "disconnect"},
-    {"x1": 390, "y1": 345, "x2": 420, "y2": 345, "label": "durable -- survives the gap"},
+    {"x1": 390, "y1": 345, "x2": 420, "y2": 345, "label": "durable, survives the gap"},
     {"x1": 610, "y1": 345, "x2": 640, "y2": 345, "label": "client retries"},
     {"x1": 800, "y1": 345, "x2": 830, "y2": 345,
      "label": "not found (seed id) -> replay everything in topic", "amber": True},
@@ -69,7 +69,7 @@ edges_1 = [
 
 notes_1 = [
     {"x": 500, "y": 465, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Same request on both rows -- ?afterEventId=<last seen eventId>. The only difference is whether anything durable sits behind the socket to answer it."},
+     "text": "Same request on both rows: ?afterEventId=<last seen eventId>. The only difference is whether anything durable sits behind the socket to answer it."},
 ]
 
 generate_diagram.emit("16-gap-filled-by-replay", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
@@ -81,16 +81,16 @@ W2, H2 = 1000, 460
 
 bands_2 = [
     {"x": 20, "y": 20, "w": 960, "h": 420,
-     "label": "KafkaBackplane.java / kafka_backplane.py -- seed-direct vs. injected-to-topic, kept strictly separate",
+     "label": "KafkaBackplane.java / kafka_backplane.py: seed-direct vs. injected-to-topic, kept strictly separate",
      "fill": "#fafafa"},
 ]
 
 nodes_2 = [
     {"x": 300, "y": 55, "w": 260, "h": 80, "style": "ghost",
-     "lines": ["older than retention", "gone -- cannot be replayed"]},
+     "lines": ["older than retention", "gone, cannot be replayed"]},
 
     {"x": 40, "y": 170, "w": 220, "h": 95, "style": "user",
-     "lines": ["Seed feed (direct)", "3 fixture events, every connection,", "every mode -- never through Kafka"]},
+     "lines": ["Seed feed (direct)", "3 fixture events, every connection,", "every mode, never through Kafka"]},
 
     {"x": 40, "y": 320, "w": 220, "h": 95, "style": "user",
      "lines": ["Inject endpoint", "POST /internal/.../handling-events", "injected events only"]},
@@ -110,11 +110,11 @@ nodes_2 = [
 edges_2 = [
     {"x1": 260, "y1": 217, "x2": 650, "y2": 377,
      "label": "always delivered directly, never via Kafka"},
-    {"x1": 260, "y1": 367, "x2": 330, "y2": 320, "label": "publish(bookingId, event) -- keyed"},
+    {"x1": 260, "y1": 367, "x2": 330, "y2": 320, "label": "publish(bookingId, event), keyed"},
     {"x1": 590, "y1": 290, "x2": 650, "y2": 240, "label": "replay-after / live tail"},
     {"x1": 460, "y1": 230, "x2": 420, "y2": 135, "label": "retention window", "dashed": True},
     {"x1": 765, "y1": 280, "x2": 765, "y2": 330,
-     "label": "gap-era events, then live -- replay-vs-live can double-deliver; client dedups", "amber": True},
+     "label": "gap-era events, then live: replay-vs-live can double-deliver; client dedups", "amber": True},
 ]
 
 notes_2 = [

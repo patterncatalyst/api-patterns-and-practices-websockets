@@ -21,7 +21,7 @@
 <text x="395.0" y="252.5" font-size="11.5" fill="#555555" text-anchor="middle">or websocat -t</text>
 <rect x="290" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="395.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Auth gate rejected</text>
-<text x="395.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">post-upgrade (Ch17), or</text>
+<text x="395.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">post-upgrade, or</text>
 <text x="395.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">subprotocol mismatch</text>
 <rect x="550" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="655.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Frame arrives,</text>
@@ -32,7 +32,7 @@
 <rect x="550" y="295" width="210" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="655.0" y="325.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Opcode mismatch</text>
 <text x="655.0" y="342.5" font-size="11.5" fill="#555555" text-anchor="middle">binary negotiated, client</text>
-<text x="655.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">expects text (Ch19)</text>
+<text x="655.0" y="357.5" font-size="11.5" fill="#555555" text-anchor="middle">expects text</text>
 <rect x="810" y="115" width="210" height="65" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="915.0" y="145.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Connection drops,</text>
 <text x="915.0" y="162.5" font-size="11.5" fill="#555555" text-anchor="middle">no obvious reason</text>

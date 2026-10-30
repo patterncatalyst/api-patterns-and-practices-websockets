@@ -101,13 +101,13 @@ cols = [
         "x": 290,
         "symptom": ["101 arrives,", "then silence / hang"],
         "tool": ["DevTools Frames tab", "or websocat -t"],
-        "diag": ["Auth gate rejected", "post-upgrade (Ch17), or", "subprotocol mismatch"],
+        "diag": ["Auth gate rejected", "post-upgrade, or", "subprotocol mismatch"],
     },
     {
         "x": 550,
         "symptom": ["Frame arrives,", "wrong shape / won't parse"],
         "tool": ["DevTools binary/text icon,", "websocat -b | xxd"],
-        "diag": ["Opcode mismatch", "binary negotiated, client", "expects text (Ch19)"],
+        "diag": ["Opcode mismatch", "binary negotiated, client", "expects text"],
     },
     {
         "x": 810,

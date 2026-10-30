@@ -64,7 +64,7 @@ edges_1 = [
 
 notes_1 = [
     {"x": 490, "y": 500, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "process_request can only answer with an HTTP response (no app close code yet) -- so this example validates right after accept and closes 1008 instead."},
+     "text": "process_request can only answer with an HTTP response (no app close code yet). This example validates right after accept and closes 1008 instead."},
 ]
 
 generate_diagram.emit("17-auth-upgrade-flow", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
@@ -76,17 +76,17 @@ W2, H2 = 980, 440
 
 bands_2 = [
     {"x": 20, "y": 20, "w": 940, "h": 400,
-     "label": "Same bearer-JWT shape at the upgrade -- different trust model behind it (DRQ-021)",
+     "label": "Same bearer-JWT shape at the upgrade, different trust model behind it",
      "fill": "#fafafa"},
 ]
 
 nodes_2 = [
     {"x": 50, "y": 65, "w": 400, "h": 55,
-     "lines": ["THIS EXAMPLE -- teaching"],
+     "lines": ["THIS EXAMPLE: teaching"],
      "style": "accent"},
 
     {"x": 530, "y": 65, "w": 400, "h": 55,
-     "lines": ["PRODUCTION PATH -- Keycloak / OIDC"],
+     "lines": ["PRODUCTION PATH: Keycloak / OIDC"],
      "style": "user"},
 
     {"x": 50, "y": 140, "w": 400, "h": 70,
@@ -98,7 +98,7 @@ nodes_2 = [
      "style": "box"},
 
     {"x": 50, "y": 230, "w": 400, "h": 70,
-     "lines": ["WS_JWT_SECRET -- one symmetric key", "shared by every minter AND verifier"],
+     "lines": ["WS_JWT_SECRET: one symmetric key", "shared by every minter AND verifier"],
      "style": "ink"},
 
     {"x": 530, "y": 230, "w": 400, "h": 70,
@@ -110,17 +110,17 @@ nodes_2 = [
      "style": "box"},
 
     {"x": 530, "y": 320, "w": 400, "h": 70,
-     "lines": ["Verify: RSA signature against the", "rotating public key -- no shared secret"],
+     "lines": ["Verify: RSA signature against the", "rotating public key, no shared secret"],
      "style": "box"},
 ]
 
 edges_2 = [
-    {"x1": 450, "y1": 92, "x2": 530, "y2": 92, "label": "DRQ-021: same shape, different trust model", "amber": True},
+    {"x1": 450, "y1": 92, "x2": 530, "y2": 92, "label": "same shape, different trust model", "amber": True},
 ]
 
 notes_2 = [
     {"x": 490, "y": 410, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "A shared secret works for one teaching process minting and verifying its own tokens -- it does not survive a second verifier needing the same secret."},
+     "text": "A shared secret works for one teaching process minting and verifying its own tokens. It does not survive a second verifier needing the same secret."},
 ]
 
 generate_diagram.emit("17-hs256-vs-keycloak", W2, H2, bands=bands_2, nodes=nodes_2, edges=edges_2, notes=notes_2)
