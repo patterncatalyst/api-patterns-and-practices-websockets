@@ -1,11 +1,10 @@
-# Part 5 example — Python native `websockets` + FastAPI: JSON vs Protobuf
+# Part 5 example: Python native `websockets` + FastAPI (JSON vs Protobuf)
 
 Forks `examples/part4-connection/python` and drops its four connection
 concerns (backpressure, error handling, heartbeats, JWT auth) to isolate
-what Part 5 is actually about (Ch19, "Binary Protobuf over WebSockets";
-Ch20, "Optimizing throughput"): the SAME `contracts/asyncapi.yaml`
-`handlingEvents` channel, served over **two wire encodings** of the exact
-same `HandlingEvent` message —
+what Part 5 is about: binary Protobuf encoding and throughput optimization
+on the same `contracts/asyncapi.yaml` `handlingEvents` channel, served over
+**two wire encodings** of the exact same `HandlingEvent` message:
 
 | Encoding | Frame type | Selected by |
 | --- | --- | --- |
@@ -15,7 +14,7 @@ same `HandlingEvent` message —
 The channel (`/ws/v1/bookings/{bookingId}/handling-events`) pushes the same
 three `HandlingEvent`s (RECEIVE, LOAD, CUSTOMS) as Parts 3 and 4, reusing
 Part 3's shared fixture byte-for-byte
-(`../../part3-handling-events/fixtures/handling-events.json`) — field VALUES
+(`../../part3-handling-events/fixtures/handling-events.json`). Field values
 are identical in both encodings (RFC-3339 string timestamps, decimal-string
 Money), so a reader can compare the two frames for the same event directly.
 The Quarkus sibling (`../quarkus/`) implements the same negotiation against
@@ -25,26 +24,26 @@ the same contract, so the two stacks are directly comparable.
 
 Two listeners, one process, one event loop (`app/main.py`):
 
-- **`app/ws_server.py`** — the WebSocket endpoint, built on the native
+- **`app/ws_server.py`**: the WebSocket endpoint, built on the native
   `websockets` library. Listens on `WS_HOST:WS_PORT` (default
   `0.0.0.0:8091`). Negotiates the subprotocol via `select_subprotocol`
   (overriding the library's default, which would reject a client that
-  offers no subprotocol at all — see that module's docstring) and replays
+  offers no subprotocol at all; see that module's docstring) and replays
   the fixture in the negotiated encoding.
-- **`app/http_app.py`** — a small FastAPI app (`/healthz`, `/`) for
+- **`app/http_app.py`**: a small FastAPI app (`/healthz`, `/`) for
   HTTP/app lifecycle, run under uvicorn on `HTTP_HOST:HTTP_PORT` (default
   `0.0.0.0:8092`).
-- **`app/mapper.py`** — converts a validated `HandlingEvent` (the generated
+- **`app/mapper.py`**: converts a validated `HandlingEvent` (the generated
   Pydantic model) to/from its Protobuf twin (`app/handling_event_pb2.py`),
   operating on `model_dump(mode="json")` values so the Protobuf and JSON
-  field values stay byte-for-byte identical (DRQ-025).
+  field values stay byte-for-byte identical.
 
-## Encoding negotiation (DRQ-026)
+## Encoding negotiation
 
 A client offers one or more values in `Sec-WebSocket-Protocol` on the
 upgrade request. The server picks the first value in its own declared
 preference order (`app/ws_server.py`'s `SUPPORTED_SUBPROTOCOLS`: bare `v1`,
-then `+json`, then `+protobuf` — the same order the Quarkus sibling declares
+then `+json`, then `+protobuf`; the same order the Quarkus sibling declares
 in `quarkus.websockets-next.server.supported-subprotocols`, so a client that
 offers more than one gets the same encoding from either stack) that the
 client also offered, and defaults to JSON for a client that offers no
@@ -57,7 +56,7 @@ handling-events.v1+protobuf   -> Protobuf binary frames (only when nothing earli
 (no Sec-WebSocket-Protocol)   -> JSON text frames (default)
 ```
 
-The negotiated value — or its absence — is echoed back by the WebSocket
+The negotiated value, or its absence, is echoed back by the WebSocket
 handshake as the `Sec-WebSocket-Protocol` response header (standard
 RFC 6455 §4.2.2 behavior from the `websockets` library; no response header
 at all when no subprotocol was selected).
@@ -77,9 +76,8 @@ python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
 ```
 
 `scripts/generate-proto.sh` compiles `contracts/handling-event.proto` with
-`grpcio-tools`' bundled `protoc` (`python -m grpc_tools.protoc`) — this site
-has no gRPC service, only the message-class generator is used (see
-`_plans/version-matrix.md`).
+`grpcio-tools`' bundled `protoc` (`python -m grpc_tools.protoc`). This site
+has no gRPC service; only the message-class generator is used.
 
 ## Run it
 
