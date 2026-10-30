@@ -4,7 +4,7 @@
 <text x="470.0" y="45.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">client</text>
 <text x="470.0" y="62.5" font-size="11.5" fill="#555555" text-anchor="middle">WS upgrade + ?token=&lt;jwt&gt;</text>
 <rect x="300" y="110" width="340" height="70" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-<text x="470.0" y="143.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">auth gate (Ch17)</text>
+<text x="470.0" y="143.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">auth gate</text>
 <text x="470.0" y="160.0" font-size="11.5" fill="#555555" text-anchor="middle">verify HS256 signature + exp, shared secret</text>
 <rect x="40" y="220" width="400" height="150" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
 <text x="240.0" y="270.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Quarkus: WebSockets Next</text>
@@ -26,7 +26,7 @@
 <text x="700.0" y="455.0" font-size="11.5" fill="#555555" text-anchor="middle">envelope + close (4400); close-only (4290)</text>
 <rect x="300" y="495" width="340" height="50" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
 <text x="470.0" y="518.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">heartbeat: ping/pong keeps the connection alive;</text>
-<text x="470.0" y="535.0" font-size="11.5" fill="#555555" text-anchor="middle">a silent peer is closed on idle-timeout (Ch14)</text>
+<text x="470.0" y="535.0" font-size="11.5" fill="#555555" text-anchor="middle">a silent peer is closed on idle-timeout</text>
 <path d="M440,80 L440,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="450.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade</text>
 <text x="450.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">upgrade</text>

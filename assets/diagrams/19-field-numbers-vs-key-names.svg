@@ -33,6 +33,6 @@
 <rect x="495" y="310" width="360" height="30" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
 <text x="675.0" y="330.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">tag 7  registered_at = &lt;value&gt;: one-byte tag, no name on the wire</text>
 <text x="225" y="25" font-size="12" fill="#1d1d1d" text-anchor="middle" font-weight="700">renaming a key is free; field NUMBERS never move or get reused</text>
-<text x="675" y="25" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">field numbers are the wire identity: additive-only, same as Ch7&#x27;s JSON discipline</text>
+<text x="675" y="25" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">field numbers are the wire identity: additive-only, same discipline as the JSON contract</text>
 <text x="450" y="405" font-size="11" fill="#555555" text-anchor="middle">check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn&#x27;t also carry.</text>
 </svg>

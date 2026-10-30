@@ -35,28 +35,28 @@ edges_1 = []
 
 # Lifecycle row
 nodes_1 += pair(55,
-    ["idle-timeout resets on the server's", "OWN outbound ping (Ch14)"],
+    ["idle-timeout resets on the server's", "OWN outbound ping"],
     ["pong-tracked LAST_PONG_AT + a scheduled", "sweep, close 4408"])
 
 # Bounds row (two pairs stacked)
 nodes_1 += pair(185,
-    ["asyncio.Queue maxsize<=0 means", "UNBOUNDED, not zero (Ch12)"],
+    ["asyncio.Queue maxsize<=0 means", "UNBOUNDED, not zero"],
     ["a positive bound + a send timeout,", "close 4290"])
 nodes_1 += pair(275,
-    ["a backplane with N instances does N", "times the discard work per event (Ch18)"],
+    ["a backplane with N instances does N", "times the discard work per event"],
     ["key/partition the broadcast domain", "don't treat it as unbounded"])
 
 # Security row
 nodes_1 += pair(395,
-    ["four token failures answered", "differently is a signature oracle (Ch17)"],
+    ["four token failures answered", "differently is a signature oracle"],
     ["collapse every failure to one close code,", "1008: reason logged server-side only"])
 
 # Schema & design row (two pairs stacked)
 nodes_1 += pair(525,
-    ["a reused Protobuf field number is a", "silent misread, not a parse error (Ch19)"],
+    ["a reused Protobuf field number is a", "silent misread, not a parse error"],
     ["field numbers are additive-only: buf", "breaking + check-proto-parity.py gate it"])
 nodes_1 += pair(615,
-    ["rejecting a client that offers no", "subprotocol (Ch19, DRQ-026)"],
+    ["rejecting a client that offers no", "subprotocol"],
     ["an explicit permissive fallback path,", "JSON by default"])
 
 for y in (95, 225, 315, 435, 565, 655):

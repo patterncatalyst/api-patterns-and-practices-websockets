@@ -20,7 +20,7 @@ nodes = [
      "style": "user"},
 
     {"x": 270, "y": 110, "w": 400, "h": 70,
-     "lines": ["subprotocol negotiation (DRQ-026)", "server picks the first offered value it also supports, echoes it back"],
+     "lines": ["subprotocol negotiation", "server picks the first offered value it also supports, echoes it back"],
      "style": "ink"},
 
     {"x": 40, "y": 220, "w": 400, "h": 120,

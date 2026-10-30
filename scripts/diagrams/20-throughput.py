@@ -78,7 +78,7 @@ bands_2 = [
 
 nodes_2 = [
     {"x": 45, "y": 75, "w": 380, "h": 80,
-     "lines": ["1. Encoding (Ch19)", "JSON vs. Protobuf: fixed per-frame cost",
+     "lines": ["1. Encoding", "JSON vs. Protobuf: fixed per-frame cost",
                "40.7% smaller, deterministic"],
      "style": "accent"},
     {"x": 475, "y": 75, "w": 380, "h": 80,
@@ -98,7 +98,7 @@ nodes_2 = [
      "style": "box"},
 
     {"x": 160, "y": 310, "w": 580, "h": 70,
-     "lines": ["5. Backpressure (Ch12) bounds all of the above",
+     "lines": ["5. Backpressure bounds all of the above",
                "under a slow consumer: a full queue or a stalled sendText",
                "caps effective throughput regardless of encoding or compression"],
      "style": "ink"},

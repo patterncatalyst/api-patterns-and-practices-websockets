@@ -20,7 +20,7 @@ nodes = [
      "style": "user"},
 
     {"x": 300, "y": 110, "w": 340, "h": 70,
-     "lines": ["auth gate (Ch17)", "verify HS256 signature + exp, shared secret"],
+     "lines": ["auth gate", "verify HS256 signature + exp, shared secret"],
      "style": "ink"},
 
     {"x": 40, "y": 220, "w": 400, "h": 150,
@@ -44,7 +44,7 @@ nodes = [
      "style": "ghost"},
 
     {"x": 300, "y": 495, "w": 340, "h": 50,
-     "lines": ["heartbeat: ping/pong keeps the connection alive;", "a silent peer is closed on idle-timeout (Ch14)"],
+     "lines": ["heartbeat: ping/pong keeps the connection alive;", "a silent peer is closed on idle-timeout"],
      "style": "sub"},
 ]
 

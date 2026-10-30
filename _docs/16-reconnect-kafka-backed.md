@@ -28,7 +28,7 @@ What makes this durable rather than merely "better buffered" is the thing both R
 
 ## Resuming from afterEventId: found, not found, and the fallback
 
-A client reconnects with `?afterEventId=<the last eventId it saw>`. Both stacks answer the same three-way question against the topic's history: was that id found, and if so, what comes after it? `KafkaBackplane.java`'s `replayFor` snapshots this booking's injected-event history (a `List.copyOf` of a `CopyOnWriteArrayList`, so concurrent appends from the always-running `@Incoming` consumer can't leak a partially built list into the search) and walks it looking for `afterEventId`. Found means replay the suffix strictly after it, so nothing the client already saw gets resent. Not found means replay the **entire snapshot**, and the Javadoc spells out exactly when that happens: "expected whenever `afterEventId` names a fixture event (the Ch15 gap scenario: a client's last-seen id, right after connecting, is one of the 3 seed events); fixture ids never appear in this buffer at all, so the search always misses for them." The Python implementation reaches the identical decision through a different mechanism, because `aiokafka` gives it a consumer and offsets rather than Quarkus's always-on, continuously-updated map:
+A client reconnects with `?afterEventId=<the last eventId it saw>`. Both stacks answer the same three-way question against the topic's history: was that id found, and if so, what comes after it? `KafkaBackplane.java`'s `replayFor` snapshots this booking's injected-event history (a `List.copyOf` of a `CopyOnWriteArrayList`, so concurrent appends from the always-running `@Incoming` consumer can't leak a partially built list into the search) and walks it looking for `afterEventId`. Found means replay the suffix strictly after it, so nothing the client already saw gets resent. Not found means replay the **entire snapshot**, and the Javadoc spells out exactly when that happens: "expected whenever `afterEventId` names a fixture event (a client's last-seen id, right after connecting, is one of the 3 seed events); fixture ids never appear in this buffer at all, so the search always misses for them." The Python implementation reaches the identical decision through a different mechanism, because `aiokafka` gives it a consumer and offsets rather than Quarkus's always-on, continuously-updated map:
 
 {% include codetabs.html langs="Quarkus|Python" %}
 
@@ -92,7 +92,7 @@ This is also why `compose.yaml` running four app instances against one shared Ka
 
 ## Dedup by eventId: the benign race this chapter absorbs
 
-{% include excalidraw.html file="16-gap-filled-by-replay" alt="A two-row timeline. The top row, Ch15 stateless, shows connect, disconnect, a gap event injected that nothing stores, reconnect with afterEventId, and the gap event lost because afterEventId is ignored. The bottom row, Ch16 kafka, shows the same connect and disconnect, but the gap event is published to the durable handling-events topic, and after reconnect with the same afterEventId it is replayed exactly once because the id is not found and the topic's full history is replayed." caption="Figure 16.2: the same disconnect/inject/reconnect sequence as the stateless-reconnect example, but a durable topic behind the socket turns 'lost' into 'filled, exactly once.'" %}
+{% include excalidraw.html file="16-gap-filled-by-replay" alt="A two-row timeline. The top row, stateless, shows connect, disconnect, a gap event injected that nothing stores, reconnect with afterEventId, and the gap event lost because afterEventId is ignored. The bottom row, kafka, shows the same connect and disconnect, but the gap event is published to the durable handling-events topic, and after reconnect with the same afterEventId it is replayed exactly once because the id is not found and the topic's full history is replayed." caption="Figure 16.2: the same disconnect/inject/reconnect sequence as the stateless-reconnect example, but a durable topic behind the socket turns 'lost' into 'filled, exactly once.'" %}
 
 "Exactly once" in the delivery-guarantee sense takes more machinery to guarantee than the phrase suggests, and the part4-backplane README is upfront about where this example lands: not a guarantee, but a documented, bounded, benign race that a dedup step absorbs. On the Quarkus side, `KafkaBackplane`'s `@Incoming` consumer runs continuously, in the background, regardless of whether any client is connected, because SmallRye Reactive Messaging wires `@Incoming` statically, so it's always consuming:
 
@@ -147,7 +147,7 @@ Run it from the repo root:
 bash examples/part4-backplane/verify.sh
 ```
 
-A representative run shows Stage A proving the Ch15 loss on both stacks, then Stage B bringing Kafka up and proving the opposite outcome:
+A representative run shows Stage A proving the stateless-mode loss on both stacks, then Stage B bringing Kafka up and proving the opposite outcome:
 
 ```
 === Stage A complete: Ch15 stateless gap PROVEN LIVE on both stacks ===

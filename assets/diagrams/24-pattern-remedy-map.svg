@@ -10,37 +10,37 @@
 <text x="32" y="510" font-size="12" font-weight="700" fill="#1d1d1d">SCHEMA &amp; DESIGN</text>
 <rect x="50" y="55" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">idle-timeout resets on the server&#x27;s</text>
-<text x="310.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">OWN outbound ping (Ch14)</text>
+<text x="310.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">OWN outbound ping</text>
 <rect x="620" y="55" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="880.0" y="93.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">pong-tracked LAST_PONG_AT + a scheduled</text>
 <text x="880.0" y="110.0" font-size="11.5" fill="#555555" text-anchor="middle">sweep, close 4408</text>
 <rect x="50" y="185" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="223.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">asyncio.Queue maxsize&lt;=0 means</text>
-<text x="310.0" y="240.0" font-size="11.5" fill="#555555" text-anchor="middle">UNBOUNDED, not zero (Ch12)</text>
+<text x="310.0" y="240.0" font-size="11.5" fill="#555555" text-anchor="middle">UNBOUNDED, not zero</text>
 <rect x="620" y="185" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="880.0" y="223.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a positive bound + a send timeout,</text>
 <text x="880.0" y="240.0" font-size="11.5" fill="#555555" text-anchor="middle">close 4290</text>
 <rect x="50" y="275" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a backplane with N instances does N</text>
-<text x="310.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">times the discard work per event (Ch18)</text>
+<text x="310.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">times the discard work per event</text>
 <rect x="620" y="275" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="880.0" y="313.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">key/partition the broadcast domain</text>
 <text x="880.0" y="330.0" font-size="11.5" fill="#555555" text-anchor="middle">don&#x27;t treat it as unbounded</text>
 <rect x="50" y="395" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">four token failures answered</text>
-<text x="310.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">differently is a signature oracle (Ch17)</text>
+<text x="310.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">differently is a signature oracle</text>
 <rect x="620" y="395" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="880.0" y="433.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">collapse every failure to one close code,</text>
 <text x="880.0" y="450.0" font-size="11.5" fill="#555555" text-anchor="middle">1008: reason logged server-side only</text>
 <rect x="50" y="525" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="563.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">a reused Protobuf field number is a</text>
-<text x="310.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">silent misread, not a parse error (Ch19)</text>
+<text x="310.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">silent misread, not a parse error</text>
 <rect x="620" y="525" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="880.0" y="563.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">field numbers are additive-only: buf</text>
 <text x="880.0" y="580.0" font-size="11.5" fill="#555555" text-anchor="middle">breaking + check-proto-parity.py gate it</text>
 <rect x="50" y="615" width="520" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="310.0" y="653.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">rejecting a client that offers no</text>
-<text x="310.0" y="670.0" font-size="11.5" fill="#555555" text-anchor="middle">subprotocol (Ch19, DRQ-026)</text>
+<text x="310.0" y="670.0" font-size="11.5" fill="#555555" text-anchor="middle">subprotocol</text>
 <rect x="620" y="615" width="520" height="80" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
 <text x="880.0" y="653.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">an explicit permissive fallback path,</text>
 <text x="880.0" y="670.0" font-size="11.5" fill="#555555" text-anchor="middle">JSON by default</text>

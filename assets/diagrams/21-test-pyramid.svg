@@ -2,12 +2,11 @@
 <defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
 <rect x="20" y="10" width="860" height="540" rx="12" fill="#fafafa" stroke="#ddd"/>
 <rect x="300" y="30" width="300" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
-<text x="450.0" y="55.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Load: k6</text>
-<text x="450.0" y="72.5" font-size="11.5" fill="#555555" text-anchor="middle">smoke.js GATED / benchmark.js local-only</text>
-<text x="450.0" y="87.5" font-size="11.5" fill="#555555" text-anchor="middle">DRQ-023, DRQ-027</text>
+<text x="450.0" y="63.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Load: k6</text>
+<text x="450.0" y="80.0" font-size="11.5" fill="#555555" text-anchor="middle">smoke.js GATED / benchmark.js local-only</text>
 <rect x="230" y="125" width="440" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
 <text x="450.0" y="150.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Functional: Newman + python close-code probe</text>
-<text x="450.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">12 assertions / 0 failed (DRQ-030); ws_close_probe for 4400/4290/1008</text>
+<text x="450.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">12 assertions / 0 failed; ws_close_probe for 4400/4290/1008</text>
 <text x="450.0" y="182.5" font-size="11.5" fill="#555555" text-anchor="middle">the HTTP seam + the close codes websocat can&#x27;t read</text>
 <rect x="140" y="220" width="620" height="90" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
 <text x="450.0" y="255.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Live integration: verify.sh + lib.sh, both stacks, real containers</text>
@@ -28,5 +27,5 @@
 <path d="M450,195 L450,220" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M450,310 L450,330" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M450,420 L450,445" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
-<text x="450" y="490" font-size="11" fill="#555555" text-anchor="middle">Ch21/22/24 are prose citing this existing corpus (DRQ-028); only Ch23 adds new runnable code.</text>
+<text x="450" y="490" font-size="11" fill="#555555" text-anchor="middle">Most of this material is prose citing this existing corpus; only one part adds new runnable code.</text>
 </svg>

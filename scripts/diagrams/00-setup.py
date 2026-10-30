@@ -21,7 +21,7 @@ gd.emit(
     840,
     460,
     bands=[
-        {"x": 20, "y": 20, "w": 800, "h": 300, "label": "docker compose (Ch0 lab, forthcoming in examples/)", "fill": "#fafafa"},
+        {"x": 20, "y": 20, "w": 800, "h": 300, "label": "docker compose (lab, forthcoming in examples/)", "fill": "#fafafa"},
         {"x": 20, "y": 340, "w": 800, "h": 100, "label": "docker compose --profile observability (opt-in)", "fill": "#fff3e0"},
     ],
     nodes=[
@@ -53,7 +53,7 @@ gd.emit(
     260,
     nodes=[
         {"x": 40, "y": 90, "w": 230, "h": 90, "lines": ["Docker Compose", "this chapter", "fastest inner loop"], "style": "ink"},
-        {"x": 320, "y": 90, "w": 230, "h": 90, "lines": ["minikube", "docker driver + containerd", "Ch26"], "style": "box"},
+        {"x": 320, "y": 90, "w": 230, "h": 90, "lines": ["minikube", "docker driver + containerd", "later chapter"], "style": "box"},
         {"x": 600, "y": 90, "w": 220, "h": 90, "lines": ["OpenShift Local (CRC)", "separate appendix", "Appendix A"], "style": "box"},
     ],
     edges=[
