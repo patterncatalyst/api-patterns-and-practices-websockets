@@ -2,7 +2,7 @@
 
 Designing WebSocket APIs well, with runnable examples in **Quarkus WebSockets Next**
 and **Python** (FastAPI/Starlette plus the native `websockets` library) against one
-AsyncAPI 3 contract — a chapter-based Jekyll site, in the `lgtm` house style.
+AsyncAPI 3 contract. A chapter-based Jekyll site, in the `lgtm` house style.
 
 Fourth and final per-style site in the *API Patterns & Practices* series (REST →
 [gRPC](https://github.com/patterncatalyst/api-patterns-and-practices-grpc) →
@@ -10,13 +10,13 @@ Fourth and final per-style site in the *API Patterns & Practices* series (REST �
 WebSockets, after
 [REST](https://github.com/patterncatalyst/api-patterns-and-practices-rest)). The
 shipping/cargo domain is continuous across the series: here, the socket pushes a live
-**handling-event feed** — container moves, customs holds, delivery confirmations — to
+**handling-event feed** (container moves, customs holds, delivery confirmations) to
 a client watching a booking, in place of polling the REST booking service for a status
 that hasn't changed.
 
 ## What's here
 
-- **29 chapters (Ch0–Ch28) + an OpenShift Local (CRC) appendix** — from the real-time
+- **29 chapters (Ch0–Ch28) plus an OpenShift Local (CRC) appendix:** from the real-time
   problem and the WebSocket decision framework through the protocol itself, AsyncAPI 3
   contract design and versioning, building the same feed in both stacks, backpressure,
   error handling, heartbeats, stateless and Kafka-backed reconnect, security, fan-out
@@ -30,16 +30,16 @@ that hasn't changed.
 - **Three tiers:** Docker Compose → minikube (docker driver, containerd runtime) →
   OpenShift Local (CRC), as a separate appendix.
 
-This repository currently holds the **r01 bootstrap scaffold** only: site chrome, the
-locked outline, and the plans ledger. No chapter prose, no runnable examples, and no
-contract yet — see `_plans/build-plan.md` for what's deferred and when it lands.
+This repository currently holds the bootstrap scaffold only: site chrome, the
+locked outline, and the build plan. No chapter prose, no runnable examples, and no
+contract yet.
 
 ## Domain
 
 The canonical **shipping / cargo** domain used across patterncatalyst material:
 `Booking`, `Cargo`, `Location` (UN/LOCODE), `Route`, `Operation`, and `Money` as a
-decimal string. WebSockets here carries the live handling-event feed for a booking —
-the same story as the REST and gRPC siblings, one more tier down.
+decimal string. WebSockets here carries the live handling-event feed for a booking,
+the same story as the REST and gRPC siblings, one tier down.
 
 ## Build locally
 
@@ -55,7 +55,7 @@ bundle exec jekyll serve --baseurl ""
 |---|---|
 | `_docs/` | The chapters + the CRC appendix (Markdown). |
 | `_parts/` | The 9 Parts the chapters are grouped under. |
-| `_plans/` | Build plan, decisions log, version matrix — rendered, not in nav. |
+| `_plans/` | Build plan, decisions log, version matrix (rendered, not in nav). |
 | `_example_pages/` | The examples index (stub until examples ship). |
 | `scripts/` | Diagram generation (`generate_diagram.py`). |
 
@@ -63,12 +63,12 @@ bundle exec jekyll serve --baseurl ""
 
 This project is dual-licensed to separate the code from the writing:
 
-- **Code** — everything under `examples/`, plus build and helper scripts and
-  inline code snippets — is licensed under the **Apache License 2.0**
+- **Code**: everything under `examples/`, plus build and helper scripts and
+  inline code snippets, is licensed under the **Apache License 2.0**
   ([`LICENSE`](LICENSE)).
-- **Content** — the tutorial and book prose (chapters under `_docs/`),
+- **Content**: the tutorial and book prose (chapters under `_docs/`),
   diagrams and images under `assets/`, and the slide decks under
-  `presentation/` — is licensed under **Creative Commons Attribution 4.0
+  `presentation/`, is licensed under **Creative Commons Attribution 4.0
   International (CC BY 4.0)** ([`LICENSE-docs.md`](LICENSE-docs.md)).
 
 Copyright 2026 PatternCatalyst (Robert Sedor).

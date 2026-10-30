@@ -82,11 +82,11 @@ function statusTable(eyebrow, title, rows, notes, opts) {
   const s = S();
   addContentTitle(s, "201 · QUARKUS WEBSOCKETS NEXT", "Six sections, same order the chapters build in");
   addTwoColBullets(s,
-    ["01: The Quarkus Endpoint: @OnOpen, Multi, the record, the contract test (Ch08)",
-     "02: Connection Concerns: backpressure, errors, heartbeats, auth (Ch12/13/14/17)",
-     "03: Reconnect and the Backplane: stateless, Kafka, Redis, scale-out (Ch15/16/18)"],
-    ["04: Performance: Protobuf, field numbers, the throughput levers (Ch19/20)",
-     "05: Testing, Debugging, Observability (Ch21/22/23)",
+    ["01: The Quarkus Endpoint: @OnOpen, Multi, the record, the contract test",
+     "02: Connection Concerns: backpressure, errors, heartbeats, auth",
+     "03: Reconnect and the Backplane: stateless, Kafka, Redis, scale-out"],
+    ["04: Performance: Protobuf, field numbers, the throughput levers",
+     "05: Testing, Debugging, Observability",
      "06: Deploy: Compose, minikube, OpenShift Local",
      { text: "Appendix: minikube/CRC manifests, the version matrix, lifecycle edge cases", muted: true }]);
   addNotes(s, "Six sections, in the order the chapters actually build the feed: get an endpoint open and pushing, harden the one connection, cross instances with a backplane, make the wire cheaper, prove and watch all of it, then run it somewhere real. Cross-references in the notes are by concept: the channel, the close code, the backplane mode, never by slide number, so trimming a section for time doesn't break a reference elsewhere in the deck.");
@@ -125,13 +125,13 @@ diagram("THE QUARKUS ENDPOINT · THE LIFECYCLE", "One callback implemented, beca
   "@OnTextMessage and @OnClose are both absent from this version because the channel is receive-only per the contract, and no per-connection state is kept yet. connection.sendText exists on WebSocketConnection and is available, but this handler never calls it directly; the Multi return type handles serialization and the send loop on its own. Section 02 is exactly the slides where onTextMessage, onClose, and an explicit sendText all show up, once the connection actually needs guarding.");
 
 code("THE QUARKUS ENDPOINT · MULTI VS. EXPLICIT SENDTEXT", "Two ways to drive the wire: the contract doesn't force a choice",
-  ["// part3 — HandlingEventWebSocket#onOpen: the Multi IS the wire",
+  ["// part3, HandlingEventWebSocket#onOpen: the Multi IS the wire",
    "@OnOpen",
    "public Multi<HandlingEvent> onOpen(@PathParam String bookingId) {",
    "    return Multi.createFrom().iterable(feed.events());",
    "}",
    "",
-   "// part4-connection — OutboundBackpressureGuard#sendOne: explicit sendText,",
+   "// part4-connection, OutboundBackpressureGuard#sendOne: explicit sendText,",
    "// because this version needs to COUNT outstanding sends per connection",
    "pending.incrementAndGet();",
    "return connection.sendText(event)",
@@ -142,7 +142,7 @@ code("THE QUARKUS ENDPOINT · MULTI VS. EXPLICIT SENDTEXT", "Two ways to drive t
    "            return Uni.createFrom().voidItem();",
    "        });"],
   "HandlingEventWebSocket.java (part3) / OutboundBackpressureGuard.java (part4-connection)",
-  "Returning a Multi is the right call when WebSockets Next's own per-item write loop is enough; explicit connection.sendText is the right call the moment something needs to observe or bound each individual send: here, an outstanding-sends counter for Chapter 12's backpressure guard. Both run under the same @OnOpen-scoped subscription Quarkus itself manages; the guard's Javadoc is explicit about why a Uni this code subscribes to manually, rather than returns, would run its completion on a raw Vert.x thread after the connection's @SessionScoped context had already torn down.");
+  "Returning a Multi is the right call when WebSockets Next's own per-item write loop is enough; explicit connection.sendText is the right call the moment something needs to observe or bound each individual send: here, an outstanding-sends counter for the backpressure guard. Both run under the same @OnOpen-scoped subscription Quarkus itself manages; the guard's Javadoc is explicit about why a Uni this code subscribes to manually, rather than returns, would run its completion on a raw Vert.x thread after the connection's @SessionScoped context had already torn down.");
 
 code("THE QUARKUS ENDPOINT · THE RECORD", "HandlingEvent mirrors the contract schema field-for-field",
   ["@JsonInclude(JsonInclude.Include.NON_NULL)",
@@ -189,12 +189,12 @@ code("THE QUARKUS ENDPOINT · THE CONTRACT-CONFORMANCE TEST", "Every emitted eve
 
 // ===== SECTION 02 — CONNECTION CONCERNS (Ch12/13/14/17) =========================
 divider("02", "Connection Concerns", "Backpressure, errors, heartbeats, and authentication: one connection, hardened.",
-  "part4-connection forks part3's endpoint and adds the four concerns a single long-lived connection actually needs: who's allowed to open it (Ch17), what happens when it sends faster than the client reads (Ch12), what a client frame outside the contract gets back (Ch13), and how a silently-dead peer gets detected (Ch14). Same channel, same fixture, more guardrails.");
+  "part4-connection forks part3's endpoint and adds the four concerns a single long-lived connection actually needs: who's allowed to open it (security), what happens when it sends faster than the client reads (backpressure), what a client frame outside the contract gets back (error handling), and how a silently-dead peer gets detected (liveness). Same channel, same fixture, more guardrails.");
 
 diagram("CONNECTION CONCERNS · PART 4 AT A GLANCE", "The same channel, now with an auth gate and two reject paths",
   "part4-connection-architecture",
   "Same shared JWT secret, same close codes on both stacks: verify.sh asserts a client can't tell them apart.",
-  "Both stacks gain the identical shape: an auth gate at the handshake (Ch17), a guarded outbound path to the fixture replay (Ch12), a reject path for any client frame outside the contract (Ch13, close 4400), and a heartbeat loop pairing an auto-ping with an idle-timeout on Quarkus or ping_interval/ping_timeout on Python (Ch14). Nothing about the public path changes: a well-behaved, authenticated client sees exactly the same three-event replay as part3.");
+  "Both stacks gain the identical shape: an auth gate at the handshake (security), a guarded outbound path to the fixture replay (backpressure), a reject path for any client frame outside the contract (error handling, close 4400), and a heartbeat loop pairing an auto-ping with an idle-timeout on Quarkus or ping_interval/ping_timeout on Python (liveness). Nothing about the public path changes: a well-behaved, authenticated client sees exactly the same three-event replay as part3.");
 
 diagram("CONNECTION CONCERNS · BACKPRESSURE", "A bounded outbound buffer between the producer and the socket",
   "12-outbound-buffer-policy",
@@ -233,7 +233,7 @@ content("CONNECTION CONCERNS · CLOSE VS. DROP", "Picking a backpressure policy 
   ["CLOSE (default): close the connection with 4290 SLOW_CONSUMER and stop sending the rest. Safer by default: an unbounded number of slow clients each holding outstanding sends is a resource-exhaustion path.",
    "DROP: skip the event that would exceed the threshold, log a warning, keep the connection open. Exists to demonstrate the trade-off, not because it fits this channel's semantics: a missed HandlingEvent is a correctness problem here, not a supersede-by-the-next-update one.",
    "The right default depends on what a missed message means: a live price tick tolerates DROP; a customs HandlingEvent does not."],
-  "Push on this distinction if there's time for one question: DROP is in this codebase as a documented trade-off, not a recommendation for this channel. A feed where only the latest value matters (Ch15's stateless-reconnect framing in section 03 makes the same distinction from the other direction) is exactly the shape where DROP is the right call; a feed where every event is a discrete fact never fits it.");
+  "Push on this distinction if there's time for one question: DROP is in this codebase as a documented trade-off, not a recommendation for this channel. A feed where only the latest value matters (the stateless-reconnect chapter's framing in section 03 makes the same distinction from the other direction) is exactly the shape where DROP is the right call; a feed where every event is a discrete fact never fits it.");
 
 diagram("CONNECTION CONCERNS · ERRORS VS. 1006", "The deliberate envelope-then-close, next to the one failure mode no code can carry",
   "13-error-flow-vs-1006",
@@ -262,7 +262,7 @@ code("CONNECTION CONCERNS · CLOSE CODES AND THE ERROR ENVELOPE", "A structured 
 diagram("CONNECTION CONCERNS · THE IDLE-TIMEOUT TRAP", "The server's own ping keeps resetting its own idle clock",
   "14-idle-timeout-trap",
   "Figure 14.1: the idle-timeout trap (the server's own ping keeps resetting its own idle clock) versus the pong-tracked sweep that actually detects a silent peer.",
-  "The gotcha to dwell on: Vert.x's HTTP idle-timeout resets on any read OR write activity, and the server's own outbound auto-ping is write activity on that same connection: a peer that never answers a single ping never trips idle-timeout, because the server keeps resetting its own clock every auto-ping-interval regardless of whether the peer responds. Confirmed live against this exact example (examples/part4-connection/verify.sh's Ch14 stage): idle-timeout alone cannot distinguish healthy from silently dead once auto-ping is on.");
+  "The detail worth dwelling on: Vert.x's HTTP idle-timeout resets on any read OR write activity, and the server's own outbound auto-ping is write activity on that same connection: a peer that never answers a single ping never trips idle-timeout, because the server keeps resetting its own clock every auto-ping-interval regardless of whether the peer responds. Confirmed live against this exact example (examples/part4-connection/verify.sh's liveness stage): idle-timeout alone cannot distinguish healthy from silently dead once auto-ping is on.");
 
 code("CONNECTION CONCERNS · THE LIVENESS SWEEP", "A scheduled bean, not endpoint logic: it needs every connection at once",
   ["@ApplicationScoped",
@@ -296,7 +296,7 @@ code("CONNECTION CONCERNS · THE LIVENESS SWEEP", "A scheduled bean, not endpoin
 diagram("CONNECTION CONCERNS · THE PONG-SWEEP TIMELINE", "From last pong to the close the peer never acknowledges",
   "14-pong-sweep-timeline",
   "Figure 14.2: the real timeline from last pong to the TCP socket actually closing: detection at the liveness timeout, then up to ten more seconds of closing-handshake grace before onClose observes 1006.",
-  "Closing a WebSocket is itself a two-way handshake: the server sends a close frame and waits for the peer's own close frame before tearing down TCP. A peer this sweep has just proven isn't responding won't send that acknowledgment either, so Vert.x forcibly terminates after its own closing-timeout grace (~10s) elapses; confirmed live: onClose sees the connection's final CloseReason as 1006, not 4408, because the requested close never completed its handshake. That's standard WebSocket behavior for an unresponsive peer, not a bug in the sweep.");
+  "Closing a WebSocket is itself a two-way handshake: the server sends a close frame and waits for the peer's own close frame before tearing down TCP. A peer this sweep has just proven isn't responding won't send that acknowledgment either, so Vert.x forcibly terminates after its own closing-timeout grace (~10s) elapses; confirmed live: onClose sees the connection's final CloseReason as 1006, not 4408, because the requested close never completed its handshake. That's standard WebSocket behavior for an unresponsive peer; the sweep is working as designed.");
 
 diagram("CONNECTION CONCERNS · AUTHENTICATE AT THE UPGRADE", "Both stacks accept, then validate as the first thing the handler does",
   "17-auth-upgrade-flow",
@@ -326,7 +326,7 @@ code("CONNECTION CONCERNS · HS256 AT THE HANDSHAKE", "Verify the token; collaps
 
 // ===== SECTION 03 — RECONNECT AND THE BACKPLANE (Ch15/16/18) ===================
 divider("03", "Reconnect and the Backplane", "What a dropped connection loses, and what a shared broker gets back.",
-  "part4-backplane moves from one connection to multiple server instances. Stateless mode (Ch15) is the starting baseline: a gap is lost. Kafka (Ch16) makes the gap replayable from afterEventId. Redis (Ch18) buys live fan-out across instances with no replay at all. Same channel, same fixture seed, three delivery strategies selected by one enum.");
+  "part4-backplane moves from one connection to multiple server instances. Stateless mode (stateless reconnect) is the starting baseline: a gap is lost. Kafka (Kafka-backed reconnect) makes the gap replayable from afterEventId. Redis (scale-out) buys live fan-out across instances with no replay at all. Same channel, same fixture seed, three delivery strategies selected by one enum.");
 
 diagram("RECONNECT & BACKPLANE · PART 4-BACKPLANE AT A GLANCE", "Two instances, an inject endpoint, and a mode-selected fan-out path",
   "part4-backplane-architecture",
@@ -336,7 +336,7 @@ diagram("RECONNECT & BACKPLANE · PART 4-BACKPLANE AT A GLANCE", "Two instances,
 diagram("RECONNECT & BACKPLANE · WHEN STATELESS IS FINE", "A fresh value supersedes a stale one, or a full resync is cheap",
   "15-when-stateless-ok",
   "Figure 15.2: the decision: stateless reconnect is fine when a fresh value supersedes a stale one or a full resync is cheap, and not enough when every event is individually significant and the feed is the only record of it.",
-  "This is the decision this whole section hangs on, stated before any code: a handling-event feed fails the 'stateless is fine' test on all three counts: every event is a discrete billable fact, there's no cheap REST endpoint to re-GET the gap from, and at-least-once delivery matters for an audit trail. That's precisely why Ch16's Kafka-backed mode exists, not because Kafka is the default choice for every WebSocket feed.");
+  "This is the decision this whole section hangs on, stated before any code: a handling-event feed fails the 'stateless is fine' test on all three counts: every event is a discrete billable fact, there's no cheap REST endpoint to re-GET the gap from, and at-least-once delivery matters for an audit trail. That's precisely why the Kafka-backed mode exists, not because Kafka is the default choice for every WebSocket feed.");
 
 code("RECONNECT & BACKPLANE · STATELESS MODE", "The default: afterEventId is accepted, and ignored",
   ["public enum BackplaneMode { STATELESS, KAFKA, REDIS }",
@@ -358,12 +358,12 @@ code("RECONNECT & BACKPLANE · STATELESS MODE", "The default: afterEventId is ac
    "    }",
    "}"],
   "StatelessBackplane.java / BackplaneMode.java: examples/part4-backplane/quarkus/src/main/java/.../backplane/",
-  "This is the Ch15/Ch18 baseline and the default: an injected event reaches only local connections on the instance that received the inject call, never persisted; a client disconnected at injection time loses it permanently. That's the visible gap the Kafka mode (next few slides) is built to close, not a bug in this class.");
+  "This is the stateless-reconnect and scale-out baseline and the default: an injected event reaches only local connections on the instance that received the inject call, never persisted; a client disconnected at injection time loses it permanently. That's the visible gap the Kafka mode (next few slides) is built to close; this class is working as designed.");
 
 diagram("RECONNECT & BACKPLANE · TOPIC-OFFSET RESUME", "Injected events are keyed by bookingId; the seed never touches Kafka",
   "16-topic-offset-resume",
   "Figure 16.1: the topic/offset/resume model: the seed never touches Kafka, only injected events are keyed into the topic by bookingId, and an afterEventId that names a seed id always falls back to replaying everything currently in the topic.",
-  "The fixture seed is sent separately and unconditionally, outside this replay path: the Kafka topic carries only injected events. That's why a client's afterEventId naming a fixture-seed id (the expected Ch15 gap scenario, right after connecting) always misses the search and replays the entire injected history, rather than replaying nothing: fixture ids never appear in the topic buffer at all.");
+  "The fixture seed is sent separately and unconditionally, outside this replay path: the Kafka topic carries only injected events. That's why a client's afterEventId naming a fixture-seed id (the expected stateless-reconnect gap scenario, right after connecting) always misses the search and replays the entire injected history, rather than replaying nothing: fixture ids never appear in the topic buffer at all.");
 
 code("RECONNECT & BACKPLANE · THE KAFKA BACKPLANE", "Every instance has its own consumer group: fan-out, not load-balancing",
   ["@Incoming(\"handling-events-in\")",
@@ -384,7 +384,7 @@ code("RECONNECT & BACKPLANE · THE KAFKA BACKPLANE", "Every instance has its own
    "    emitter.send(message);",
    "}"],
   "examples/part4-backplane/quarkus/src/main/java/.../backplane/KafkaBackplane.java",
-  "mp.messaging.incoming.handling-events-in.group.id is derived from each instance's own INSTANCE_ID, so every instance gets its own consumer group and receives every record: the opposite of the usual shared-group load-balancing pattern, chosen because Ch18's proof needs instance A's client to see an event injected through instance B. auto.offset.reset=earliest means a freshly started instance replays the full topic into memory before any client connects, so replayFor always has the complete picture.");
+  "mp.messaging.incoming.handling-events-in.group.id is derived from each instance's own INSTANCE_ID, so every instance gets its own consumer group and receives every record: the opposite of the usual shared-group load-balancing pattern, chosen because the scale-out chapter's proof needs instance A's client to see an event injected through instance B. auto.offset.reset=earliest means a freshly started instance replays the full topic into memory before any client connects, so replayFor always has the complete picture.");
 
 diagram("RECONNECT & BACKPLANE · STICKY SESSIONS VS. A SHARED BACKPLANE", "A sticky session says nothing about where an event enters",
   "18-sticky-vs-backplane",
@@ -394,7 +394,7 @@ diagram("RECONNECT & BACKPLANE · STICKY SESSIONS VS. A SHARED BACKPLANE", "A st
 diagram("RECONNECT & BACKPLANE · KAFKA VS. REDIS", "Same fan-out outcome, different trade-off: no single winner",
   "18-kafka-vs-redis",
   "Figure 18.2: Kafka and Redis both close the fan-out gap; the difference is what each one gives up to do it cheaply (Redis) or durably (Kafka), not whether the client gets the event.",
-  "Kafka: durable, retained on disk, replayable; the same topic that powers Ch16's afterEventId resume, at the cost of topic/partition/offset bookkeeping per instance. Redis: a handling-events:{bookingId} Pub/Sub channel, live fan-out only; a dropped subscriber loses in-flight messages with nothing to catch back up, and afterEventId behaves exactly as stateless mode because there's no history. verify.sh proves identical cross-instance delivery on both; the choice is an operational trade-off, not a correctness one.");
+  "Kafka: durable, retained on disk, replayable; the same topic that powers the Kafka-backed reconnect's afterEventId resume, at the cost of topic/partition/offset bookkeeping per instance. Redis: a handling-events:{bookingId} Pub/Sub channel, live fan-out only; a dropped subscriber loses in-flight messages with nothing to catch back up, and afterEventId behaves exactly as stateless mode because there's no history. verify.sh proves identical cross-instance delivery on both; the choice is an operational trade-off, not a correctness one.");
 
 code("RECONNECT & BACKPLANE · THE REDIS BACKPLANE", "Pub/Sub, subscribed once per booking, kept for the app's lifetime",
   ["@Override",
@@ -430,11 +430,11 @@ code("RECONNECT & BACKPLANE · THE INJECT SEAM", "One internal endpoint, routed 
    "    }",
    "}"],
   "examples/part4-backplane/quarkus/src/main/java/.../backplane/HandlingEventInjectResource.java",
-  "Not part of contracts/asyncapi.yaml: an internal/demo endpoint, documented in PROTOCOL.md's 'Inject endpoint' section, how tests and the Ch18 proof itself get an event onto the active backplane. Always 202 Accepted: publishing is fire-and-forget from the caller's side, regardless of whether delivery ends up local-only (stateless), durable (Kafka), or live-only (Redis): BackplaneRouter is the one seam that routes to whichever mode application.properties selected.");
+  "Not part of contracts/asyncapi.yaml: an internal/demo endpoint, documented in PROTOCOL.md's 'Inject endpoint' section, how tests and the scale-out chapter's proof itself get an event onto the active backplane. Always 202 Accepted: publishing is fire-and-forget from the caller's side, regardless of whether delivery ends up local-only (stateless), durable (Kafka), or live-only (Redis): BackplaneRouter is the one seam that routes to whichever mode application.properties selected.");
 
 // ===== SECTION 04 — PERFORMANCE (Ch19/20) =======================================
 divider("04", "Performance", "A second wire encoding, negotiated, and the four levers that bound throughput.",
-  "part5-performance adds a choice between JSON and Protobuf, negotiated via Sec-WebSocket-Protocol on the same channel, then walks the throughput levers (encoding, batching, compression, size limits) that sit underneath Chapter 12's backpressure ceiling from section 02.");
+  "part5-performance adds a choice between JSON and Protobuf, negotiated via Sec-WebSocket-Protocol on the same channel, then walks the throughput levers (encoding, batching, compression, size limits) that sit underneath the backpressure ceiling from section 02.");
 
 diagram("PERFORMANCE · PART 5 AT A GLANCE", "Two wire encodings negotiated by subprotocol, decoded to identical values",
   "part5-performance-architecture",
@@ -470,15 +470,15 @@ code("PERFORMANCE · THE PROTOBUF PATH", "Map to the generated type, then branch
 diagram("PERFORMANCE · FIELD NUMBERS ARE THE REAL CONTRACT", "A JSON key can be renamed freely; a Protobuf tag never can",
   "19-field-numbers-vs-key-names",
   "Figure 19.2: a JSON key can be renamed freely because the string itself is the identity; a Protobuf field number can never move or be reused, because the integer tag, not the field's name, is the wire identity.",
-  "scripts/check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn't also carry: the same additive-only discipline Chapter 7's JSON contract already enforces, just enforced on a different identity (an integer tag rather than a string key). HandlingEventProtoMapper's own enum-prefix stripping is this same discipline showing up as runtime code: the proto enum's HANDLING_EVENT_TYPE_ prefix has to agree with the bare Java enum on both sides.");
+  "scripts/check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn't also carry: the same additive-only discipline the versioning-and-evolution chapter's JSON contract already enforces, just enforced on a different identity (an integer tag rather than a string key). HandlingEventProtoMapper's own enum-prefix stripping is this same discipline showing up as runtime code: the proto enum's HANDLING_EVENT_TYPE_ prefix has to agree with the bare Java enum on both sides.");
 
 diagram("PERFORMANCE · THE THROUGHPUT LEVERS", "Four levers, one shared ceiling underneath all of them",
   "20-levers",
-  "Figure 20.2: four throughput levers, one shared ceiling: Chapter 12's bounded outbound queue governs every byte every lever above it produces.",
-  "Encoding (Protobuf vs. JSON) is a fixed, load-independent per-frame discount. Batching trades latency for fewer, larger frames. permessage-deflate is a per-stack default difference, not a universal win: Python's websockets library enables compression=\"deflate\" by default; Quarkus WebSockets Next requires an explicit per-message-compression-supported=true to negotiate it at all. Size limits (max-message-size/max-frame-size) bound one frame independent of Chapter 12's queue depth. None of the four changes whether backpressure trips; they only change how much useful work a connection gets through before it does.");
+  "Figure 20.2: four throughput levers, one shared ceiling: the bounded outbound queue governs every byte every lever above it produces.",
+  "Encoding (Protobuf vs. JSON) is a fixed, load-independent per-frame discount. Batching trades latency for fewer, larger frames. permessage-deflate is a per-stack default difference, not a universal win: Python's websockets library enables compression=\"deflate\" by default; Quarkus WebSockets Next requires an explicit per-message-compression-supported=true to negotiate it at all. Size limits (max-message-size/max-frame-size) bound one frame independent of the backpressure queue's depth. None of the four changes whether backpressure trips; they only change how much useful work a connection gets through before it does.");
 
-code("PERFORMANCE · COMPRESSION AND SIZE LIMITS", "Illustrative Ch20 config: neither property is actually set in this example",
-  ["# _docs/20-optimizing-throughput.md — Ch20's own config excerpt.",
+code("PERFORMANCE · COMPRESSION AND SIZE LIMITS", "Illustrative config: neither property is set in this example",
+  ["# _docs/20-optimizing-throughput.md: Ch20's own config excerpt.",
    "# NOT present in examples/part5-performance/quarkus/.../application.properties:",
    "# that file never sets either property, which is itself this chapter's finding",
    "# (Quarkus defaults per-message-compression-supported to OFF; Python's",
@@ -490,8 +490,8 @@ code("PERFORMANCE · COMPRESSION AND SIZE LIMITS", "Illustrative Ch20 config: ne
    "# application-level cap beyond Vert.x/Netty's own defaults.",
    "quarkus.websockets-next.server.max-message-size=1048576",
    "quarkus.websockets-next.server.max-frame-size=65536"],
-  "_docs/20-optimizing-throughput.md (Ch20): illustrative; not set in examples/part5-performance/quarkus/src/main/resources/application.properties",
-  "A correction on this slide's own source: the actual application.properties for part5-performance sets neither property: that absence is the Ch20 finding being illustrated, not an oversight in this deck. A production deployment accepting attacker-reachable messages would want an explicit max-message-size/max-frame-size rather than relying on the framework's own ceiling; the chapter's k6/benchmark.js measured the compression-negotiation gap live (0% on Quarkus vs. 100% on Python across three runs with the identical client request).");
+  "_docs/20-optimizing-throughput.md: illustrative; not set in examples/part5-performance/quarkus/src/main/resources/application.properties",
+  "A correction on this slide's own source: the actual application.properties for part5-performance sets neither property: that absence is what this chapter is illustrating, not an oversight in this deck. A production deployment accepting attacker-reachable messages would want an explicit max-message-size/max-frame-size rather than relying on the framework's own ceiling; the chapter's k6/benchmark.js measured the compression-negotiation gap live (0% on Quarkus vs. 100% on Python across three runs with the identical client request).");
 
 diagram("PERFORMANCE · BYTES PER FRAME, MEASURED", "Protobuf's size win is real; deflate's is a measurement blind spot",
   "20-bytes-per-frame",
@@ -500,7 +500,7 @@ diagram("PERFORMANCE · BYTES PER FRAME, MEASURED", "Protobuf's size win is real
 
 // ===== SECTION 05 — TESTING, DEBUGGING, OBSERVABILITY (Ch21/22/23) ==============
 divider("05", "Testing, Debugging, Observability", "Proving a protocol you can't curl, then watching it run.",
-  "Section 05 closes the implementation arc: the test pyramid this whole site's verify.sh corpus already is (Ch21), a symptom-to-tool map for live debugging (Ch22), and the one place Quarkus's auto-instrumentation stops and a manual span has to start (Ch23).");
+  "Section 05 closes the implementation arc: the test pyramid this whole site's verify.sh corpus already is (testing), a symptom-to-tool map for live debugging (debugging), and the one place Quarkus's auto-instrumentation stops and a manual span has to start (observability).");
 
 diagram("TESTING · THE PYRAMID FOR A PROTOCOL YOU CAN'T CURL", "Five tools, four tiers, all gated on one contract-derived schema",
   "21-test-pyramid",
@@ -527,12 +527,12 @@ code("TESTING · THE CONFORMANCE TEST, RE-RUN AGAINST PART 6", "Same shape, re-v
 diagram("DEBUGGING · SYMPTOM TO TOOL", "Reach for the cheapest tool that taps the right layer first",
   "22-symptom-to-tool",
   "Figure 22.2: five symptoms, five first tools: start at the cheapest tool that taps the layer the symptom points to.",
-  "Never upgrades at all → curl --include (a proxy likely stripped Connection: Upgrade). 101 then silence → DevTools Frames or websocat -t (check the auth gate from section 02, or a subprotocol mismatch). Wrong frame shape → the binary/text icon or websocat -b | xxd (an opcode mismatch, Ch19's negotiation gone wrong). Drops with no reason → the close_code itself: 4400/4290/4408/1008 each say why; 1006 means no code arrived at all. Dies under load → backpressure (4290) or the liveness sweep (4408) firing under pressure, both from section 02.");
+  "Never upgrades at all → curl --include (a proxy likely stripped Connection: Upgrade). 101 then silence → DevTools Frames or websocat -t (check the auth gate from section 02, or a subprotocol mismatch). Wrong frame shape → the binary/text icon or websocat -b | xxd (an opcode mismatch, the binary-Protobuf chapter's negotiation gone wrong). Drops with no reason → the close_code itself: 4400/4290/4408/1008 each say why; 1006 means no code arrived at all. Dies under load → backpressure (4290) or the liveness sweep (4408) firing under pressure, both from section 02.");
 
 diagram("OBSERVABILITY · AUTO-TRACED UPGRADE, MANUAL PUSH SPAN", "Same span name, same trace-id log line, two different paths to get there",
   "23-auto-vs-manual",
   "Figure 23.1: Quarkus adds a manual child span under an auto-traced HTTP upgrade; Python has no auto-traced layer at all, so the whole connection span is hand-written with the SDK tracer directly.",
-  "quarkus-opentelemetry auto-instruments the HTTP upgrade itself: every request gets a span with zero code. @WithSpan on @OnOpen adds a child span over the Multi it returns; the interceptor defers span.end() until that Multi completes, so the span covers the whole push, not just the synchronous part of the method body. Python has no native websockets auto-instrumentation at all: its equivalent span is entirely hand-written with the SDK tracer, no parent to attach to.");
+  "quarkus-opentelemetry auto-instruments the HTTP upgrade itself: every request gets a span with zero code. @WithSpan on @OnOpen adds a child span over the Multi it returns; the interceptor defers span.end() until that Multi completes, so the span covers the whole push rather than ending at the method's synchronous return. Python has no native websockets auto-instrumentation at all: its equivalent span is entirely hand-written with the SDK tracer, no parent to attach to.");
 
 code("OBSERVABILITY · THE MANUAL SPAN AND THE DELIVERY COUNTER", "A child span, a trace-id log line, a Micrometer counter: once per event",
   ["@WebSocket(path = \"/ws/v1/bookings/{bookingId}/handling-events\", endpointId = \"handling-events\")",
@@ -579,7 +579,7 @@ divider("APP", "Appendix: Manifests, Edge Cases, Reference", "Keep this open in 
   "The appendix carries platform manifests that didn't fit the main body's narrative arc (the minikube ingress overlay, the OpenShift Route and pinned AMQ Streams CSV), two lifecycle edge cases worth knowing before running this in production, and the version matrix every example in this deck is pinned against.");
 
 code("APPENDIX · THE MINIKUBE INGRESS OVERLAY", "Raised proxy timeouts and an affinity cookie for a long-lived upgrade",
-  ["# k8s/overlays/minikube/kustomization.yaml — retags images to the tag",
+  ["# k8s/overlays/minikube/kustomization.yaml: retags images to the tag",
    "# verify-minikube.sh builds+loads, forces imagePullPolicy: Never",
    "images:",
    "  - name: part4-backplane-quarkus",
@@ -591,14 +591,14 @@ code("APPENDIX · THE MINIKUBE INGRESS OVERLAY", "Raised proxy timeouts and an a
    "        path: /spec/template/spec/containers/0/imagePullPolicy",
    "        value: Never",
    "",
-   "# k8s/base/ingress.yaml — nginx's 60s proxy-read-timeout would otherwise",
+   "# k8s/base/ingress.yaml: nginx's 60s proxy-read-timeout would otherwise",
    "# kill a long-lived upgraded connection that goes quiet",
    "annotations:",
    "  nginx.ingress.kubernetes.io/proxy-read-timeout: \"3600\"",
    "  nginx.ingress.kubernetes.io/proxy-send-timeout: \"3600\"",
    "  nginx.ingress.kubernetes.io/affinity: \"cookie\""],
   "examples/part4-backplane/k8s/overlays/minikube/kustomization.yaml + k8s/base/ingress.yaml",
-  "No special 'websocket' annotation exists for ingress-nginx: it detects the Connection: Upgrade / Upgrade: websocket request headers and proxies the upgrade through automatically; only the timeouts need raising. The affinity cookie is a sticky session so a reconnecting client (Ch15/Ch16) keeps landing on the same pod, moot with one replica per instance here, but it documents the production-shape intent. verify-minikube.sh's idle-hold step is the live proof the raised timeout does what it says: hold past 60s, assert a late frame still arrives.");
+  "No special 'websocket' annotation exists for ingress-nginx: it detects the Connection: Upgrade / Upgrade: websocket request headers and proxies the upgrade through automatically; only the timeouts need raising. The affinity cookie is a sticky session so a reconnecting client (stateless or Kafka-backed reconnect) keeps landing on the same pod, moot with one replica per instance here, but it documents the production-shape intent. verify-minikube.sh's idle-hold step is the live proof the raised timeout does what it says: hold past 60s, assert a late frame still arrives.");
 
 code("APPENDIX · THE OPENSHIFT ROUTE AND PINNED KAFKA OPERATOR", "Edge-TLS at the router; a Manual-approval CSV pin for AMQ Streams",
   ["# openshift/helm/part4-backplane/templates/routes.yaml",
@@ -624,7 +624,7 @@ code("APPENDIX · THE OPENSHIFT ROUTE AND PINNED KAFKA OPERATOR", "Edge-TLS at t
 content("APPENDIX · COMPOSE PROFILES VS. BACKPLANE_MODE", "One env var selects the mode; a compose profile brings up the matching broker",
   ["compose.yaml's three profiles (default/kafka/redis) each bring up exactly the infrastructure the matching BACKPLANE_MODE needs: no profile brings up a broker the app isn't configured to use.",
    "BACKPLANE_MODE=STATELESS (default, no profile) boots with no broker at all; KAFKA and REDIS each need their own profile flag to start the matching container alongside the app.",
-   "Ch25 keeps this pairing explicit rather than always starting every broker: a stateless-mode run with a Kafka container sitting idle nearby would be a confusing demo, not a safer one."],
+   "The Docker Compose chapter keeps this pairing explicit rather than always starting every broker: a stateless-mode run with a Kafka container sitting idle nearby would be a confusing demo, not a safer one."],
   "The point to make here: BACKPLANE_MODE and the compose profile are two separate selectors that have to agree, not one flag doing double duty. Getting them out of sync, KAFKA mode with no kafka profile running, is exactly the scenario the next appendix slide's hard-fail receipt documents.");
 
 code("APPENDIX · THE NO-RESOLVABLE-BOOTSTRAP HARD-FAIL", "An unresolvable Kafka hostname crashes Quarkus at startup: a receipt, not a guess",
@@ -650,13 +650,13 @@ code("APPENDIX · THE NO-RESOLVABLE-BOOTSTRAP HARD-FAIL", "An unresolvable Kafka
 content("APPENDIX · DEDUP-BY-EVENTID IS A BENIGN RACE", "A replayed Kafka record and the live consumer can both deliver the same event",
   ["KafkaBackplane#consume dedupes with a per-booking Set<String> of seen eventIds before appending to the in-memory history: a redelivered or replayed record never gets counted twice in replayFor's search.",
    "The race this guards is between a replay burst (on instance startup, auto.offset.reset=earliest) and the always-on live consumer: both can observe the same record, and only the first one to call seen.add(...) wins the append.",
-   "This is a benign race, not a bug to eliminate: the client-side contract is 'dedupe by eventId,' so a client that receives the same event twice over the wire (the seen.add race doesn't prevent delivery, only double-counting history) is already expected to tolerate it."],
+   "This is a benign, expected race: the client-side contract is 'dedupe by eventId,' so a client that receives the same event twice over the wire (the seen.add race doesn't prevent delivery, only double-counting history) is already expected to tolerate it."],
   "Worth being precise about what this guard does and doesn't do: it prevents the in-memory injected history from growing duplicate entries, which would otherwise corrupt replayFor's afterEventId search. It does not guarantee a connected client never sees the same HandlingEvent delivered twice over the wire in a narrow replay-vs-live race: that's exactly why every consumer on this channel, client included, is expected to dedupe by eventId rather than assume delivery is exactly-once.");
 
 code("APPENDIX · LIFECYCLE EDGE CASES", "SKIP overlapping sweeps; close every connection with a stated reason on shutdown",
   ["@Scheduled(every = \"${example.heartbeat.sweep-interval:5s}\",",
    "           concurrentExecution = ConcurrentExecution.SKIP)",
-   "void sweep() { /* HeartbeatLivenessSweep — see section 02 */ }",
+   "void sweep() { /* HeartbeatLivenessSweep, see section 02 */ }",
    "",
    "@ApplicationScoped",
    "public class ConnectionLifecycleShutdown {",
@@ -686,7 +686,7 @@ statusTable("APPENDIX · VERSION MATRIX", "What every example in this deck is pi
     { code: "minikube", name: "v1.39.0 (floor)", purpose: "docker driver + containerd runtime only: the podman path is not supported" },
     { code: "CRC", name: "2.64.0 / OCP 4.22.14", purpose: "verified live headless 2026-10-19" },
   ],
-  "Pulled directly from _plans/version-matrix.md, not restated from memory: check that file before citing a version from this deck. Repeat this hedge every time CRC's Kafka version comes up: 4.2.0 is a recorded step-back from 4.3.1 because the AMQ Streams operator doesn't yet support 4.3.x, and the CRC idle-hold proof is weaker than minikube's own run for that reason: the wire behavior Ch16/Ch18 exercise is identical on both versions, but the version pin itself is not.",
+  "Pulled directly from _plans/version-matrix.md, not restated from memory: check that file before citing a version from this deck. Repeat this hedge every time CRC's Kafka version comes up: 4.2.0 is a recorded step-back from 4.3.1 because the AMQ Streams operator doesn't yet support 4.3.x, and the CRC idle-hold proof is weaker than minikube's own run for that reason: the wire behavior the Kafka-backed-reconnect and scale-out chapters exercise is identical on both versions, but the version pin itself is not.",
   { colW: [2.5, 2.0, 7.59] });
 
 

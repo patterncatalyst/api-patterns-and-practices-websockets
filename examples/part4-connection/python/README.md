@@ -1,4 +1,4 @@
-# Part 4 example — Python native `websockets` + FastAPI: connection concerns
+# Part 4 example: Python native `websockets` + FastAPI, connection concerns
 
 Forks `examples/part3-handling-events/python` and layers four "keeping a
 long-lived connection healthy" concerns on top of its plain fixture replay,
@@ -14,31 +14,31 @@ implementing the same `contracts/asyncapi.yaml` `handlingEvents` channel:
 The channel (`/ws/v1/bookings/{bookingId}/handling-events`) pushes the same
 three `HandlingEvent`s (RECEIVE, LOAD, CUSTOMS) as Part 3, reusing Part 3's
 shared fixture byte-for-byte (`../../part3-handling-events/fixtures/handling-events.json`)
-rather than duplicating it — Part 4 is about connection concerns, not new
+rather than duplicating it: Part 4 is about connection concerns, not new
 message content. The Quarkus sibling (`../quarkus/`) implements the same
 four concerns against the same contract, so the two stacks are directly
 comparable.
 
 ## Architecture
 
-Two listeners, one process, one event loop (`app/main.py`) — unchanged from
+Two listeners, one process, one event loop (`app/main.py`), unchanged from
 Part 3:
 
-- **`app/ws_server.py`** — the WebSocket endpoint, built on the native
+- **`app/ws_server.py`**: the WebSocket endpoint, built on the native
   `websockets` library. Listens on `WS_HOST:WS_PORT` (default
   `0.0.0.0:8081`).
-- **`app/http_app.py`** — a small FastAPI app (`/healthz`, `/`) for
+- **`app/http_app.py`**: a small FastAPI app (`/healthz`, `/`) for
   HTTP/app lifecycle, run under uvicorn on `HTTP_HOST:HTTP_PORT` (default
   `0.0.0.0:8082`).
 
-## JWT auth (Ch17)
+## JWT auth
 
 HS256, shared-secret tokens, carried as `?token=<jwt>` on the WebSocket
 upgrade URL (per `contracts/asyncapi.yaml` `servers.local.bindings.ws`).
 Secret: `WS_JWT_SECRET` (dev default: `dev-secret-change-me`; override it
 for anything beyond local dev). Validation happens in `app/ws_server.py`'s
-`handler`, immediately after the opening handshake completes and BEFORE any
-fixture frame is sent — see that module's docstring for why rejection is a
+`handler`, immediately after the opening handshake completes and before any
+fixture frame is sent. See that module's docstring for why rejection is a
 post-accept WebSocket close (code **1008**) rather than an HTTP-level
 `process_request` rejection.
 
@@ -65,10 +65,10 @@ via `WS_JWT_SECRET` for anything beyond that.
 | `1011` | Unexpected server-side error | `app/ws_server.py` |
 | `1001` | Server going away (sent to every open connection when the server shuts down) | the `websockets` library's default `Server.close()` behavior |
 
-## Error handling (Ch13): close-code-vs-envelope
+## Error handling: close-code-vs-envelope
 
 This channel defines no client-to-server operation (server-push only), so
-ANY frame a client sends is a protocol error. For that case the server sends
+any frame a client sends is a protocol error. For that case the server sends
 an in-band JSON error envelope **before** closing:
 
 ```json
@@ -78,40 +78,41 @@ an in-band JSON error envelope **before** closing:
 ...then closes with `4400`. The envelope carries human-readable detail a
 client developer can log; the close code alone tells automated reconnect
 logic *that* something ended and *roughly why*, without parsing a payload.
-Cases that aren't about one specific bad message — auth failure (`1008`),
-backpressure (`4290`), an unexpected server exception (`1011`) — rely on the
-close code alone, since there's no single offending frame to annotate.
+Cases that aren't about one specific bad message, such as auth failure
+(`1008`), backpressure (`4290`), or an unexpected server exception
+(`1011`), rely on the close code alone, since there's no single offending
+frame to annotate.
 
-## Backpressure (Ch12)
+## Backpressure
 
 `app/outbound.py`'s `OutboundQueue` decouples frame production from the
 actual `websocket.send()` call via a bounded `asyncio.Queue`
-(`OUTBOUND_QUEUE_MAXSIZE`, default 32). A sustained overrun — the queue
-fills up, or a single `send()` hangs past `OUTBOUND_SEND_TIMEOUT_S` (default
-5s) because the peer stopped reading — triggers
+(`OUTBOUND_QUEUE_MAXSIZE`, default 32). A sustained overrun, meaning the
+queue fills up or a single `send()` hangs past `OUTBOUND_SEND_TIMEOUT_S`
+(default 5s) because the peer stopped reading, triggers
 `OUTBOUND_BACKPRESSURE_POLICY`:
 
-- `close` (default) — close the connection with `4290`. Safer default: an
+- `close` (default): close the connection with `4290`. Safer default: an
   unbounded number of slow clients each holding a full queue is a
   resource-exhaustion path, and a dropped `HandlingEvent` is a correctness
   problem for this feed, not a superseded-by-the-next-update one.
-- `drop` — log a warning and discard the triggering frame, keeping the
+- `drop`: log a warning and discard the triggering frame, keeping the
   connection open. Shown for comparison; not the right default for this
   channel's semantics (see `app/outbound.py`'s module docstring).
 
-## Heartbeats (Ch14)
+## Heartbeats
 
 Delegated entirely to the `websockets` library: `create_server` passes
 `ping_interval`/`ping_timeout` straight to `serve()`. The library sends a
 ping every `ping_interval` seconds and closes the connection if no pong
-arrives within `ping_timeout` seconds — no custom liveness code in this
+arrives within `ping_timeout` seconds. No custom liveness code lives in this
 module. Both are env-overridable (`WS_PING_INTERVAL_S` / `WS_PING_TIMEOUT_S`,
 default 20s each) so a test can shrink the window to something it can wait
 out.
 
 ## Build-time model generation
 
-`app/models_generated.py` is **generated, gitignored, never committed** —
+`app/models_generated.py` is **generated, gitignored, never committed**:
 identical pipeline to Part 3:
 
 ```bash

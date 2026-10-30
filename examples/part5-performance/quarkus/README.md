@@ -1,28 +1,28 @@
-# Part 5 "Performance" — Quarkus (WebSockets Next)
+# Part 5 "Performance": Quarkus (WebSockets Next)
 
-Forked from the LAYOUT of
+Forks the layout of
 [`examples/part4-connection/quarkus`](../../part4-connection/quarkus) (pom,
 `@WebSocket` endpoint, `HandlingEvent` record/enum/feed, Containerfile
-build-context-from-repo-root, `HandlingEventContractTest`) — but NOT its
+build-context-from-repo-root, `HandlingEventContractTest`), without its
 connection-concern code (JWT auth, heartbeats, backpressure, the malformed-
-frame error envelope): this part is about wire ENCODING, not connection
-hardening, so those stay out of scope here. The same `handlingEvents`
+frame error envelope): wire encoding is the new material here, and
+connection hardening stays out of scope. The same `handlingEvents`
 channel (`operations.receiveHandlingEvent`,
-[`contracts/asyncapi.yaml`](../../../contracts/asyncapi.yaml)) — one
-WebSocket connection per booking, replaying the shared fixture on open, then
-staying open — now negotiates which of TWO wire encodings carries that
-replay. The Python/`websockets`-library sibling app
+[`contracts/asyncapi.yaml`](../../../contracts/asyncapi.yaml)), one
+WebSocket connection per booking that replays the shared fixture on open
+and then stays open, now negotiates which of two wire encodings carries
+that replay. The Python/`websockets`-library sibling app
 ([`../python`](../python)) implements the identical behavior against the
 same contract and the same proto; see that app's README/docstrings for the
 other side of every convention below.
 
 - **Endpoint:** `ws://localhost:8090/ws/v1/bookings/{bookingId}/handling-events`
-  (port **8090** — distinct from part3/part4's 8080 so both can run at once).
+  (port **8090**, distinct from part3/part4's 8080 so both can run at once).
 - **Model:** `HandlingEvent` / `HandlingEventType` are byte-for-byte copies
-  of part3/part4's — this part adds no new message content, only a second
+  of part3/part4's: this adds no new message content, only a second
   wire encoding of the same shape.
 
-## Encoding negotiation (DRQ-026)
+## Encoding negotiation
 
 A client picks the wire encoding via `Sec-WebSocket-Protocol`, offering one
 or more of the three values `contracts/asyncapi.yaml` declares:
@@ -30,35 +30,35 @@ or more of the three values `contracts/asyncapi.yaml` declares:
 | Client offers                  | Server selects (echoed back)   | Wire encoding                                  |
 |---------------------------------|----------------------------------|-------------------------------------------------|
 | `handling-events.v1+protobuf`  | `handling-events.v1+protobuf`  | Protobuf **binary** frames (opcode `0x2`)        |
-| `handling-events.v1+json`      | `handling-events.v1+json`      | JSON **text** frames (opcode `0x1`) — same as part3/part4 |
-| `handling-events.v1` (bare)    | `handling-events.v1`           | JSON **text** frames — equivalent to `+json`     |
-| nothing                        | *(none negotiated)*            | JSON **text** frames — the pre-Part-5 default    |
+| `handling-events.v1+json`      | `handling-events.v1+json`      | JSON **text** frames (opcode `0x1`), same as part3/part4 |
+| `handling-events.v1` (bare)    | `handling-events.v1`           | JSON **text** frames, equivalent to `+json`     |
+| nothing                        | *(none negotiated)*            | JSON **text** frames, the pre-Part-5 default    |
 
 `quarkus.websockets-next.server.supported-subprotocols` (application.properties)
-lists all three; Vert.x picks the first entry in THAT list the client also
+lists all three; Vert.x picks the first entry in that list the client also
 offered and echoes it back in the `101` response.
 `HandlingEventPerformanceWebSocket#onOpen` reads the result via
-`WebSocketConnection#subprotocol()` and branches on it — see that class's
+`WebSocketConnection#subprotocol()` and branches on it; see that class's
 Javadoc for why this is an explicit `sendText`/`sendBinary` chain rather than
 `return Multi<...>` (the framework's own build-time dispatch code picks
-text-vs-binary wiring from the `@OnOpen` method's STATIC declared return
+text-vs-binary wiring from the `@OnOpen` method's static declared return
 type, which rules out one method dynamically choosing between the two per
 connection).
 
-Field VALUES are identical between the two encodings — `occurredAt` /
+Field values are identical between the two encodings: `occurredAt` /
 `registeredAt` stay RFC-3339 strings and `amount` stays a decimal string on
-BOTH sides (see `contracts/handling-event.proto`'s header comment and
-`HandlingEventProtoMapper`'s Javadoc) — a client decodes the same values
+both sides (see `contracts/handling-event.proto`'s header comment and
+`HandlingEventProtoMapper`'s Javadoc). A client decodes the same values
 whichever encoding it negotiated.
 
 ## Protobuf generation
 
 `contracts/handling-event.proto` (package `shipping.handlingevents.v1`) is
 generated into `target/generated-sources/` by
-`io.github.ascopes:protobuf-maven-plugin` at `generate-sources` — never
+`io.github.ascopes:protobuf-maven-plugin` at `generate-sources`; it is never
 committed (see `pom.xml`'s header comment for the exact relative path
 resolution, and `contracts/README.md`'s "No generated stubs are committed"
-convention). Pins (kept in lockstep — see `pom.xml`'s `protobuf.version`
+convention). Pins (kept in lockstep; see `pom.xml`'s `protobuf.version`
 property comment):
 
 - `com.google.protobuf:protobuf-java:4.36.2` (runtime)
@@ -72,15 +72,15 @@ property comment):
 standard collision-avoidance rule appends `OuterClass`, so the generated,
 confirmed-live class is `shipping.handlingevents.v1.HandlingEventOuterClass`,
 nesting `HandlingEventOuterClass.HandlingEvent` and
-`HandlingEventOuterClass.HandlingEventType` — see
-`HandlingEventProtoMapper`'s Javadoc for why this wasn't "fixed" by editing
-the shared, parity-gated contract file just for this one stack's naming
-convenience.
+`HandlingEventOuterClass.HandlingEventType`. See
+`HandlingEventProtoMapper`'s Javadoc for the rationale: the shared,
+parity-gated contract file keeps this name rather than being adjusted for
+one stack's naming convenience.
 
 ## Measured frame sizes (confirmed live)
 
 Compact (no-pretty-print) JSON vs. serialized Protobuf, same three fixture
-events, same field values — protobuf runs **38–41% smaller**:
+events, same field values: protobuf runs **38–41% smaller**:
 
 | Event                          | JSON (bytes) | Protobuf (bytes) | Reduction |
 |---------------------------------|-------------:|------------------:|----------:|
@@ -113,13 +113,13 @@ python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
 ./mvnw -q test
 ```
 
-- `HandlingEventContractTest` — the JSON path: every fixture event validates
+- `HandlingEventContractTest`: the JSON path. Every fixture event validates
   against `build/handling-event.schema.json` (forked verbatim from part3/
   part4's test of the same name).
-- `HandlingEventProtoRoundTripTest` — the Protobuf path: every fixture event
+- `HandlingEventProtoRoundTripTest`: the Protobuf path. Every fixture event
   round-trips through `toProto().toByteArray()` → `parseFrom()` →
-  `fromProto()` back to an `equals()`-identical `HandlingEvent`, the
-  round-tripped value ALSO validates against the same schema, and the
+  `fromProto()` back to an `equals()`-identical `HandlingEvent`; the
+  round-tripped value also validates against the same schema, and the
   Protobuf byte count is asserted strictly smaller than the JSON byte count.
 
 ## Packaging
@@ -160,8 +160,8 @@ wc -c /tmp/first-event.pb   # strictly smaller than the JSON frame above
 A small Java one-off (compiled against the generated proto classes under
 `target/classes`) decodes `/tmp/first-event.pb` back to the same RECEIVE
 event the JSON path returned, confirming both encodings carry identical
-field values — see this module's test suite for the same assertion made
-reproducibly (not just as a manual spot check).
+field values; see this module's test suite for the same assertion made
+reproducibly.
 
 ## Observability
 
@@ -172,7 +172,7 @@ a reachable collector to turn tracing on.
 
 ## Related guides
 
-- [WebSockets Next](https://quarkus.io/guides/websockets-next-reference) —
-  Implementation of the WebSocket API with enhanced efficiency and usability.
-- [OpenTelemetry](https://quarkus.io/guides/opentelemetry) — Use
+- [WebSockets Next](https://quarkus.io/guides/websockets-next-reference):
+  implementation of the WebSocket API with enhanced efficiency and usability.
+- [OpenTelemetry](https://quarkus.io/guides/opentelemetry): use
   OpenTelemetry to trace services.

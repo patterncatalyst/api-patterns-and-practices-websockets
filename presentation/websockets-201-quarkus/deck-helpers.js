@@ -1,4 +1,4 @@
-// deck-helpers.js — design system & helpers for the REST deck
+// deck-helpers.js: design system and helpers for the WebSockets 201 Quarkus deck
 // Carries the visual conventions from the existing Python deck:
 //   - 13.333 x 7.5 LAYOUT_WIDE
 //   - Eyebrow 12pt bold red EE0000, charSpacing 4
@@ -62,7 +62,7 @@ const H = 7.5;
 function newDeck() {
   const pres = new PptxGenJS();
   pres.layout = "LAYOUT_WIDE";
-  pres.title = "Designing Cloud-Native REST APIs — Python";
+  pres.title = "WebSockets with Quarkus: 201 (Quarkus WebSockets Next)";
   pres.author = "Robert Sedor";
   pres.company = "Red Hat";
   return pres;

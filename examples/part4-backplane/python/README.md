@@ -1,7 +1,7 @@
-# Part 4 example — Python native `websockets` + FastAPI: reconnect + backplane fan-out
+# Part 4 example: Python native `websockets` + FastAPI, reconnect + backplane fan-out
 
 Forks `examples/part4-connection/python` and implements
-`examples/part4-backplane/PROTOCOL.md` — the shared wire/behavior contract
+`examples/part4-backplane/PROTOCOL.md`: the shared wire/behavior contract
 both this stack and its Quarkus sibling (`../quarkus/`) implement
 identically, so one combined `verify.sh` can assert both and a client
 connected to one stack's instance A can see an event injected through the
@@ -11,14 +11,14 @@ same stack's instance B.
 | --- | --- | --- |
 | Ch15 | Reconnect (visible gap, stateless) | `app/ws_server.py`, `app/backplane/stateless_backplane.py` |
 | Ch16 | Reconnect (`?afterEventId=` replay via Kafka) | `app/backplane/kafka_backplane.py` |
-| Ch18 | Scale-out fan-out (DRQ-005): stateless/kafka/redis | `app/backplane/` |
+| Ch18 | Scale-out fan-out: stateless/kafka/redis | `app/backplane/` |
 
 The channel (`/ws/v1/bookings/{bookingId}/handling-events`) pushes the same
 three `HandlingEvent`s (RECEIVE, LOAD, CUSTOMS) as Part 3/Part 4-connection,
 reusing the shared fixture byte-for-byte
 (`../../part3-handling-events/fixtures/handling-events.json`) as the
 deterministic seed baseline on **every** connection, in **every** backplane
-mode — this example is about connection/backplane concerns, not new message
+mode: this example is about connection/backplane concerns, not new message
 content.
 
 ## Architecture
@@ -26,18 +26,18 @@ content.
 Two listeners, one process, one event loop (`app/main.py`), sharing one
 `Backplane` instance:
 
-- **`app/ws_server.py`** — the WebSocket endpoint, native `websockets`
+- **`app/ws_server.py`**: the WebSocket endpoint, native `websockets`
   library. Listens on `WS_HOST:WS_PORT` (default `0.0.0.0:8081`).
-- **`app/http_app.py`** — a small FastAPI app (`/healthz`, `/`, and the
+- **`app/http_app.py`**: a small FastAPI app (`/healthz`, `/`, and the
   `POST /internal/bookings/{bookingId}/handling-events` inject endpoint),
   run under uvicorn on `HTTP_HOST:HTTP_PORT` (default `0.0.0.0:8082`).
-- **`app/backplane/`** — the `Backplane` abstraction and its three
+- **`app/backplane/`**: the `Backplane` abstraction and its three
   implementations, selected by `BACKPLANE_MODE`:
-  - `stateless_backplane.StatelessBackplane` (default) — in-process
+  - `stateless_backplane.StatelessBackplane` (default): in-process
     `asyncio.Queue` fan-out only; no cross-instance delivery.
-  - `kafka_backplane.KafkaBackplane` — a shared `handling-events` topic via
+  - `kafka_backplane.KafkaBackplane`: a shared `handling-events` topic via
     `aiokafka`; durable, replayable, powers `?afterEventId=` resume.
-  - `redis_backplane.RedisBackplane` — a shared `handling-events:{bookingId}`
+  - `redis_backplane.RedisBackplane`: a shared `handling-events:{bookingId}`
     Pub/Sub channel via `redis.asyncio`; live fan-out only, no replay.
 
 ## Design note: seed baseline vs. the backplane (resolving PROTOCOL.md's ambiguity)
@@ -49,22 +49,23 @@ implementation detail implicit: exactly how the "deterministic baseline"
 follows, and the Quarkus sibling should match it:
 
 - **The 3 fixture seed events are delivered directly from `app/feed.py` on
-  every connection, in every backplane mode** — never through the
+  every connection, in every backplane mode**, never through the
   backplane. This keeps the deterministic baseline byte-for-byte identical
   across stateless/kafka/redis (see `app/ws_server.py`'s `_deliver_loop`).
-- **The backplane (topic/channel) carries only INJECTED events** — never the
+- **The backplane (topic/channel) carries only injected events**, never the
   seed. This is what makes `afterEventId=<the last seed event's id>`
   meaningful in kafka mode even though that id was never produced to Kafka:
   `KafkaBackplane.subscribe` buffers the topic's full history up to the
-  subscribe-time snapshot, looks for `after_event_id` in it, and — when not
+  subscribe-time snapshot, looks for `after_event_id` in it, and, when not
   found (as for a seed-event id, or any id produced before the backplane
-  existed) — falls back to replaying **everything currently in the topic**,
-  which is exactly the gap-era injected event(s) in the Ch15-gap-then-Ch16-
-  replay scenario. See `app/backplane/kafka_backplane.py`'s module
-  docstring for the full rationale.
+  existed), falls back to replaying **everything currently in the topic**,
+  which is exactly the gap-era injected event(s) in the
+  stateless-gap-then-kafka-replay scenario. See
+  `app/backplane/kafka_backplane.py`'s module docstring for the full
+  rationale.
 - `redis`/`stateless` modes ignore `after_event_id` entirely (no history to
-  replay — PROTOCOL.md calls this out explicitly for redis; stateless is the
-  mode that demonstrates the gap).
+  replay; PROTOCOL.md calls this out explicitly for redis, and stateless is
+  the mode that demonstrates the gap).
 
 ## Backplane modes
 
@@ -89,7 +90,7 @@ Content-Type: application/json
 
 Returns `202 Accepted`. Publishes to the active backplane (kafka topic /
 redis channel) in broker modes, or delivers directly to this instance's
-local connections in stateless mode. Internal/demo endpoint — not part of
+local connections in stateless mode. Internal/demo endpoint: not part of
 the public AsyncAPI contract.
 
 ## Instance identity
@@ -107,11 +108,11 @@ delivered eventId=<id> bookingId=<id> instance=<INSTANCE_ID>
 | --- | --- |
 | `4400` | Malformed client message (this channel is still server-push-only) |
 | `1011` | Unexpected server-side error |
-| `1001` | Server going away (shutdown — handled by the `websockets` library's default `Server.close()`) |
+| `1001` | Server going away (shutdown: handled by the `websockets` library's default `Server.close()`) |
 | `1000` | Normal close |
 
 Auth (`1008`) and backpressure (`4290`) from `part4-connection` are **not**
-re-exercised here (PROTOCOL.md) — this example focuses on the backplane.
+re-exercised here (PROTOCOL.md). This example focuses on the backplane.
 
 ## Build-time model generation
 
@@ -145,17 +146,17 @@ BACKPLANE_MODE=redis REDIS_URL=redis://localhost:6379/0 uv run python -m app.mai
 INSTANCE_ID=python-b WS_PORT=8084 HTTP_PORT=8085 BACKPLANE_MODE=kafka uv run python -m app.main
 ```
 
-## Self-verify — what was actually proven live
+## Self-verify: what was proven live
 
 All three modes were started and driven with real client connections and
-real HTTP injects against this checkout (not just unit-tested):
+real HTTP injects against this checkout, beyond unit tests:
 
-- **`uv sync --group dev`** — resolves and installs cleanly on Python 3.15.0
-  (uv-managed), including `aiokafka==0.14.0` (built from sdist, no C-ext
-  build failures) and `redis==8.1.0`.
-- **`./scripts/generate-models.sh`** — generates `app/models_generated.py`
-  from `contracts/asyncapi.yaml` successfully.
-- **`uv run pytest`** — **13 passed** (schema conformance, error-envelope
+- **`uv sync --group dev`**: resolves and installs cleanly on Python 3.15.0
+  (uv-managed), including `aiokafka==0.14.0` (built cleanly from sdist) and
+  `redis==8.1.0`.
+- **`./scripts/generate-models.sh`**: generates `app/models_generated.py`
+  from `contracts/asyncapi.yaml`.
+- **`uv run pytest`**: **13 passed** (schema conformance, error-envelope
   shape, `create_backplane` mode selection, `StatelessBackplane` in-process
   pub/sub incl. no-subscriber-drop and no-cross-booking-delivery).
 - **stateless mode, standalone** (`BACKPLANE_MODE=stateless`,
@@ -163,34 +164,32 @@ real HTTP injects against this checkout (not just unit-tested):
   the seeded RECEIVE frame (schema-validated); `POST` inject while connected
   → the connected client received it, with the exact
   `delivered eventId=... bookingId=... instance=python-a` log line.
-  **Ch15 gap test**: connect → disconnect → inject a gap event while
+  **Stateless gap test**: connect → disconnect → inject a gap event while
   disconnected → reconnect with `?afterEventId=<last seed eventId>` →
-  **confirmed the gap event was NOT delivered** (stateless loses gap-era
+  **confirmed the gap event was not delivered** (stateless loses gap-era
   events, by design).
 - **kafka mode, standalone** (a real `apache/kafka:4.3.1` container, no
-  mocks): same gap test — connect → disconnect → inject a gap event →
+  mocks): same gap test: connect → disconnect → inject a gap event →
   reconnect with `?afterEventId=<last seed eventId>` → **confirmed the gap
-  event WAS delivered, exactly once, with no duplicate** (verified both
-  against a topic with prior test history — the fallback-replay path — and
+  event was delivered, exactly once, with no duplicate** (verified both
+  against a topic with prior test history, the fallback-replay path, and
   against a freshly named topic, which delivered precisely 3 seed + 1 gap
-  frame, nothing more). This caught and fixed a real bug during development:
-  the original streaming skip/flip logic hung forever when the only
-  historical record was also the last one before the live tail (an
-  off-by-one in "have we reached the subscribe-time snapshot" bookkeeping).
-  The fix buffers the topic's history up to the snapshot first, then decides
-  the replay slice — see `app/backplane/kafka_backplane.py`.
+  frame, nothing more). `KafkaBackplane` buffers the topic's history up to
+  the subscribe-time snapshot first, then decides the replay slice, which
+  keeps the replay deterministic even when the last historical record sits
+  right at the live-tail boundary; see `app/backplane/kafka_backplane.py`.
 - **redis mode, standalone** (a real `redis:8.10.2-alpine` container, no
   mocks), **two instances** (`python-a` on 8081/8082, `python-b` on
   8084/8085, same Redis): connected a client to instance A, injected via
   instance B's `POST /internal/.../handling-events`, and **confirmed
   instance A's client received the event**, with instance A's log showing
-  `delivered eventId=... bookingId=... instance=python-a` — proving the
-  event crossed instances via the Redis Pub/Sub backplane (the Ch18 DRQ-005
+  `delivered eventId=... bookingId=... instance=python-a`, proving the
+  event crossed instances via the Redis Pub/Sub backplane (the fan-out
   proof).
 - All containers and processes started for this verification were torn down
   afterward; nothing was left running.
 
-Nothing here was deferred to the combined `verify.sh` — Docker was available
+Nothing here was deferred to the combined `verify.sh`. Docker was available
 in this environment, so all three modes (including the two-instance
 cross-instance fan-out proof) were exercised against real brokers rather
 than left as "implemented to spec, unverified."
