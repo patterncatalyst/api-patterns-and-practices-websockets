@@ -1,9 +1,9 @@
-# Ch9 example — Python native `websockets` + FastAPI
+# Part 3 example: Python native `websockets` + FastAPI
 
 Implements `contracts/asyncapi.yaml`'s `handlingEvents` channel: one
 WebSocket connection per booking at
 `/ws/v1/bookings/{bookingId}/handling-events`, pushing the shared fixture's
-three `HandlingEvent`s (RECEIVE, LOAD, CUSTOMS — see
+three `HandlingEvent`s (RECEIVE, LOAD, CUSTOMS, see
 `../fixtures/handling-events.json`) in order as soon as the upgrade
 completes. The Quarkus sibling (`../quarkus/`) replays the identical
 fixture, byte-for-byte, so the two stacks are directly comparable.
@@ -12,28 +12,28 @@ fixture, byte-for-byte, so the two stacks are directly comparable.
 
 Two listeners, one process, one event loop (`app/main.py`):
 
-- **`app/ws_server.py`** — the WebSocket endpoint, built on the native
+- **`app/ws_server.py`**: the WebSocket endpoint, built on the native
   `websockets` library (`websockets.asyncio.server.serve`), not
   FastAPI/Starlette's bundled WebSocket support. That's the point of this
   chapter: see `../../_docs/09-python-native-websockets.md`. Listens on
-  `WS_HOST:WS_PORT` (default `0.0.0.0:8081` — `8080` is the Quarkus
+  `WS_HOST:WS_PORT` (default `0.0.0.0:8081`; `8080` is the Quarkus
   sibling's port).
-- **`app/http_app.py`** — a small FastAPI app (`/healthz`, `/`) for
+- **`app/http_app.py`**: a small FastAPI app (`/healthz`, `/`) for
   HTTP/app lifecycle, run under uvicorn on `HTTP_HOST:HTTP_PORT` (default
   `0.0.0.0:8082`).
 
 The contract documents a `handling-events.v1` subprotocol and a `token`
-query parameter for a future auth chapter (Ch17); neither is enforced here
-— see the docstring on `app/ws_server.py:create_server` for why requiring
-the subprotocol today would reject plain clients (websocat, browsers)
-for no behavior this example implements yet.
+query parameter for a future auth chapter; neither is enforced here. See
+the docstring on `app/ws_server.py:create_server` for why requiring the
+subprotocol today would reject plain clients (websocat, browsers) for no
+behavior this example implements yet.
 
 ## Build-time model generation
 
 `app/models_generated.py` is **generated, gitignored, never committed**.
 `datamodel-code-generator`'s AsyncAPI input support is unreliable for this
 contract, so generation goes through the extracted JSON Schema instead
-(that's what `../../../scripts/extract-message-schema.py` is for — it
+(that's what `../../../scripts/extract-message-schema.py` is for: it
 inlines `HandlingEvent`'s `$ref`s into one self-contained Draft 2020-12
 document):
 
@@ -48,7 +48,7 @@ python3 -I scripts/extract-message-schema.py build/handling-event.schema.json
 The app imports the generated `HandlingEvent` Pydantic v2 model from
 `app.models_generated`; `app/feed.py` validates every fixture event against
 it and emits the model's own `model_dump_json(exclude_none=True)` as the
-wire frame — one source of truth for both validation and serialization, so
+wire frame: one source of truth for both validation and serialization, so
 there's no hand-written JSON-building code to drift from the contract.
 
 ## Run it
@@ -98,15 +98,15 @@ details and the UBI 10 base image pin.
 | fastapi | 0.146.0 |
 | websockets | 17.2 |
 | uvicorn[standard] | 0.54.0 |
-| opentelemetry-distro | 0.66b1 (declared; not yet wired into the entrypoint — no exporter is configured for this example, see scope note below) |
+| opentelemetry-distro | 0.66b1 (declared; not yet wired into the entrypoint; no exporter is configured for this example, see scope note below) |
 | datamodel-code-generator (dev) | 0.86.0 |
 | jsonschema (dev) | 4.26.0 |
 | pytest (dev) | 9.1.1 |
 | UBI base image | `registry.access.redhat.com/ubi10/python-314-minimal:10.2-1791928506` |
 
 `opentelemetry-distro` is declared per the dependency list for this example
-but intentionally not wrapped around the entrypoint yet: without an OTLP
-exporter package configured, wrapping `python -m app.main` with
-`opentelemetry-instrument` would default to trying to export traces nowhere
-useful. Observability wiring is Ch23's job, not Ch9's — this example keeps
-the dependency available without reaching ahead of scope.
+but not wrapped around the entrypoint yet: without an OTLP exporter package
+configured, wrapping `python -m app.main` with `opentelemetry-instrument`
+would default to trying to export traces nowhere useful. Observability
+wiring belongs to a later chapter, not this one; this example keeps the
+dependency available without reaching ahead of scope.
