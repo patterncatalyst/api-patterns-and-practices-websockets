@@ -15,9 +15,9 @@ follow, and each stack's own README for its implementation notes.
 
 | Chapter | Concern | Mode | What `verify.sh` proves |
 |---|---|---|---|
-| Ch15 | Reconnect, visible gap | `stateless` (default) | A client disconnects, an event is injected during the gap, the client reconnects with `?afterEventId=<last seen>`: the gap event is **lost** (no broker, no history). |
-| Ch16 | Reconnect, replay | `kafka` | Same sequence, but the gap event **is delivered** after reconnect (replayed from the shared Kafka topic), deduped by `eventId`. |
-| Ch18 | Scale-out fan-out | `kafka` or `redis` | An event injected through instance **B**'s internal endpoint reaches a client connected to instance **A**, proven once per backplane, for both stacks. |
+| Chapter 15 | Reconnect, visible gap | `stateless` (default) | A client disconnects, an event is injected during the gap, the client reconnects with `?afterEventId=<last seen>`: the gap event is **lost** (no broker, no history). |
+| Chapter 16 | Reconnect, replay | `kafka` | Same sequence, but the gap event **is delivered** after reconnect (replayed from the shared Kafka topic), deduped by `eventId`. |
+| Chapter 18 | Scale-out fan-out | `kafka` or `redis` | An event injected through instance **B**'s internal endpoint reaches a client connected to instance **A**, proven once per backplane, for both stacks. |
 
 ## Backplane modes: Kafka vs. Redis
 

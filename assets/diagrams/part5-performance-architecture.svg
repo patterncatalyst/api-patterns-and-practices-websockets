@@ -24,7 +24,7 @@
 <text x="700.0" y="422.5" font-size="11.5" fill="#555555" text-anchor="middle">same field VALUES, ~40% smaller</text>
 <rect x="300" y="475" width="340" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="470.0" y="503.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">decode both -&gt; identical field values</text>
-<text x="470.0" y="520.0" font-size="11.5" fill="#555555" text-anchor="middle">verify.sh asserts byte-for-byte equal after decode</text>
+<text x="470.0" y="520.0" font-size="11.5" fill="#555555" text-anchor="middle">byte-for-byte equal after decode</text>
 <path d="M440,80 L440,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <text x="450.0" y="89.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">upgrade</text>
 <text x="450.0" y="89.0" font-size="11" fill="#555" text-anchor="middle">upgrade</text>
@@ -38,5 +38,5 @@
 <path d="M700,340 L700,380" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M240,435 L440,475" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
 <path d="M700,435 L640,475" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a)"/>
-<text x="470" y="545" font-size="12" fill="#555555" text-anchor="middle">Same contract, same fixture, two wire encodings: verify.sh proves field equality and the Protobuf size win live on both stacks.</text>
+<text x="470" y="545" font-size="12" fill="#555555" text-anchor="middle">Same contract, same fixture, two wire encodings: field equality and the Protobuf size win hold live on both stacks.</text>
 </svg>

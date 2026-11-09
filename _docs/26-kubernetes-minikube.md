@@ -2,7 +2,7 @@
 title: "Kubernetes (minikube)"
 order: 26
 part: "Runtime Progression"
-description: "Moving the four-instance WebSocket backplane from Docker Compose onto a real Kubernetes cluster, behind an ingress, with an operator-managed Kafka."
+description: "Running the four-instance WebSocket backplane on minikube behind ingress-nginx, with a Strimzi-managed Kafka and no registry."
 duration: "16 min read"
 ---
 
@@ -10,94 +10,131 @@ duration: "16 min read"
 
 By the end of this chapter you can:
 
-- Build a registry-free image path for a single-node cluster with `docker build` plus `minikube image load`, and explain why `imagePullPolicy: Never` is required for it to stick.
-- Trace the `base/` manifest set plus `overlays/minikube`, `components/redis-mode`, and `overlays/minikube-redis` layering that reuses one Deployment/Service/Ingress set across backplane modes.
-- Sequence an operator-managed Kafka's readiness (`kubectl wait kafka/my-cluster --for=condition=Ready`) ahead of app-pod startup, and explain what crashes if that ordering is skipped.
-- Configure ingress-nginx's WebSocket-relevant annotations (`proxy-read-timeout`, `proxy-send-timeout`, `affinity: cookie`) and explain why none of them name "websocket" directly.
-- Verify a cross-pod delivery claim against a pod's own log with `kubectl logs`, independent of the client-side assertion that triggered it.
+- Get an image into a single-node cluster with `docker build` plus `minikube image load`, and explain why `imagePullPolicy: Never` is required.
+- Layer a kustomize base, an overlay and a component so one Deployment, Service and Ingress set serves both backplane modes.
+- Gate app startup on an operator-managed Kafka reaching `Ready`, and explain what crashes if you don't.
+- Configure ingress-nginx for long-lived sockets (`proxy-read-timeout`, `proxy-send-timeout`, `affinity: cookie`) and explain why no annotation names WebSocket.
+- Confirm a cross-pod delivery from the receiving pod's own log with `kubectl logs`.
 
 ## Why this matters
 
-The Docker Compose deployment closed on a question this chapter exists to answer: whether a topology proven correct against one Docker daemon survives a scheduler that can restart a pod on its own, an edge proxy with its own idle-timeout defaults, and a Kafka cluster an operator reconciles rather than a container Compose just starts. It does, and the evidence is a live, headless run against this exact manifest set, not an inference from what Kubernetes is supposed to do.
+A topology that works on one Docker daemon still has to survive a scheduler that restarts pods, an edge proxy with its own idle timeouts, and a Kafka cluster that an operator reconciles instead of a container that Compose starts. The deployment runs the same four-instance backplane (two stacks, two instances each, Kafka or Redis behind a mode flag) on minikube with the docker driver and containerd runtime. A live headless run on 2026-10-19 recorded the evidence under `examples/part4-backplane/k8s/evidence/`.
 
-Docker Compose brought the full `examples/part4-backplane` stack up: two stacks, two instances each, a Kafka or Redis backplane behind a profile flag. This chapter runs the identical topology on a second rung: a real Kubernetes cluster via minikube, docker driver plus containerd runtime, Kafka managed by the Strimzi operator instead of a single broker container, and an ingress-nginx edge standing in front of instance A on each stack instead of a published Docker port. Every claim in this chapter is cited against `examples/part4-backplane/k8s/` and against a live, headless run captured on 2026-10-19: `examples/part4-backplane/k8s/evidence/verify-minikube-2026-10-19.log`, `cluster-state-2026-10-19.txt`, and the two pod-log excerpts alongside them. Nothing here is asserted from how Kubernetes is supposed to behave; it's what this exact manifest set did against a real API server.
+## The same instances, a different substrate
 
-## The same four instances, a different substrate
+The protocol is unchanged: channel path, resume semantics, backplane modes, the inject endpoint, close codes, and the `INSTANCE_ID`-tagged delivery log line. Both environments run the same two images (`part4-backplane-quarkus`, `part4-backplane-python`) with the same `envFrom` configuration. What moves is everything around the app.
 
-`PROTOCOL.md` governs both environments without a single word of its own changing: the channel path, the resume semantics, the backplane modes, the inject endpoint, the close codes, the `INSTANCE_ID`-tagged delivery log line every stack writes on every send. Compose and minikube run the same two container images (`part4-backplane-quarkus` and `part4-backplane-python`) built from the same Containerfiles, against the same `envFrom`-sourced configuration contract. What moves is everything *around* the app: Compose runs a single `apache/kafka:4.3.1` container as the backplane; minikube runs the same Kafka release, but as a Strimzi-managed custom resource that an operator reconciles rather than a container `docker compose` just starts. Compose publishes each instance's port straight to the host; minikube puts an ingress-nginx edge in front of instance A only, with annotations this chapter exists to explain. Compose's `docker compose up --build` is one command; minikube's path is `kubectl apply -k` against a kustomize overlay, preceded by an operator install that has to finish before the apps are allowed to start at all. And where Compose gives instance B a distinct host port (`8083`, `8084`/`8085`) because every instance shares one Docker network and one set of host ports, minikube's instance B runs in its own pod with its own network namespace, so it reuses the exact same container ports, `8080` for Quarkus, `8081`/`8082` for Python, that instance A uses, reachable only by its own cluster-DNS Service name.
+| Concern | Docker Compose | minikube |
+| --- | --- | --- |
+| Kafka | one `apache/kafka:4.3.1` container | the same release as a Strimzi custom resource |
+| Edge | each instance's port published to the host | ingress-nginx in front of instance A only |
+| Deploy | `docker compose up --build` | operator install, then `kubectl apply -k` |
+| Instance B ports | distinct host ports (`8083`, `8084`/`8085`) | same container ports as A (`8080`, `8081`/`8082`), reachable by Service name |
+
+Each pod has its own network namespace, so instance B needs no port of its own.
 
 ## One base, two overlays, one component
 
-`examples/part4-backplane/k8s/base/` is the part that doesn't know it's running on minikube: a `Namespace`, a `ConfigMap` (`backplane-config`, shipping `BACKPLANE_MODE: kafka` as the primary mode), four `Deployment`+`Service` pairs (`quarkus-a`, `quarkus-b`, `python-a`, `python-b`), and an `Ingress` with host rules that are generic placeholders (`quarkus.part4-backplane.example`) so `base/` stays deployable against any ingress-nginx cluster, not just this one. `overlays/minikube/kustomization.yaml` is what makes it runnable here: it retags both app images to `:minikube` (the tag `verify-minikube.sh` builds and loads), patches every Deployment's `imagePullPolicy` to `Never`, and rewrites the Ingress's two host rules to `quarkus.part4-backplane.minikube.local` / `python.part4-backplane.minikube.local` as static placeholders: placeholders the live run then overwrites again, which is its own lesson below. `components/redis-mode/kustomization.yaml` is a Kustomize **Component**, not an overlay: it patches exactly one key, `ConfigMap.data.BACKPLANE_MODE`, from `kafka` to `redis`, touching nothing else in the manifest set. `overlays/minikube-redis/kustomization.yaml` composes `../minikube` as its base resource and layers that component on top, so the redis leg of a deploy is the identical minikube overlay plus one ConfigMap patch, not a second copy of four Deployments. The Strimzi Kafka cluster itself lives outside this kustomization entirely, in `strimzi/kafka.yaml`, applied by its own script, because the Strimzi CRDs it depends on have to exist in the cluster before `kubectl apply -k` can even parse a `Kafka` custom resource.
+`k8s/base/` knows nothing about minikube: a Namespace, a ConfigMap (`backplane-config`, `BACKPLANE_MODE: kafka`), four Deployment and Service pairs (`quarkus-a`, `quarkus-b`, `python-a`, `python-b`), and an Ingress with placeholder hosts, so it deploys to any ingress-nginx cluster.
 
-## docker driver, containerd runtime, no registry anywhere
+- `overlays/minikube` retags both images to `:minikube`, sets every `imagePullPolicy` to `Never`, and rewrites the Ingress hosts to `quarkus.part4-backplane.minikube.local` and `python.part4-backplane.minikube.local`.
+- `components/redis-mode` is a Kustomize component, not an overlay. It patches one key, `ConfigMap.data.BACKPLANE_MODE`, from `kafka` to `redis`.
+- `overlays/minikube-redis` takes `../minikube` as its base and adds that component, so the Redis leg is the minikube overlay plus one patch, not a second copy of four Deployments.
 
-This deploy pins minikube's docker driver with the containerd runtime; podman is not supported for this profile. The live run confirms the combination: `minikube start -p part4-backplane --driver=docker --container-runtime=containerd --kubernetes-version=v1.37.1` produced a control-plane node reporting `containerd://2.3.4` in `cluster-state-2026-10-19.txt`. The pinned Kubernetes version produced this sequence on the live run: minikube's own output read `Specified Kubernetes version 1.37.1 is newer than the newest supported version: v1.37.0`, then `Searching the internet for Kubernetes version...`, then `Kubernetes version 1.37.1 found in GitHub version list` before proceeding. minikube's bundled version list lags the pin by one patch release; the cluster still came up at exactly `v1.37.1`, confirmed by `kubectl get nodes` in the same log. There is no registry in this deploy at all. `docker build` runs twice against the two app Containerfiles from the repo root, producing `part4-backplane-quarkus:minikube` and `part4-backplane-python:minikube`; `minikube image load` then pushes each image directly into the profile's containerd image store, no push and no pull. `imagePullPolicy: Never` on every Deployment is what makes that stick, without it, the kubelet would still try a registry pull for an image that exists only in that one cluster's local store, and the Deployment would sit in `ImagePullBackOff` forever. The `:minikube` tag the overlay applies is the same tag `verify-minikube.sh` builds and loads, so the retag and the pull policy only work because they're kept in lockstep by the same two files.
+The Strimzi `Kafka` resource lives outside the kustomization in `strimzi/kafka.yaml`. Its CRDs must exist before `kubectl apply -k` can parse it.
 
-## The ingress edge: raised timeouts, no websocket annotation
+{% include excalidraw.html file="26-minikube-deployment" alt="Inside the part4-backplane namespace, a websocat client using a nip.io host name reaches instance A through ingress-nginx, which carries the raised timeouts and cookie affinity and has rules for A only. Instance B has a Service but no Ingress rule and is reached by kubectl exec from A. Both instances publish to a Strimzi Kafka cluster, or to Redis when the redis-mode component is applied, read their mode from the backplane-config ConfigMap, and run images loaded with minikube image load and imagePullPolicy: Never." caption="Figure 26.1: the minikube deployment: one ingress edge, four instances and a Kafka or Redis backplane." %}
 
-`minikube addons enable ingress -p part4-backplane` installs ingress-nginx; the live run's `cluster-state-2026-10-19.txt` shows the resulting `part4-backplane` Ingress routing both `quarkus.192.168.49.2.nip.io` and `python.192.168.49.2.nip.io` through its single external IP on port 80. `base/ingress.yaml`'s annotations are where the WebSocket-specific work happens, and there are only three of them. `nginx.ingress.kubernetes.io/proxy-read-timeout` and `proxy-send-timeout` are both raised to `"3600"` from nginx's own 60-second default: the default that would otherwise kill a long-lived, upgraded connection the moment it goes quiet for a minute, which for a WebSocket channel that can legitimately sit idle between events is routine, not an edge case. `nginx.ingress.kubernetes.io/affinity: "cookie"` with `session-cookie-name: "part4-backplane-affinity"` sets sticky sessions, so a reconnecting client keeps landing on the same pod, moot with one replica per instance in this example, but it documents the production shape a multi-replica deployment needs, and it matters again later in this chapter, when the same cookie confirms an Ingress patch took effect. What's absent is any annotation naming "websocket" at all: ingress-nginx has no such knob, because it detects the `Connection: Upgrade` / `Upgrade: websocket` request headers on its own and proxies the upgrade through automatically. The only thing a WebSocket channel needs from this ingress controller that an ordinary HTTP route doesn't is a longer clock, not a different code path.
+## No registry anywhere
 
-## Strimzi: Kafka has to be Ready before a single app pod starts
+The profile uses the docker driver with containerd; podman isn't supported here.
 
-Strimzi 1.3.0 is the pinned operator version, installed by Helm from `oci://quay.io/strimzi-helm/strimzi-kafka-operator` straight into the app namespace rather than a separate operator namespace. It serves exactly one CRD API group version (`kafka.strimzi.io/v1`) and nothing older; `v1beta2`, `v1beta1`, and `v1alpha1` are gone in this release, so a Kafka custom resource authored against an older API version is rejected outright, not silently accepted and misread. `strimzi/kafka.yaml` defines a single-node KRaft cluster: one `KafkaNodePool` with both the `controller` and `broker` roles on the same node (Strimzi calls this "dual-role"), ephemeral `emptyDir`-backed storage with no PersistentVolumeClaim, and every replication factor set to `1`: a demo cluster sized to prove wire behavior, not to survive a pod restart. Kafka itself runs at `4.3.1` with `metadataVersion: 4.3-IV0`, Strimzi 1.3.0's own default and an exact match for Compose's `apache/kafka:4.3.1` pin, so the Kafka-backed reconnect and the cross-instance fan-out exercise the identical Kafka release in both environments.
-
-The ordering in `scripts/install-strimzi.sh` is the part that isn't optional. It installs the operator, waits for its Deployment to roll out, waits for the `kafkas.kafka.strimzi.io` and `kafkanodepools.kafka.strimzi.io` CRDs to report `Established`, applies the Kafka CR, applies Redis, and only then blocks on `kubectl wait kafka/my-cluster --for=condition=Ready --timeout=480s` before returning control to `verify-minikube.sh`, which applies the app overlay next. The reason this ordering is required, not merely tidy: the Quarkus side's `quarkus-messaging-kafka` channels are wired unconditionally, with no feature flag gating them off in stateless or redis mode. Handing that always-on consumer an unresolvable bootstrap hostname at startup doesn't produce a retry loop or a degraded-but-running pod: it crashes the app immediately with `ConfigException: No resolvable bootstrap urls`, a hard CDI failure at boot, not the soft "resolvable but currently unreachable" case Quarkus's own Kafka documentation describes. The live run's evidence shows exactly why the ordering holds: `my-cluster-kafka-bootstrap` only exists as a resolvable Service once Strimzi's reconciliation creates it, and `install-strimzi.sh`'s final wait is what guarantees that Service, and a Kafka cluster answering behind it, exists before `quarkus-a`'s pod is ever scheduled. Run the apps-overlay apply before this script finishes and every Quarkus pod in the Deployment crash-loops on that same `ConfigException`, in both backplane modes, because the Kafka consumer channel's existence doesn't depend on which mode the ConfigMap currently names.
-
-## A resolvable Host header, by way of a wildcard DNS trick
-
-Proving the ingress path means a WebSocket client connecting with the ingress's own hostname in the request, not a bare IP with a forced header. The `Host` header on the wire has to come from the connection URL's own authority: websocat 1.14.1 derives it from the URL and does not apply a `-H` override to it, confirmed with a packet capture of the bytes leaving the client. A `-H 'Host: quarkus.part4-backplane.minikube.local'` flag against a URL whose authority is the bare `minikube ip` address never shows up as `Host:` on the wire, only the URL's own host:port does. Instead of `/etc/hosts` edits or `minikube tunnel`, `verify-minikube.sh` uses nip.io, a public wildcard DNS service that resolves `<anything>.<ip>.nip.io` straight to `<ip>` with no record to provision. `minikube ip -p part4-backplane` returned `192.168.49.2` on the live run, so the script built `quarkus.192.168.49.2.nip.io` and `python.192.168.49.2.nip.io` as the WS URLs' own authorities: hostnames that are simultaneously real, resolvable DNS names and the exact ingress routing keys the Ingress needs. The only external dependency this adds is outbound DNS resolution to nip.io; nothing in-cluster depends on it.
-
-Those hostnames don't exist until the cluster is already up, which means the Ingress's `host` rules, statically set to the overlay's placeholder values at apply time, have to be patched live, after `minikube ip` resolves, to the real nip.io names. `patch_ingress_hosts_and_wait` does that with a `kubectl patch ingress ... --type=json` call, then waits for proof the patch took effect rather than trusting a bare curl exit code: ingress-nginx's config reload is asynchronous, typically a few seconds, and during that window its generic default-backend 404 page answers an unmatched host with what looks, to a plain curl, like a completed response. The live run's script comment documents the race directly: the first post-patch probe returned a 404 that looked legitimate, and the WebSocket check right after it failed against that same default backend. The `affinity: cookie` annotation from the Ingress section above doubles as the check for this: because `session-cookie-name: "part4-backplane-affinity"` only gets set on a response that traversed this Ingress's own rule, the default backend never sets it, so grepping the response headers for that cookie is a deterministic signal that the patch has propagated, not a fixed sleep guessing at reload latency. The live run confirms both hostnames routing within single-digit seconds: `ingress routing confirmed for Host: quarkus.192.168.49.2.nip.io after 4s`, `... python.192.168.49.2.nip.io after 0s`.
-
-## Flipping the backplane on a cluster that's already running
-
-Switching a running deployment from Kafka mode to Redis mode is `kubectl apply -k overlays/minikube-redis`, but that command alone doesn't finish the job, and the live run proves why. A ConfigMap mounted via `envFrom`/`configMapRef` is read into a container's environment once, at process start; Kubernetes has no mechanism to push an updated ConfigMap value into an already-running container's environment variables, so patching `BACKPLANE_MODE` to `redis` changes what the *next* pod will see and nothing about the pods currently running. `verify-minikube.sh`'s Step 7 applies the redis overlay and then immediately issues `kubectl rollout restart` against all four Deployments, forcing new pods that read the updated ConfigMap at their own startup; the evidence log shows the sequence explicitly: `configmap/backplane-config configured` followed four lines later by `deployment.apps/quarkus-a restarted`, `deployment.apps/quarkus-b restarted`, and the same for both Python instances, each then rolled out and confirmed before the Redis-mode proof runs.
-
-That same `kubectl apply -k` call has a second, less obvious side effect: it re-applies `base/ingress.yaml` in full, including the overlay's static placeholder `host` values, which overwrites Step 5b's live nip.io patch, because kustomize has no concept of "leave this field as some other process set it." The script's own comment on `patch_ingress_hosts_and_wait` names the consequence directly: skipping the re-patch after this second apply reproduces the identical symptom as the first pre-patch window: a default-backend 404 masquerading as a real response. `verify-minikube.sh` calls `patch_ingress_hosts_and_wait` a second time immediately after the redis overlay's rollout, and the evidence log shows it re-confirming both hosts (`after 2s`, `after 0s`) before a single Redis-mode assertion runs. The lesson generalizes past this one script: any `kubectl apply -k` against a manifest a live process has separately hand-patched overwrites that patch on every re-apply, because kustomize's job is to converge the cluster to the file, not to the file plus whatever ran after it.
-
-Strimzi's Kafka cluster is untouched by any of this. `strimzi/kafka.yaml` is applied exactly once, by `install-strimzi.sh`, and stays installed and Ready regardless of which backplane mode the apps are currently routed through: the Quarkus side's Kafka consumer channel is wired unconditionally, the same reason it has to exist before the apps start in the first place.
-
-## Instance B still never goes through the Ingress
-
-`base/ingress.yaml` only defines rules for `quarkus-a` and `python-a`; `quarkus-b` and `python-b` have Services but appear nowhere in the Ingress spec. That split is the same one the cross-pod fan-out proof depends on in Compose, carried over unchanged: instance B stands in for "some other pod in the fleet," and the inject endpoint it exposes, `POST /internal/bookings/{id}/handling-events`, is explicitly documented in `PROTOCOL.md` as internal and demo-only, never part of the public contract, so it has no business being reachable from outside the cluster at all. `verify-minikube.sh` reaches it with `kubectl exec` into instance A's own running pod, curling instance B's Service by its cluster-DNS name (`http://quarkus-b:8080/...` or `http://python-b:8082/...`) and reads back delivery confirmation with `kubectl logs` against that same pod. Neither of those crosses the cluster boundary from the host machine running the script; the only thing that does is the WebSocket client itself, connecting through the Ingress to instance A. `kubectl port-forward` appears nowhere in this script: forwarding a port bypasses the exact ingress path this chapter proves, and the house convention this project follows elsewhere (the OpenShift/CRC evidence captures, the modernizing-enterprise-applications deploy scripts) is the same: exec to reach a Service, logs to read a pod, never a tunnel standing in for the real path.
-
-## On the wire
-
-The idle-hold assertion and the cross-pod delivery are the two checks that only mean anything captured live, against a real ingress and real pods, which is exactly what `verify-minikube.sh`'s Step 6 and Step 7 did on 2026-10-19. The harness's own account of the Kafka-mode idle hold:
-
-```
-verify-minikube.sh: quarkus/kafka: connected, received the 3 seed frames; holding idle for 65s (nginx's default proxy-read-timeout is 60s) ...
-verify-minikube.sh: inject eventId=evt_45579ad2403e41ba973d708253 bookingId=bkg_b370fc4e07974d808ea9ee8cec via exec(quarkus-a)->http://localhost:8080 -> HTTP 202
-verify-minikube.sh: ok — quarkus/kafka: late frame arrived after a 65s idle hold — the raised proxy-read-timeout/proxy-send-timeout annotations are working
+```bash
+minikube start -p part4-backplane --driver=docker --container-runtime=containerd --kubernetes-version=v1.37.1
 ```
 
-Sixty-five seconds is five seconds past nginx's own 60-second default: the margin the raised `proxy-read-timeout`/`proxy-send-timeout: "3600"` annotations exist to cover, proven by holding the connection past the point it would have been killed on an unannotated Ingress and then confirming a frame injected after the hold still arrives. For the cross-pod fan-out, the harness's assertion is only half the proof; the other half is instance A's own pod log, read independently with `kubectl logs`, not inferred from the client's side of the socket. Here is the redis-mode leg of that proof, exactly as `quarkus-a-delivered-2026-10-19.log` recorded it:
+The live run reported `containerd://2.3.4`. minikube printed that 1.37.1 is newer than its newest supported version, found it in the GitHub version list, and still came up at exactly `v1.37.1`.
+
+`docker build` produces `part4-backplane-quarkus:minikube` and `part4-backplane-python:minikube` from the repo root, and `minikube image load` copies each into the profile's containerd store. `imagePullPolicy: Never` keeps it there. Without it the kubelet tries a registry pull for an image that exists only in that one cluster and the Deployment sits in `ImagePullBackOff`. The `:minikube` tag in the overlay must match the tag the script builds and loads.
+
+## The ingress edge: longer clocks, no WebSocket annotation
+
+`minikube addons enable ingress -p part4-backplane` installs ingress-nginx. `base/ingress.yaml` carries three annotations:
+
+| Annotation | Value | Why |
+| --- | --- | --- |
+| `proxy-read-timeout` | `"3600"` | nginx's 60-second default kills an upgraded connection that goes quiet for a minute |
+| `proxy-send-timeout` | `"3600"` | same, for the send direction |
+| `affinity` | `"cookie"`, cookie name `part4-backplane-affinity` | a reconnecting client lands on the same pod |
+
+Affinity is moot with one replica per instance, but it is the shape a multi-replica deployment needs. No annotation names WebSocket because ingress-nginx detects `Connection: Upgrade` and `Upgrade: websocket` on its own and proxies the upgrade. A socket needs a longer clock from the ingress controller, not a different code path.
+
+## Strimzi: Kafka Ready before any app pod
+
+Strimzi 1.3.0 is installed by Helm from `oci://quay.io/strimzi-helm/strimzi-kafka-operator` into the app namespace. It serves only `kafka.strimzi.io/v1`; `v1beta2`, `v1beta1` and `v1alpha1` are gone, so a Kafka resource written for an older API version is rejected. `strimzi/kafka.yaml` defines a single-node KRaft cluster: one `KafkaNodePool` with both `controller` and `broker` roles, ephemeral `emptyDir` storage, every replication factor `1`. Kafka runs at `4.3.1` with `metadataVersion: 4.3-IV0`, the Strimzi default and the same release Compose pins. It proves wire behavior and doesn't survive a pod restart.
+
+`scripts/install-strimzi.sh` runs in a fixed order:
+
+1. Install the operator and wait for its Deployment to roll out.
+2. Wait for the `kafkas.kafka.strimzi.io` and `kafkanodepools.kafka.strimzi.io` CRDs to report `Established`.
+3. Apply the Kafka resource and Redis.
+4. Block on `kubectl wait kafka/my-cluster --for=condition=Ready --timeout=480s`.
+
+Only then does `verify-minikube.sh` apply the app overlay. The order is required because the Quarkus side's `quarkus-messaging-kafka` channels are wired unconditionally, in every mode. An unresolvable bootstrap hostname at startup is not a retry loop. It fails CDI at boot with `ConfigException: No resolvable bootstrap urls`. The `my-cluster-kafka-bootstrap` Service exists only after Strimzi reconciles, so applying the apps early crash-loops every Quarkus pod, in Kafka and Redis mode alike.
+
+## A resolvable Host header without tunnels
+
+The ingress routes on the `Host` header, which websocat 1.14.1 derives from the URL authority and does not override with `-H`. Instead of `/etc/hosts` edits or `minikube tunnel`, the script uses nip.io, a public wildcard DNS service that resolves `<anything>.<ip>.nip.io` to `<ip>`. With `minikube ip` returning `192.168.49.2`, the WebSocket URLs use `quarkus.192.168.49.2.nip.io` and `python.192.168.49.2.nip.io`, which are real DNS names and also the Ingress routing keys. The only added dependency is outbound DNS to nip.io; nothing in the cluster uses it.
+
+Those names exist only after the cluster is up, so `patch_ingress_hosts_and_wait` patches the Ingress hosts with `kubectl patch ingress --type=json`, then waits for proof that the patch took effect. ingress-nginx reloads asynchronously, and meanwhile its default backend answers an unmatched host with a 404 that looks like a completed response. The first post-patch probe in the live run hit exactly that, and the WebSocket check after it failed. The `affinity: cookie` annotation gives a deterministic signal: the cookie is set only on a response that traversed this Ingress's own rule, so grepping response headers for it replaces a guessed sleep. The live run confirmed routing in `4s` and `0s`.
+
+## Flipping the backplane on a running cluster
+
+`kubectl apply -k overlays/minikube-redis` changes the ConfigMap, but `envFrom` is read once at process start, so running pods keep `BACKPLANE_MODE=kafka`. The script follows the apply with `kubectl rollout restart` on all four Deployments so new pods read the updated value.
+
+The same apply also re-applies `base/ingress.yaml` with its placeholder hosts, overwriting the live nip.io patch. Kustomize converges the cluster to the file, not to the file plus whatever ran after it. The script calls `patch_ingress_hosts_and_wait` a second time after the rollout, and skipping it reproduces the default-backend 404. The Kafka cluster is untouched by the flip; it stays Ready in both modes.
+
+## Instance B stays off the Ingress
+
+`base/ingress.yaml` has rules for `quarkus-a` and `python-a` only. Instance B stands in for some other pod in the fleet, and its `POST /internal/bookings/{id}/handling-events` inject endpoint is internal and demo-only, so it is not reachable from outside the cluster. The script reaches it with `kubectl exec` into instance A's pod, calling `http://quarkus-b:8080/...` or `http://python-b:8082/...` by Service name, and reads delivery confirmation with `kubectl logs`. Only the WebSocket client crosses the cluster boundary, through the Ingress to instance A. `kubectl port-forward` is not used: it bypasses the ingress path under test.
+
+## Two checks that need a live cluster
+
+A Kafka-mode client connects through the Ingress, receives its three seed frames, holds idle for 65 seconds (five past nginx's default), and then still receives a frame injected after the hold. That proves the raised timeouts.
+
+The cross-pod check is confirmed from the receiving pod, not only the client. The redis-mode leg from `quarkus-a-delivered-2026-10-19.log`:
 
 ```
-2026-10-19 18:19:46,904 INFO  [...LocalDelivery] (vert.x-eventloop-thread-0) delivered eventId=evt_0e7711c25850465f86d4ed98d4 bookingId=bkg_88597b28fdf04cfca0ac44f3c4 instance=quarkus-a
-2026-10-19 18:19:46,960 INFO  [...HandlingEventBackplaneWebSocket] (vert.x-eventloop-thread-0) handling-events connection opened bookingId=bkg_2be1ce99d8334e90a77816dfd3 afterEventId=null mode=REDIS instance=quarkus-a; seeding 3 fixture event(s) + replaying 0 backplane event(s)
 2026-10-19 18:19:50,531 INFO  [...LocalDelivery] (vert.x-eventloop-thread-0) delivered eventId=evt_3b5479dba9fe461e8d3ba3e2ec bookingId=bkg_2be1ce99d8334e90a77816dfd3 instance=quarkus-a
 ```
 
-That last line is `quarkus-a`'s own process reporting it delivered `evt_3b5479dba9fe461e8d3ba3e2ec`, an event the harness injected through `quarkus-b`'s in-cluster Service, never through the Ingress, to a client connected through the Ingress to `quarkus-a`. The harness's `wait_for_k8s_log_pattern` call polled exactly this log for exactly this line before declaring the check passed; this is the pod's own independent record of the same fact, not a restatement of the assertion. Run the whole proof directly:
+The event was injected through `quarkus-b`'s in-cluster Service and delivered to a client connected through the Ingress to `quarkus-a`. A client-side assertion can't distinguish that from local delivery; the pod's own log can.
+
+Nothing in the protocol changed on this rung: no close code, no message shape. The same images are rebuilt for a different tag and distribution path. The OpenShift Local appendix runs the same question behind a Route with AMQ Streams instead of Strimzi.
+
+> **Decision**
+>
+> Each addition answers a question Compose never asked. Images: `minikube image load` plus `imagePullPolicy: Never`; skipping either leaves `ImagePullBackOff`. Edge: raise `proxy-read-timeout` and `proxy-send-timeout` past nginx's 60 seconds. Kafka: wait for `kafka/my-cluster` Ready before the apps, or the always-wired consumer crash-loops. Redeploys: re-patch any field a live process set, because `kubectl apply -k` overwrites it.
+
+## Build, run, observe
 
 ```bash
 examples/part4-backplane/k8s/verify-minikube.sh --keep
 ```
 
-`--keep` leaves the minikube profile running afterward for inspection with `kubectl`; omit it and the script tears the profile down on exit regardless of pass or fail. Expect ten to twenty minutes end to end, cluster bring-up, two image builds, the Strimzi operator install, and three separate `kubectl apply -k` rollouts, depending on how warm the image build cache and the Strimzi operator pull already are.
+`--keep` leaves the profile running for inspection with `kubectl`; without it the script tears the profile down on exit, pass or fail. Expect ten to twenty minutes: cluster bring-up, two image builds, the Strimzi install and three `kubectl apply -k` rollouts. Output markers print as `ok, ` and `FAIL, `, and a passing run ends in `PASS: `. It checks the Kafka-mode idle hold, cross-pod delivery in both modes, and the Ingress re-patch after the flip.
 
-## Where this goes next
+Experiments, each from the behavior described above:
 
-Everything this chapter changed is infrastructure around the app: where Kafka runs, how an image gets into the cluster, what sits at the network edge, how a client's Host header gets resolved. Nothing in `PROTOCOL.md` changed, no close code changed, no message shape changed, and the same two container images that passed the Compose run's proof are the same two images `docker build` produces here: rebuilt for a different tag and a different distribution mechanism, not rewritten. That's the point of running the same topology on a second rung before trying a third: a WebSocket channel that only works when `docker-compose.yaml` wires its DNS names for it hasn't proven it can survive a real scheduler, a real ingress controller's own idle timeouts, or a real operator's own startup ordering; this chapter is the evidence that it does, on all three counts, live. Appendix A takes the identical question to OpenShift Local: the same two app images, the same `PROTOCOL.md` contract, the same Kafka-or-Redis toggle, this time behind a Route instead of an Ingress and a Kafka managed by the AMQ Streams operator instead of upstream Strimzi directly: a different platform's answer to the same three questions this chapter just answered for minikube.
-
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Every mechanism this chapter adds exists to answer a question Compose's single host never had to ask. Compose never needed a registry-free image path because the daemon building the image and the daemon running it were the same daemon; minikube's answer is <code>minikube image load</code> plus <code>imagePullPolicy: Never</code>, and skipping either half leaves a Deployment in <code>ImagePullBackOff</code> forever. Compose never needed an edge proxy's timeout raised because its ports were published straight through; an unannotated ingress-nginx kills a quiet WebSocket connection at 60 seconds, which <code>proxy-read-timeout</code>/<code>proxy-send-timeout: "3600"</code> exists to prevent, proven live by holding a connection idle for 65. Compose never needed a readiness gate between its broker and its apps because a container healthcheck in the same Compose file already serialized that order; minikube's Kafka is a custom resource an operator reconciles asynchronously, and the Quarkus side's always-wired consumer turns a skipped <code>kafka/my-cluster</code> Ready wait into a hard crash loop, not a slow retry. And Compose never needed a second patch after every redeploy, because nothing in Compose reaches in from outside to rewrite a file it already applied; <code>kubectl apply -k</code> re-applying the Ingress's static placeholder hosts over a live nip.io patch is exactly that case, caught only because the <code>affinity: cookie</code> annotation's own cookie doubles as proof the reload reached our rule and not the default backend's look-alike 404. None of this changes what the channel does, <code>PROTOCOL.md</code>, the message shapes, and the close codes are identical to the Compose deployment's; it only changes what has to be true about the platform underneath it before the channel is allowed to run at all.</p></div>
+- Remove `imagePullPolicy: Never` from the overlay: Deployments go to `ImagePullBackOff`.
+- Apply the app overlay before the Kafka wait finishes: Quarkus pods crash with `No resolvable bootstrap urls`.
+- Drop the two timeout annotations: the idle connection closes at nginx's 60-second default instead of surviving the 65-second hold.
+- Skip the second `patch_ingress_hosts_and_wait` after the Redis apply: probes hit the default backend's 404.
 
 ## For deeper coverage
 
 - Bilgin Ibryam & Roland Huß, *Kubernetes Patterns*, 2nd ed. (O'Reilly, 2023): the Deployment/Service/ConfigMap vocabulary and the readiness-gate pattern behind `install-strimzi.sh`'s ordering.
-- Brendan Burns, Joe Beda, Kelsey Hightower & Lachlan Evenson, *Kubernetes: Up and Running*, 3rd ed. (O'Reilly, 2022): the scheduler and in-cluster networking model this chapter's ingress edge and pod-to-pod Service DNS depend on.
-- *Cloud Native Design Patterns*, "Running Example 05 on minikube" chapter: the same docker-driver/containerd, Strimzi-managed Kafka, kustomize-overlay shape this chapter applies, run against a different example.
+- Brendan Burns, Joe Beda, Kelsey Hightower & Lachlan Evenson, *Kubernetes: Up and Running*, 3rd ed. (O'Reilly, 2022): the scheduler and in-cluster networking model the ingress edge and pod-to-pod Service DNS depend on.
+- *Cloud Native Design Patterns*, "Running Example 05 on minikube" chapter: the same docker-driver/containerd, Strimzi-managed Kafka, kustomize-overlay shape applied, run against a different example.
 - *Cloud Native Design Patterns*, "WebSockets at Scale" chapter: the pub/sub-backplane-plus-resume posture `part4-backplane` implements, and why long-lived sockets fight stateless scaling on Kubernetes in the first place.
-- [ingress-nginx WebSocket documentation](https://kubernetes.github.io/ingress-nginx/user-guide/miscellaneous/#websockets): confirms the automatic `Connection: Upgrade` detection this chapter's Ingress relies on, with no WebSocket-specific annotation required.
+- [ingress-nginx WebSocket documentation](https://kubernetes.github.io/ingress-nginx/user-guide/miscellaneous/#websockets): confirms the automatic `Connection: Upgrade` detection the Ingress relies on, with no WebSocket-specific annotation required.

@@ -142,7 +142,7 @@ public class HeartbeatLivenessSweep {
             Duration silentFor = Duration.between(lastSeen, now);
             if (silentFor.compareTo(livenessTimeout) > 0) {
                 String bookingId = connection.pathParam("bookingId");
-                Log.warnf("handling-events connection bookingId=%s silent for %s (>%s) — requesting close as dead (Ch14 liveness timeout)",
+                Log.warnf("handling-events connection bookingId=%s silent for %s (>%s): requesting close as dead (liveness timeout)",
                         bookingId, silentFor, livenessTimeout);
                 connection.userData().put(CLOSE_REQUESTED, true);
                 connection.close(new CloseReason(CloseCodes.LIVENESS_TIMEOUT, "no pong received within the liveness window"))

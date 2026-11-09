@@ -2,81 +2,70 @@
 title: "Setup and the Lab"
 order: 0
 part: "Prerequisites"
-description: "Toolchain pins, the Docker Compose lab with opt-in LGTM tracing, and the shipping/cargo domain this site's sockets share with the REST booking service."
-duration: "17 min read"
+description: "Toolchain pins, the Docker Compose lab with opt-in LGTM tracing, and the shipping and cargo domain the sockets share with the REST booking service."
+duration: "10 min read"
 ---
 
 ## Learning objectives
 
 By the end of this chapter you can:
 
-- Install and pin the exact toolchain every example in this site builds against: JDK 25.0.4 / Quarkus 3.40 with `quarkus-websockets-next`, Python 3.15 managed by `uv`, the AsyncAPI CLI, and the Docker Compose plugin.
-- Explain why `check-prereqs.sh` enforces looser minimum versions than the exact pins in the Version Matrix, and what each enforces.
-- Bring up the Docker Compose lab with `docker compose up --build`, and turn on tracing on demand with `docker compose --profile observability up --build`.
-- Trace the three-tier runtime progression this site climbs (Docker Compose, then minikube, then OpenShift Local (CRC)) without either service's code changing between tiers.
-- Tear down the lab cleanly with `docker compose down --volumes --remove-orphans`, and explain why `--volumes` matters for a stack that persists Tempo and Mimir data.
+- Install the pinned toolchain the examples build against: JDK 25 and Quarkus with `quarkus-websockets-next`, Python 3.15 managed by `uv`, the AsyncAPI CLI, and the Docker Compose plugin.
+- Bring up an example's Docker Compose lab with `docker compose up --build`, and turn on tracing with `docker compose --profile observability up --build`.
+- Tear the lab down cleanly with `docker compose down --volumes --remove-orphans`, and say why `--volumes` matters.
+- Name the three runtime tiers the examples climb (Docker Compose, minikube, OpenShift Local) and what changes between them.
 
 ## Why this matters
 
-This chapter builds the ground every later chapter stands on: a pinned toolchain, a Docker Compose lab that boots both stacks side by side, and a repeatable way to tear it down between runs. The one idea worth carrying forward is that none of this should ever become the thing you're debugging: once the toolchain and the lab shape are settled here, every later chapter can assume them and spend its own space on sockets, not setup.
-
-Every hands-on chapter from here forward hands you a live socket in two languages, pushing the same shipping/cargo handling events over the same AsyncAPI contract. This chapter pins the toolchain each example builds against, lays out the Docker Compose lab that boots both stacks side by side with observability one flag away, and describes the two scripts, `check-prereqs.sh` and the teardown, that make the lab's state predictable before a single line of handler code exists. Nothing here touches message shapes or connection lifecycle; that starts in Part 1. This chapter makes sure the toolchain and the lab shape are settled facts before the real protocol work begins, so neither is ever the thing you're debugging once a chapter asks you to reason about a reconnect or a backpressure policy instead.
-
-The lab itself, the running `compose.yaml`, the `check-prereqs.sh` and teardown scripts, ships with the examples iteration, not this one. What follows describes the toolchain those scripts will check, the Compose shape they will bring up, and the exact commands and output you'll see once they land, so the contract between this chapter's prose and the forthcoming example is unambiguous.
+Every hands-on chapter gives you a live socket in two languages, pushing the same shipping and cargo handling events under one AsyncAPI contract. A pinned toolchain and a lab with a predictable shape mean the thing you debug is the socket, not the setup. Pins are exact so builds reproduce; nothing else here touches message shapes or connection lifecycle.
 
 ## Toolchain pins
 
-This site pins to the current stable release of each tool as of this writing, not an older LTS floor, for the same reason the REST and gRPC sibling sites do: a reader installing the toolchain today should land close to what every example targets, not several minor versions behind it. Quarkus builds on **JDK 25** (the current LTS line, patch **25.0.4**) and targets **Quarkus 3.40**, the current stable minor on the 3.x track: Quarkus 4.0 is in beta as of this writing and isn't adopted here until it ships stable. **WebSockets Next** is the extension that matters for this site specifically: it's the current-generation Quarkus WebSocket API, built on Vert.x and Mutiny from the ground up for structured concurrency and per-connection state, and it ships inside the same Quarkus release train rather than as a separately versioned artifact. The legacy `quarkus-websockets` extension still exists and still works, but every Quarkus example in this site uses WebSockets Next exclusively; WebSockets Next gets a full treatment later in the book, where the legacy API gets its one explicit mention, as the thing this site doesn't teach.
+The pins track the current stable release of each tool, not an older LTS floor, so a reader installing today lands close to what every example targets.
 
-The Python side pins to **Python 3.15**, the current stable release of the language, managed by **`uv`** rather than `pip` and a hand-rolled virtualenv: uv installs the interpreter, resolves and locks dependencies in a `pyproject.toml`-first workflow, and runs the project, all from one fast tool. This is the house standard across the REST and gRPC sibling sites and the shared Python scaffold. Every Python example builds on **FastAPI** for HTTP routing and app lifecycle, paired with the native **`websockets`** library for the socket itself rather than a framework-bundled WebSocket shim: FastAPI's own `WebSocket` type is a thin wrapper over Starlette's ASGI-level primitive, fine for a single-process toy, but the native library exposes the connection state machine, ping/pong control frames, and close-code handling directly: the exact knobs Part 4's liveness and reconnect chapters need. That choice, and when reaching for the framework's built-in support is the right call instead, gets a full treatment later.
+**Quarkus** builds on JDK 25 (the current LTS line) and Quarkus 3.40, the current stable minor. Quarkus 4.0 is in beta and is not adopted until it ships stable. **WebSockets Next** (`quarkus-websockets-next`) is the current-generation Quarkus WebSocket API, built on Vert.x and Mutiny, with per-connection state and no separately versioned artifact. The legacy `quarkus-websockets` extension still works; every Quarkus example here uses WebSockets Next only.
 
-Contract-first work needs one more tool before either service exists: the **AsyncAPI CLI**, which validates `contracts/asyncapi.yaml` against the AsyncAPI 3.0 meta-schema the same way `buf lint` validates a `.proto` file on the gRPC site. That contract gets written and validated for the first time later; this chapter's lab only needs the CLI installed and on `PATH` so `check-prereqs.sh` can confirm it. Two load and functional testing tools round out the list without being needed for this chapter's own checks: **k6** drives the sustained-connection load tests Part 4 builds against, and **Newman** runs any REST-side assertions this site needs at the seam back to the REST booking service. Installing both now means Part 4 is never the first time you reach for either.
+**Python** pins to 3.15, managed by `uv`: it installs the interpreter, resolves and locks dependencies from `pyproject.toml`, and runs the project. FastAPI handles HTTP routing and app lifecycle, and the native `websockets` library handles the socket. FastAPI's own `WebSocket` type is a thin wrapper over Starlette's ASGI primitive, fine for a single-process toy, but the native library exposes the connection state machine, ping/pong control frames and close-code handling that liveness and reconnect work need.
+
+The **AsyncAPI CLI** validates `contracts/asyncapi.yaml` against the AsyncAPI 3.0 meta-schema, the way `buf lint` validates a `.proto` file. **k6** drives the sustained-connection load tests and **Newman** runs REST-side assertions at the seam back to the booking service.
 
 {% include codetabs.html langs="Quarkus|Python" %}
 
 ```bash
-# Quarkus — SDKMAN manages the JDK and the Quarkus CLI
+# Quarkus: SDKMAN manages the JDK and the Quarkus CLI
 sdk install java 25.0.4-tem
 sdk install quarkus 3.40.0
 quarkus create app shipping:handling-events-ws \
   --extension=quarkus-websockets-next,quarkus-opentelemetry
 ```
 ```bash
-# Python — uv manages both the interpreter and the project
+# Python: uv manages both the interpreter and the project
 uv python install 3.15.0
 uv init handling-events-ws && cd handling-events-ws
 uv python pin 3.15.0
 uv add fastapi websockets "uvicorn[standard]" opentelemetry-distro
 ```
 
-A container engine with the **Compose plugin** (Docker Engine or Docker Desktop providing `docker compose` as a CLI subcommand, not the legacy standalone `docker-compose` binary) is the one tool every chapter assumes without exception. The plugin itself has moved past the `2.x` line it's still colloquially called "v2" after (it's at `5.6` as of this writing); the name stuck because it replaced the Python-based v1 tool, and the version number runs on its own track, kept clear of the Compose *file* format's own v2/v3 schema numbering, a different thing entirely. The last toolchain piece is the observability stack itself: `grafana/otel-lgtm`, an all-in-one image bundling Loki (logs), Grafana (dashboards), Tempo (traces), and Mimir (metrics) behind a single OpenTelemetry Collector, the same image the gRPC and REST sites use, so a reader working through more than one site in this series reuses one mental model of where a trace ends up.
+A container engine with the **Compose plugin** (Docker Engine providing `docker compose`, not the legacy standalone `docker-compose` binary) is the one tool every chapter assumes. The plugin is still called "Compose v2" because it replaced the Python-based v1 tool, but its version runs on its own track (5.6 in the matrix below) and has nothing to do with the Compose *file* format's old v2/v3 schema numbers. The labs need a plugin new enough for `profiles` and `depends_on` health conditions. The observability stack is `grafana/otel-lgtm`, an all-in-one image bundling Loki (logs), Grafana (dashboards), Tempo (traces) and Mimir (metrics) behind one OpenTelemetry Collector, the same image the REST and gRPC siblings use.
 
-## The lab (compose + LGTM)
+## The lab (Compose and LGTM)
 
-This chapter's example `compose.yaml` (landing with the examples iteration) brings up two services by default: `quarkus` on host port 8080 and `python` on host port 8081. Both expose a single upgrade path, `/events`, and both are generated against the exact same `contracts/asyncapi.yaml`. Neither pushes a real handling event yet (the contract itself gets written later, and the examples iteration after it is where a server first answers on the wire), but the Compose shape standing here now is the one every later chapter's lab reuses without re-explaining it: two services, one contract, one assertable connection.
-
-A third service, `lgtm`, sits behind a Compose `profiles: ["observability"]` entry, exactly as it does on the REST and gRPC sites, which means a plain `docker compose up` never starts it:
+Each example directory that runs services has its own `compose.yaml` with two services: `quarkus` on host port 8080, and `python` with its WebSocket server on host port 8081 and its HTTP side (`/healthz`) on 8082. The performance example shifts the same pair to 8090, 8091 and 8092. Both services are built against the same `contracts/asyncapi.yaml`, and each example's `README.md` lists its ports and endpoints. A third service, `lgtm`, sits behind a Compose `profiles: ["observability"]` entry, so a plain `docker compose up` never starts it:
 
 ```bash
 docker compose up --build                            # lab only: quarkus, python
 docker compose --profile observability up --build     # + Grafana LGTM on :3000
 ```
 
-Both applications are wired for OTLP export unconditionally (the collector endpoint is an environment variable, nothing more), but neither one requires a collector to be listening to start cleanly. An OTLP exporter with no live endpoint fails in the background on its own schedule; it never blocks an upgrade handshake or the server's startup. At this stage there's nothing worth tracing beyond "a client connected," so four extra containers on every reader's first boot would slow the inner loop down for no signal. The profile exists so observability is one flag away the moment a chapter's content makes a trace worth looking at, starting with Part 6, where that trace is the whole point of the chapter, and every later chapter's lab keeps this same shape: fast by default, tracing opt-in.
+Both applications are wired for OTLP export, with the collector endpoint set by an environment variable, but neither needs a collector to start. An OTLP exporter with no live endpoint fails in the background and never blocks an upgrade handshake or startup. Extra containers on every first boot would slow the inner loop for no signal, so tracing is opt-in and every example keeps this shape: fast by default, observability one flag away.
 
-{% include excalidraw.html file="00-lab-topology" alt="The Compose lab topology: a wscat or browser dev console opening a WebSocket upgrade against a Quarkus WebSockets Next container on host port 8080 and a Python FastAPI-plus-websockets container on host port 8081, both generated from the same contracts/asyncapi.yaml, with an optional LGTM observability stack reachable only when the observability profile is active." caption="Figure 0.1: The lab: one contract, two servers, OTel off by default." %}
-
-## check-prereqs.sh
-
-`check-prereqs.sh` is the first thing every chapter's `verify.sh` calls, and the first thing a reader runs before touching Compose at all. It doesn't install anything; it only checks what's already on `PATH` against the pins in the previous section, and fails loud with the exact install command to fix whatever's missing, rather than letting a vague Compose build error be the first symptom of a missing toolchain. The script ships with the examples iteration, but its shape is fixed now, because every later chapter's own prerequisite checks follow it: one `require` function per tool, a version comparison against a pinned minimum, and a single non-zero exit the moment the first check fails, so CI and a reader's terminal report the same failure the same way.
-
-Each check follows the same three-step shape: locate the binary, parse its reported version, compare it against the pin. For a tool like `quarkus` that embeds its own version in `--version` output, that's a direct string compare; for `docker compose version`, it's a `>=` comparison against the plugin's minimum, since the exact patch rarely matters as long as the plugin architecture is new enough to support `profiles` and `depends_on` health conditions, both of which this chapter's lab uses. A missing tool prints its install command verbatim, copied from the toolchain pins above, so fixing a failed check never means leaving this chapter to go find the right flag.
+{% include excalidraw.html file="00-lab-topology" alt="The Compose lab: a wscat or browser client opening a WebSocket upgrade against a Quarkus container on host port 8080 and a Python container on host port 8081, both generated from the same AsyncAPI contract, with an optional LGTM stack reachable only when the observability profile is active." caption="Figure 0.1: The lab: one contract, two servers, OTel off by default." %}
 
 ## Version matrix
 
 | Component | Pinned version | Why this one |
 |---|---|---|
-| JDK | 25.0.4 (LTS) | current LTS patch; every Quarkus Containerfile in this site builds on it |
+| JDK | 25.0.4 (LTS) | current LTS patch; every Quarkus Containerfile builds on it |
 | Quarkus | 3.40.0 | current stable minor; 4.0 is beta as of this writing |
 | Quarkus WebSockets Next | ships with Quarkus 3.40.0 | no separate version, part of the core extension set |
 | Python | 3.15.0 | current stable language release |
@@ -85,75 +74,34 @@ Each check follows the same three-step shape: locate the binary, parse its repor
 | websockets (library) | 17.1 | current stable; the native library both stacks' Python side builds on |
 | AsyncAPI CLI | 6.2.1 | validates `contracts/asyncapi.yaml` once it exists |
 | Docker Compose (plugin) | 5.6.0 | the `docker compose` subcommand, not the legacy `docker-compose` v1 binary |
-| k6 | 2.3.0 | load-testing tool for Part 4; installed now, used later |
+| k6 | 2.3.0 | load-testing tool for sustained-connection tests |
 | Newman | 6.2.3 | REST-side assertions at the booking-service seam |
 | Kafka | 4.3.1 (KRaft mode, `apache/kafka` image) | current stable; backs the Kafka-backed reconnect design and the scale-out fan-out, ZooKeeper-free |
-| Redis | 8.10.2-alpine | current stable; the other scale-out backplane, run alongside Kafka for the cross-instance fan-out proof |
+| Redis | 8.10.2-alpine | current stable; the other scale-out backplane, run alongside Kafka for cross-instance fan-out |
 | PyJWT | 2.15.1 | current stable; validates the self-minted HS256 JWT at the upgrade handshake |
 
-Every row is pinned to an exact version, never a floating major or a `latest` tag, and bumped as a reviewed change when the next survey pass finds a newer stable release, never as a side effect of an unrelated commit. The canonical copy of this table lives in `_plans/version-matrix.md`; this chapter's copy is the one `check-prereqs.sh` enforces at build time, so the two are kept in lockstep by the same review that bumps either one.
+Every row is an exact version, never a floating major or `latest`, and bumped as a reviewed change when a survey finds a newer stable release. Nothing in the examples depends on a feature newer than the minimum the tool needs, so a reader a patch or two behind still runs them.
 
 ## Teardown
-
-A lab that only knows how to start isn't one you can trust to start cleanly the next time. Tearing down this chapter's stack is one command:
 
 ```bash
 docker compose down --volumes --remove-orphans
 ```
 
-`--volumes` matters here specifically because the `lgtm` service, once started under the observability profile, persists Tempo and Mimir data to a named volume between runs; leaving it in place across chapters means the first trace you capture later in the book might not be the first trace Tempo holds. `--remove-orphans` catches the case where an earlier chapter's `compose.yaml` left a container running under a service name this chapter's file no longer defines: a stale container from an earlier interrupted run, not a sign anything is wrong with this chapter's file. Every later chapter's `verify.sh` runs this exact teardown in a shell `trap` on exit, success or failure, which is what makes "run the lab, see it fail, fix the handler, run it again" a loop that never accumulates state between attempts.
+`--volumes` matters because the `lgtm` service persists Tempo and Mimir data to a named volume between runs; leaving it means the first trace you capture may not be the first trace Tempo holds. `--remove-orphans` removes containers left under a service name the current `compose.yaml` no longer defines, such as a stale container from an interrupted run. Every example's `verify.sh` runs this teardown in a shell `trap`, so "run, see it fail, fix, run again" never accumulates state.
 
-This chapter's tier is the first of three this site climbs through, and the only one this chapter's lab stands up. Docker Compose is the fast inner loop every chapter's example targets first; the identical two services come up later on **minikube**, using the docker driver and the containerd runtime rather than Podman, to show the same contract surviving a real scheduler, Services, and readiness probes. Appendix A repeats that exercise a third time on **OpenShift Local (CRC)**, as a separate, non-numbered track rather than folded into the minikube chapter, because the two platforms solve different problems: a free local cluster for iterating versus a faithful single-node OpenShift for routes, security context constraints, and an Operator-managed Kafka. None of the three tiers changes what either service does; each one only changes how a client reaches it and how the platform keeps it running.
+## Three runtime tiers
 
-{% include excalidraw.html file="00-tier-progression" alt="Three runtime tiers in sequence: Docker Compose, used in this chapter, as the fastest inner loop; minikube with the docker driver and containerd runtime later in the book; and OpenShift Local (CRC) as a separate appendix. An arrow connects each tier to the next, labeled 'same contract, same services.'" caption="Figure 0.2: Three tiers, one contract: Compose now, minikube and CRC later." %}
+Docker Compose is the fast inner loop every example targets first. The same two services then come up on **minikube**, using the docker driver and the containerd runtime, to show the contract surviving a real scheduler, Services and readiness probes. Appendix A repeats the exercise on **OpenShift Local (CRC)** as a separate track, for routes, security context constraints and an Operator-managed Kafka. None of the tiers changes what either service does; each changes how a client reaches it and how the platform keeps it running.
 
-## On the wire
+{% include excalidraw.html file="00-tier-progression" alt="Three runtime tiers in sequence: Docker Compose, then minikube with the docker driver and containerd runtime, then OpenShift Local (CRC) as an appendix, joined by arrows labeled same contract, same services." caption="Figure 0.2: Three tiers, one contract: Compose, then minikube, then CRC." %}
 
-Once the examples iteration lands, running `check-prereqs.sh` against a fully-provisioned machine looks like this:
-
-```text
-$ ./scripts/check-prereqs.sh
-checking java................. 25.0.4 (>= 25.0.0)        OK
-checking quarkus............... 3.40.0 (>= 3.33.0)        OK
-checking python................ 3.15.0 (>= 3.15.0)        OK
-checking uv.................... 0.13.1 (>= 0.12.0)        OK
-checking asyncapi.............. 6.2.1 (>= 5.0.0)          OK
-checking docker................ 29.1.2                    OK
-checking docker compose........ 5.6.0 (>= 2.20.0)         OK
-checking k6..................... 2.3.0 (>= 1.0.0)          OK
-checking newman................. 6.2.3 (>= 6.0.0)          OK
-all checks passed — run: docker compose up --build
-```
-
-A missing or under-pinned tool fails exactly one line and stops the script there rather than listing every subsequent check as a cascading failure:
-
-```text
-checking uv.................... not found
-missing dependency: uv >= 0.12.0
-  install: curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-| Check | Pinned minimum | What it gates |
-|---|---|---|
-| `java` | 25.0.0 | Quarkus build and dev mode |
-| `quarkus` | 3.33.0 | WebSockets Next extension availability |
-| `python` | 3.15.0 | matches the `pyproject.toml` `requires-python` floor every example pins to |
-| `uv` | 0.12.0 | the `pyproject.toml` + `uv.lock` workflow this site's Python uses |
-| `asyncapi` | 5.0.0 | AsyncAPI 3.0 validation support |
-| `docker compose` | 2.20.0 | `profiles` and `depends_on` health conditions |
-
-The minimums in this table are looser than the exact pins in the Version Matrix above by design: a reader two patch releases behind the current pin still passes every check and runs every example correctly, because nothing in this site's examples depends on a feature introduced after the minimum. The exact pins exist so the book's own CI and container builds are reproducible; the minimums exist so a reader isn't forced into a same-day toolchain upgrade to get started.
-
-## Where this goes next
-
-The next part steps back from the lab to the problem this site's first part spends its time justifying: why polling a REST endpoint stops working once "almost real-time" isn't good enough, and what a persistent connection buys over it instead. WebSockets itself gets a full treatment shortly after: the HTTP Upgrade handshake, frame anatomy, control versus data frames, and the close-code vocabulary every later error-handling chapter refers back to. `contracts/asyncapi.yaml` is written and validated for the first time a bit further in, in the first chapter this site's CI gate enforces. Everything this chapter fixed, the toolchain pins, the Compose shape, the three-tier runtime progression, `check-prereqs.sh` as the thing every chapter runs first, stays constant from here forward; only what's behind each upgrade handshake gets more real.
-
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>This site pins JDK 25 / Quarkus 3.40, Python 3.15 / uv 0.13, and the Compose plugin as the toolchain every example builds against, surveyed to current stable rather than an older LTS floor, with the lab running entirely through Docker Compose and LGTM gated behind an opt-in profile; <code>check-prereqs.sh</code> and the Compose lab itself ship with the examples iteration, but the pins, the Compose shape, and the three-tier runtime progression they target are fixed as of this chapter.</p></div>
+<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Pin exact current-stable versions (JDK 25 and Quarkus 3.40, Python 3.15 and uv, the Compose plugin), run every example through Docker Compose with LGTM behind an opt-in profile, and move to minikube and OpenShift Local only to change how the same services are reached and kept running.</p></div>
 
 ## For deeper coverage
 
 - Gough, J. & Bryant, D. & Auburn, M., *Mastering API Architecture* (O'Reilly, 2022): the architectural decisions behind picking a toolchain and a runtime posture before a single endpoint exists.
-- *Cloud Native Design Patterns*, "Communications" chapter: the interaction-style landscape this site's lab is built to exercise one corner of.
-- [Quarkus WebSockets Next guide](https://quarkus.io/guides/websockets-next): the extension this chapter's toolchain pins and later chapters build on.
-- [Python `websockets` documentation](https://websockets.readthedocs.io/): the native library this site's Python stack uses for the socket itself.
-- [Docker Compose documentation](https://docs.docker.com/compose/): `profiles`, `depends_on` health conditions, and the plugin version this chapter's lab depends on.
+- *Cloud Native Design Patterns*, "Communications" chapter: the interaction-style landscape the lab exercises one corner of.
+- [Quarkus WebSockets Next guide](https://quarkus.io/guides/websockets-next): the extension every Quarkus example builds on.
+- [Python `websockets` documentation](https://websockets.readthedocs.io/): the native library the Python stack uses for the socket itself.
+- [Docker Compose documentation](https://docs.docker.com/compose/): `profiles`, `depends_on` health conditions, and the plugin version the lab depends on.

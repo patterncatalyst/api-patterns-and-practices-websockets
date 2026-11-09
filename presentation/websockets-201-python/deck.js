@@ -20,8 +20,8 @@ const {
   addStatusTable, addCaption, addCodeSlide, addDiagramSlide, addSectionDivider, addNotes,
 } = H;
 
-const OUT = "WebSockets_201_Python-r1.1.pptx";
-const REV = "r1.1";
+const OUT = "WebSockets_201_Python-r1.2.pptx";
+const REV = "r1.2";
 const LANG_PY = "Python · websockets / FastAPI";
 
 const pres = newDeck();
@@ -71,7 +71,7 @@ function code(eyebrow, title, lang, codeLines, caption, notes, opts) {
     { x: 6.00, y: 4.80, w: 6.80, h: 1.00, fontFace: FONT.body, fontSize: 16, italic: true, color: COLOR.caption, align: "left", valign: "top" });
   s.addText(REV, { x: 11.85, y: 5.85, w: 0.95, h: 0.30, fontFace: FONT.mono, fontSize: 11, color: COLOR.caption, align: "right", valign: "middle" });
   try { s.addImage({ path: `${ASSETS}/logo-candidate-2.png`, x: 11.10, y: 6.80, w: 1.55, h: 0.37 }); } catch (e) {}
-  addNotes(s, "This is the 201-Python: the code-level companion for engineers implementing the handling-events feed on Python's native websockets library rather than FastAPI's bundled WebSocket support. The main body runs just under 50 slides across six sections: the Part 3 endpoint, Part 4 connection concerns (backpressure, errors, liveness, auth), Part 4 reconnect and the backplane, Part 5 Protobuf performance, Part 6 testing/debugging/observability, and deploy. The Quarkus WebSockets Next sibling is cross-referenced by concept throughout, never by slide number.");
+  addNotes(s, "This is the 201-Python: the code-level companion for engineers implementing the handling-events feed on Python's native websockets library rather than FastAPI's bundled WebSocket support. The main body runs just under 50 slides across six sections: the handling-events endpoint, connection concerns (backpressure, errors, liveness, auth), reconnect and the backplane, Protobuf performance, testing/debugging/observability, and deploy. The Quarkus WebSockets Next sibling is cross-referenced by concept throughout, never by slide number.");
 }
 
 // ===== AGENDA ===================================================================
@@ -86,12 +86,12 @@ function code(eyebrow, title, lang, codeLines, caption, notes, opts) {
      "05: Testing, debugging, observability: the test pyramid, symptom-to-tool, a hand-written span where no auto-instrumentation exists",
      "06: Deploy: Compose to minikube to OpenShift Local",
      { text: "Appendix: model-generation pipeline, the maxsize=0 behavior, dedup-by-eventId, Newman + k6, the drift gate, version matrix", muted: true }]);
-  addNotes(s, "Six sections, the same order the chapters build in: the endpoint (Python native websockets), the four connection concerns (backpressure and flow control, error handling, liveness and heartbeats, security), reconnect and scale-out (stateless reconnect, Kafka-backed reconnect, scale-out and fan-out), performance (binary Protobuf over WebSockets, optimizing throughput), the toolbox (testing, debugging, observability), and deploy. Appendix carries the model-generation pipeline, a deeper look at the backpressure behavior, Kafka dedup, the Newman and k6 scripts, the drift-gate pipeline figure, and the version matrix. Cross-references to the Quarkus WebSockets Next sibling are by concept, 'the same close code on both stacks,' never by slide number, so the deck survives a trim.");
+  addNotes(s, "Six sections, in the order the example is built: the endpoint (Python native websockets), the four connection concerns (backpressure and flow control, error handling, liveness and heartbeats, security), reconnect and scale-out (stateless reconnect, Kafka-backed reconnect, scale-out and fan-out), performance (binary Protobuf over WebSockets, optimizing throughput), the toolbox (testing, debugging, observability), and deploy. Appendix carries the model-generation pipeline, a deeper look at the backpressure behavior, Kafka dedup, the Newman and k6 scripts, the drift-gate pipeline figure, and the version matrix. Cross-references to the Quarkus WebSockets Next sibling are by concept, 'the same close code on both stacks,' never by slide number, so the deck survives a trim.");
 }
 
 // ===== SECTION 01 — THE PYTHON ENDPOINT =========================================
 divider("01", "The Python Endpoint", "Native websockets, not FastAPI's bundled WebSocket support.",
-  "Opens with the Part 3 build (Python native websockets): one handler, one channel, pushing the fixture's three HandlingEvents on connect. The choice this whole section defends is using the raw `websockets` library instead of Starlette's bundled WebSocket support. That contrast is this section's throughline.");
+  "Opens with the plain-replay build (Python native websockets): one handler, one channel, pushing the fixture's three HandlingEvents on connect. The choice this whole section defends is using the raw `websockets` library instead of Starlette's bundled WebSocket support. That contrast is this section's throughline.");
 
 diagram("THE PYTHON ENDPOINT · AT A GLANCE", "One channel, two stacks, the same fixture sequence",
   "part3-architecture",
@@ -120,12 +120,12 @@ code("THE PYTHON ENDPOINT · THE HANDLER", "serve() + handler(ServerConnection):
    "def create_server(host: str, port: int):",
    "    return serve(handler, host, port)"],
   "examples/part3-handling-events/python/app/ws_server.py: handler(ServerConnection) pushes the fixture, then holds the connection open",
-  "websocket.request.path carries the full request-target; the channel regex is matched against it directly here (Part 4 later has to split off a query string for the token). sequence_as_json() reuses the same generated model the conformance test validates against: nothing hand-written sits between the contract and this send() call. No subprotocol is enforced yet: passing subprotocols= to serve() would reject any client that didn't offer one, breaking plain clients for no behavior this example implements. The security chapter is where that changes.");
+  "websocket.request.path carries the full request-target; the channel regex is matched against it directly here (the connection example later has to split off a query string for the token). sequence_as_json() reuses the same generated model the conformance test validates against: nothing hand-written sits between the contract and this send() call. No subprotocol is enforced yet: passing subprotocols= to serve() would reject any client that didn't offer one, breaking plain clients for no behavior this example implements. The security section is where that changes.");
 
-content("WHY NOT FASTAPI/STARLETTE'S BUNDLED WEBSOCKET", "The chapter's own contrast, stated directly",
-  ["Starlette's WebSocket support is exactly what this chapter is contrasting against: this example runs the raw `websockets` library instead, on its own asyncio listener, side by side with a small FastAPI app that owns only HTTP and lifecycle.",
+content("WHY NOT FASTAPI/STARLETTE'S BUNDLED WEBSOCKET", "The contrast, stated directly",
+  ["Starlette's WebSocket support is exactly what this example contrasts against: this example runs the raw `websockets` library instead, on its own asyncio listener, side by side with a small FastAPI app that owns only HTTP and lifecycle.",
    "The two servers run as two coroutines on one event loop, not two processes: `asyncio.gather(_run_ws(), _run_http())` in app/main.py, each awaited forever.",
-   "That split keeps the WebSocket surface on the library built specifically for the protocol, while FastAPI keeps doing what it's good at: `/healthz`, `/`, and (from Part 4 on) the HTTP inject seam."],
+   "That split keeps the WebSocket surface on the library built specifically for the protocol, while FastAPI keeps doing what it's good at: `/healthz`, `/`, and (from the connection example on) the HTTP inject seam."],
   "This is an architectural choice worth defending out loud: `websockets` is a focused, asyncio-native library built for exactly one protocol, with direct control over ping/pong, subprotocol negotiation, and close codes, all of which this deck's later slides lean on directly (liveness's ping_interval/ping_timeout as a serve() kwarg, security's close-code-only auth rejection). FastAPI/Starlette's bundled WebSocket support exists, but it isn't what this series is teaching.");
 
 diagram("TWO LISTENERS, ONE EVENT LOOP", "The WS server and the FastAPI app, as coroutines",
@@ -210,9 +210,9 @@ code("THE CONFORMANCE TEST", "Round-trip fidelity: schema validation plus exact-
 
 // ===== SECTION 02 — CONNECTION CONCERNS =========================================
 divider("02", "Connection Concerns", "Backpressure, errors, liveness, and auth: four concerns on one connection.",
-  "Walks the Part 4 connection example (backpressure, error handling, liveness, and security): the bounded outbound buffer, envelope-then-close error handling, the idle-timeout trap and the library's own ping/pong default, and JWT auth validated right after the upgrade completes.");
+  "Walks the connection example (backpressure, error handling, liveness, and security): the bounded outbound buffer, envelope-then-close error handling, the idle-timeout trap and the library's own ping/pong default, and JWT auth validated right after the upgrade completes.");
 
-diagram("THE PART-4 CONNECTION APP", "Four concerns layered onto Part 3's plain replay",
+diagram("THE CONNECTION APP", "Four concerns layered onto the plain replay",
   "part4-connection-architecture",
   "Same shared JWT secret, same close codes on both stacks: verify.sh asserts a client can't tell them apart.",
   "Four concerns layer onto the same channel path: an auth gate before any data streams (security), a bounded OutboundQueue feeding the replay (backpressure), a receive loop that rejects any client frame as a protocol error (error handling), and ping_interval/ping_timeout handed straight to the library (liveness). Every one of these is closed-source behavior on the Quarkus side too: same close codes, same shared secret.");
@@ -257,7 +257,7 @@ diagram("SLOW-CONSUMER TIMELINE", "A producer outrunning a consumer, without a b
 
 diagram("ERROR HANDLING: ENVELOPE-THEN-CLOSE", "Two signals, not one, for a client-caused protocol error",
   "13-error-flow-vs-1006",
-  "Figure 13.2. the envelope-then-close sequence this chapter builds, next to the one failure mode no close code can ever carry: a peer that vanished before any handshake could complete.",
+  "Figure 13.2. the envelope-then-close sequence this example builds, next to the one failure mode no close code can ever carry: a peer that vanished before any handshake could complete.",
   "A close code alone tells the client that something went wrong, cheaply, but carries no human-readable detail and arrives after the connection is already gone. An in-band JSON error envelope sent before the close frame explains what was wrong, for a client developer debugging their own framing bug. 1006 is the contrast case: an RFC 6455 reserved value an implementation must never actually put in a close frame: it exists only for a local API to report 'no handshake happened at all.'");
 
 code("CLOSE CODES AND THE ERROR ENVELOPE", "ConnectionClosed, and the channel's own protocol-error convention",
@@ -272,7 +272,7 @@ code("CLOSE CODES AND THE ERROR ENVELOPE", "ConnectionClosed, and the channel's 
    "    await websocket.close(code=CLOSE_CODE_MALFORMED, reason=\"malformed client message\")",
    "",
    "async def _receive_loop(websocket) -> None:",
-   "    # server-push-only channel -- ANY client frame is a protocol error",
+   "    # server-push-only channel: ANY client frame is a protocol error",
    "    async for message in websocket:",
    "        if not isinstance(message, str):",
    "            await _reject_malformed(websocket, \"binary frames are not supported on this channel\")",
@@ -280,7 +280,7 @@ code("CLOSE CODES AND THE ERROR ENVELOPE", "ConnectionClosed, and the channel's 
    "        await _reject_malformed(websocket, \"this channel accepts no client-to-server messages\")",
    "        return"],
   "examples/part4-connection/python/app/ws_server.py: _reject_malformed sends the envelope, then closes 4400",
-  "This channel defines no client-to-server operation at all, so the receive loop's job is simple: any inbound frame, of any shape, is by definition a protocol error. Auth (1008), backpressure (4290), and an internal error (1011) rely on the close code alone: none of them has a single offending frame to annotate, unlike the malformed-message case this slide shows.");
+  "This channel defines no client-to-server operation at all, so the receive loop's job is simple: any inbound frame, of any shape, is by definition a protocol error. Auth (1008), backpressure (4290), and an internal error (1011) rely on the close code alone: none of them has a single offending frame to annotate, unlike the malformed-message case shown earlier.");
 
 diagram("LIVENESS: THE IDLE-TIMEOUT TRAP", "A server's own ping can reset its own idle clock",
   "14-idle-timeout-trap",
@@ -291,10 +291,10 @@ code("LIVENESS AS A LIBRARY DEFAULT", "ping_interval / ping_timeout, handed stra
   LANG_PY,
   ["# examples/part4-connection/python/app/ws_server.py",
    "def create_server(host: str, port: int):",
-   "    \"\"\"Ch14 heartbeats: ping_interval/ping_timeout are handed straight to",
+   "    \"\"\"Heartbeats: ping_interval/ping_timeout are handed straight to",
    "    the `websockets` library, which sends a ping every ping_interval",
    "    seconds and closes the connection if no pong arrives within",
-   "    ping_timeout seconds of that ping -- no code in this module",
+   "    ping_timeout seconds of that ping: no code in this module",
    "    implements liveness detection; it is entirely the library's",
    "    responsibility.",
    "    \"\"\"",
@@ -341,10 +341,10 @@ code("JWT AUTH: validate_token, PYJWT, COLLAPSE TO 1008", "process_request vs. t
 divider("03", "Reconnect and the Backplane", "Stateless by default, durable and replayable with Kafka, simple with Redis.",
   "Walks stateless reconnect, Kafka-backed reconnect, and scale-out and fan-out: when stateless reconnect is fine, the Kafka-backed backplane that closes the gap a stateless mode leaves open, the Redis Pub/Sub alternative, and the scale-out problem: a sticky session says nothing about where an event is produced.");
 
-diagram("THE PART-4 BACKPLANE APP", "Two instances, one shared fan-out mechanism",
+diagram("THE BACKPLANE APP", "Two instances, one shared fan-out mechanism",
   "part4-backplane-architecture",
   "Both stacks (Quarkus WebSockets Next, Python websockets+FastAPI) implement this identically: PROTOCOL.md is the single source of truth.",
-  "A test harness injects an event at instance B while the client is connected to instance A: exactly the gap a sticky load balancer can't close on its own. Three backplane modes share one interface: stateless (in-process only, the stateless-reconnect chapter), kafka (durable and replayable, the Kafka-backed-reconnect chapter), redis (live fan-out only, the scale-out chapter).");
+  "A test harness injects an event at instance B while the client is connected to instance A: exactly the gap a sticky load balancer can't close on its own. Three backplane modes share one interface: stateless (in-process only, for stateless reconnect), kafka (durable and replayable, for Kafka-backed reconnect), redis (live fan-out only, for scale-out).");
 
 diagram("STATELESS RECONNECT: afterEventId IGNORED", "Fine when a fresh value supersedes a stale one",
   "15-when-stateless-ok",
@@ -367,7 +367,7 @@ code("THE STATELESS BACKPLANE", "In-process fan-out only; after_event_id accepte
    "            queue.put_nowait(event)",
    "",
    "    async def subscribe(self, booking_id, after_event_id):",
-   "        del after_event_id  # unused -- no history to replay",
+   "        del after_event_id  # unused: no history to replay",
    "        queue: asyncio.Queue[HandlingEvent] = asyncio.Queue()",
    "        self._subscribers[booking_id].add(queue)",
    "        try:",
@@ -376,7 +376,7 @@ code("THE STATELESS BACKPLANE", "In-process fan-out only; after_event_id accepte
    "        finally:",
    "            self._subscribers[booking_id].discard(queue)"],
   "examples/part4-backplane/python/app/backplane/stateless_backplane.py: no broker, no shared state, scoped to this instance only",
-  "This is the default profile, and the scale-out chapter's motivating contrast case: two instances behind a load balancer do not see each other's injected events. after_event_id is accepted purely for interface symmetry with the other two modes: this mode keeps no history at all, so a gap-era event is lost for a disconnected client, by design (PROTOCOL.md calls this the 'visible-gap proof').");
+  "This is the default profile, and the motivating contrast case for scale-out: two instances behind a load balancer do not see each other's injected events. after_event_id is accepted purely for interface symmetry with the other two modes: this mode keeps no history at all, so a gap-era event is lost for a disconnected client, by design (PROTOCOL.md calls this the 'visible-gap proof').");
 
 diagram("KAFKA-BACKED RESUME: TOPIC OFFSET TO afterEventId", "Durable + replayable, the resume mechanism itself",
   "16-topic-offset-resume",
@@ -402,7 +402,7 @@ code("THE KAFKA BACKPLANE", "aiokafka producer/consumer; buffer-then-search for 
    "        await consumer.seek_to_beginning(*topic_partitions)",
    "        end_offsets = await consumer.end_offsets(topic_partitions)",
    "        # buffer every record up to the snapshotted end offsets, THEN",
-   "        # search for after_event_id's index -- streaming can't decide",
+   "        # search for after_event_id's index; streaming can't decide",
    "        # in time whether a record should ultimately be kept.",
    "        ...",
    "    async for record in consumer:",
@@ -414,7 +414,7 @@ code("THE KAFKA BACKPLANE", "aiokafka producer/consumer; buffer-then-search for 
 diagram("SCALE-OUT: STICKY SESSIONS VS. A SHARED BACKPLANE", "A sticky session says nothing about where an event is produced",
   "18-sticky-vs-backplane",
   "Figure 18.1. a sticky load balancer pins the client to instance A, but the event enters at instance B; without a shared backplane the event never crosses the gap between them.",
-  "This is the scale-out chapter's motivating picture: sticky sessions keep a client on one instance and nothing more: they say nothing about which instance an event is produced on. Without a backplane, instance A has no way to learn about something that happened at instance B. Only a shared Kafka topic or Redis channel crosses that gap.");
+  "This is the motivating picture for scale-out: sticky sessions keep a client on one instance and nothing more: they say nothing about which instance an event is produced on. Without a backplane, instance A has no way to learn about something that happened at instance B. Only a shared Kafka topic or Redis channel crosses that gap.");
 
 diagram("KAFKA VS. REDIS", "Same fan-out outcome, different trade-off: no single winner",
   "18-kafka-vs-redis",
@@ -431,7 +431,7 @@ code("THE REDIS PUB/SUB BACKPLANE", "Simplicity and latency, at the cost of any 
    "    await self._client.publish(_channel(booking_id), event.model_dump_json(exclude_none=True))",
    "",
    "async def subscribe(self, booking_id, after_event_id):",
-   "    del after_event_id  # unused -- no history in Pub/Sub",
+   "    del after_event_id  # unused: no history in Pub/Sub",
    "    pubsub = self._client.pubsub()",
    "    channel = _channel(booking_id)",
    "    await pubsub.subscribe(channel)",
@@ -461,7 +461,7 @@ code("THE HTTP INJECT SEAM", "One endpoint feeds whichever backplane is active",
    "                event.eventId, bookingId, request.app.state.instance_id)",
    "    return {\"status\": \"accepted\", \"eventId\": event.eventId, \"bookingId\": bookingId}"],
   "examples/part4-backplane/python/app/http_app.py: PROTOCOL.md's \"Inject endpoint\", shared across all three backplane modes",
-  "One FastAPI route, one line that actually matters: `backplane.publish(bookingId, event)`. The polymorphism lives entirely behind the Backplane interface, so this endpoint has no idea whether it's talking to an in-process queue, a Kafka producer, or a Redis client. That's what lets tests and the scale-out chapter's demo script inject an event the same way regardless of which mode the instance was started in.");
+  "One FastAPI route, one line that actually matters: `backplane.publish(bookingId, event)`. The polymorphism lives entirely behind the Backplane interface, so this endpoint has no idea whether it's talking to an in-process queue, a Kafka producer, or a Redis client. That's what lets tests and the scale-out demo script inject an event the same way regardless of which mode the instance was started in.");
 
 // ===== SECTION 04 — PERFORMANCE =================================================
 divider("04", "Performance", "Binary Protobuf as a second encoding, not a second contract.",
@@ -470,7 +470,7 @@ divider("04", "Performance", "Binary Protobuf as a second encoding, not a second
 diagram("THE PART-5 PERFORMANCE APP", "One channel, two wire encodings, negotiated by subprotocol",
   "part5-performance-architecture",
   "Same contract, same fixture, two wire encodings: verify.sh proves field equality and the Protobuf size win live on both stacks.",
-  "This example drops Part 4's connection concerns entirely (no backpressure, no in-band errors, no auth, no heartbeat tuning) to isolate the encoding comparison: the same HandlingEvent, pushed either as a 247-byte JSON text frame or a 149-byte Protobuf binary frame, decoded both ways to prove the field values are identical.");
+  "This example drops the connection concerns entirely (no backpressure, no in-band errors, no auth, no heartbeat tuning) to isolate the encoding comparison: the same HandlingEvent, pushed either as a 247-byte JSON text frame or a 149-byte Protobuf binary frame, decoded both ways to prove the field values are identical.");
 
 diagram("BINARY PROTOBUF: A SECOND ENCODING, NOT A SECOND CONTRACT", "One message, negotiated by Sec-WebSocket-Protocol",
   "19-two-encodings-one-message",
@@ -496,7 +496,7 @@ code("THE PROTO MAPPER", "Validated model to its Protobuf binary twin, and back"
    "        kwargs[\"amount\"] = data[\"amount\"]",
    "    return HandlingEventProto(**kwargs)",
    "",
-   "# app/ws_server.py -- subprotocol decides the encoding, once, at handshake:",
+   "# app/ws_server.py: subprotocol decides the encoding, once, at handshake:",
    "SUBPROTOCOL_PROTOBUF = \"handling-events.v1+protobuf\"",
    "if _is_protobuf(websocket):",
    "    await websocket.send(to_proto(event).SerializeToString())",
@@ -508,7 +508,7 @@ code("THE PROTO MAPPER", "Validated model to its Protobuf binary twin, and back"
 diagram("FIELD NUMBERS ARE THE REAL CONTRACT", "A JSON key can be renamed freely; a Protobuf field number never moves",
   "19-field-numbers-vs-key-names",
   "Figure 19.2. a JSON key can be renamed freely because the string itself is the identity; a Protobuf field number can never move or be reused, because the integer tag, not the field's name, is the wire identity.",
-  "check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn't also carry: field numbers are additive-only, the same discipline the versioning-and-evolution chapter's JSON contract already enforces on key names, just enforced differently because the two encodings carry their contract in different places.");
+  "check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn't also carry: field numbers are additive-only, the same discipline the JSON contract's versioning rules already enforce on key names, just enforced differently because the two encodings carry their contract in different places.");
 
 diagram("OPTIMIZING THROUGHPUT: THE LEVERS", "Four levers, one shared ceiling",
   "20-levers",
@@ -533,12 +533,12 @@ code("COMPRESSION AND SIZE LIMITS: BOTH LIBRARY DEFAULTS", "create_server() neve
    "        select_subprotocol=_select_subprotocol,",
    "    )"],
   "examples/part5-performance/python/app/ws_server.py: create_server() passes no compression, max_size, or max_queue argument at all",
-  "What isn't on screen is the point: serve()'s own signature defaults to compression=\"deflate\" and a real 1 MiB max_size, neither overridden here: every connection to Python's :8091 negotiates permessage-deflate unless a caller explicitly opts out. The optimizing-throughput chapter's own measurement found Quarkus WebSockets Next takes the opposite stance (off unless per-message-compression-supported=true is set): the same benchmark request negotiated deflate on 100% of Python's connects and 0% of Quarkus's.");
+  "What isn't on screen is the point: serve()'s own signature defaults to compression=\"deflate\" and a real 1 MiB max_size, neither overridden here: every connection to Python's :8091 negotiates permessage-deflate unless a caller explicitly opts out. The throughput benchmark found Quarkus WebSockets Next takes the opposite stance (off unless per-message-compression-supported=true is set): the same benchmark request negotiated deflate on 100% of Python's connects and 0% of Quarkus's.");
 
 diagram("BYTES PER FRAME, MEASURED", "40.7% smaller, and a blind spot the benchmark tool can't see past",
   "20-bytes-per-frame",
   "Figure 20.1. the measured bytes/frame comparison and the real stack difference in whether permessage-deflate gets negotiated at all; the deflate row's bytes/frame is a blind spot, not evidence against compression.",
-  "k6/ws is built on gorilla/websocket, which transparently inflates a compressed frame before the script ever sees its bytes: the json_deflate row reading identical to plain json is a measurement-tool blind spot, not proof deflate had no effect on the wire. What the benchmark can prove without inference is the negotiation outcome itself: Python 7908/7908 (100%), Quarkus 0 out of 11806-18292 across three runs (0%), the one number this chapter treats as proven rather than inferred.");
+  "k6/ws is built on gorilla/websocket, which transparently inflates a compressed frame before the script ever sees its bytes: the json_deflate row reading identical to plain json is a measurement-tool blind spot, not proof deflate had no effect on the wire. What the benchmark can prove without inference is the negotiation outcome itself: Python 7908/7908 (100%), Quarkus 0 out of 11806-18292 across three runs (0%), the one number treated as proven rather than inferred.");
 
 // ===== SECTION 05 — TESTING, DEBUGGING, OBSERVABILITY ===========================
 divider("05", "Testing, Debugging, Observability", "A protocol you can't curl needs a different toolbox.",
@@ -552,7 +552,7 @@ diagram("THE TEST PYRAMID FOR A PROTOCOL YOU CAN'T CURL", "Five tools, four tier
 diagram("DEBUGGING: SYMPTOM TO TOOL", "Reach for the cheapest tool that taps the right layer first",
   "22-symptom-to-tool",
   "Figure 22.2. five symptoms, five first tools: start at the cheapest tool that taps the layer the symptom points to.",
-  "Never upgrades at all → curl --include the upgrade request. 101 then silence → DevTools Frames tab or websocat -t. Wrong frame shape → websocat -b piped to xxd (an opcode mismatch, the binary-Protobuf chapter's JSON-vs-binary negotiation gone wrong). Drops with no obvious reason → python ws_close_probe plus the server's trace-id logs: the close code says why (4400, 4290, 4408, 1008; 1006 means no code arrived at all). Dies after sustained load → tcpdump plus server logs over time, looking for backpressure or the liveness sweep firing under pressure.");
+  "Never upgrades at all → curl --include the upgrade request. 101 then silence → DevTools Frames tab or websocat -t. Wrong frame shape → websocat -b piped to xxd (an opcode mismatch, the JSON-vs-binary Protobuf negotiation gone wrong). Drops with no obvious reason → python ws_close_probe plus the server's trace-id logs: the close code says why (4400, 4290, 4408, 1008; 1006 means no code arrived at all). Dies after sustained load → tcpdump plus server logs over time, looking for backpressure or the liveness sweep firing under pressure.");
 
 diagram("OBSERVABILITY: NO AUTO-INSTRUMENTATION FOR NATIVE websockets", "Same span name, same trace-id log line, two different paths to get there",
   "23-auto-vs-manual",
@@ -593,7 +593,7 @@ divider("06", "Deploy.", "Compose, to minikube, to OpenShift Local.");
 diagram("THE RUNTIME PROGRESSION", "Three tiers, one contract",
   "00-tier-progression",
   "Figure 0.2. Three tiers, one contract: Compose now, minikube and CRC later.",
-  "Docker Compose is the fastest inner loop, used throughout every chapter in this deck; minikube (docker driver + containerd runtime) is where the Part 4 backplane chart runs as a real Kubernetes Deployment; OpenShift Local is a separate appendix chapter, not a variant tucked into the minikube chapter.");
+  "Docker Compose is the fastest inner loop, used throughout this deck; minikube (docker driver + containerd runtime) is where the backplane chart runs as a real Kubernetes Deployment; OpenShift Local is a separate appendix, not a variant tucked into the minikube tier.");
 
 content("DEPLOYING PYTHON: THE OPENSHIFT PATH", "A Docker-strategy BuildConfig, because Python has no S2I builder of its own",
   ["Quarkus gets a binary S2I BuildConfig quarkus-openshift generates automatically; Python has no equivalent, so build-images.sh assembles a throwaway build-context directory mirroring the Containerfile's expected COPY paths and hands it to `oc start-build --from-dir` against a Docker-strategy BuildConfig.",
@@ -610,7 +610,7 @@ content("201 · CLOSE", "One contract, one Python build, from laptop to OpenShif
   ["The Python build covered the full arc: the native-websockets endpoint over FastAPI's bundled support, four connection concerns, a three-mode backplane, a second wire encoding, the test/debug/observability toolbox, and deploy through OpenShift Local.",
    "For the same build on Quarkus WebSockets Next, see the 201-Quarkus companion: same contract, same close codes, same backplane modes, a structurally different S2I build path on OpenShift.",
    "For the ideas and advantage case at architect altitude, why WebSockets over polling, why one contract across two stacks, see the 101 deck."],
-  "This is the deck's actual closing slide. If a question goes past just-enough-code depth, the direct answer is usually 'open the file this slide named': every code slide in this deck points at a real path under examples/, runnable today. If the question is about the Quarkus side specifically, the 201-Quarkus companion covers the same ground stack-for-stack.");
+  "This is the deck's actual closing slide. If a question goes past just-enough-code depth, the direct answer is usually 'open the file the code slide named': every code slide in this deck points at a real path under examples/, runnable today. If the question is about the Quarkus side specifically, the 201-Quarkus companion covers the same ground stack-for-stack.");
 
 // ===============================================================================
 // APPENDIX
@@ -667,8 +667,8 @@ code("APPENDIX · THE maxsize=0 SETTING, DEEPER", "asyncio.Queue(maxsize=0) mean
 code("APPENDIX · DEDUP-BY-eventId", "At-least-once delivery, exactly-once effect, on the Kafka backplane",
   LANG_PY,
   ["# examples/part4-backplane/python/app/backplane/kafka_backplane.py",
-   "# Ch16: the topic can double-deliver on a replay burst overlapping",
-   "# the always-on live consumer -- the client resolves this by deduping",
+   "# The topic can double-deliver on a replay burst overlapping",
+   "# the always-on live consumer; the client resolves this by deduping",
    "# on eventId, not by trusting delivery to be exactly-once at the source.",
    "index = next((i for i, e in enumerate(history) if e.eventId == after_event_id), None)",
    "to_replay = history[index + 1 :] if index is not None else history",
@@ -697,14 +697,14 @@ code("APPENDIX · NEWMAN: FUNCTIONAL HTTP AROUND THE SOCKET", "The HTTP seam and
    "Inject - Quarkus (WebSockets Next) >",
    "  quarkus-a inject malformed body (invalid eventType) -> 400"],
   "examples/part6-testing/newman/collection.json. The HTTP surfaces: health probes and the inject endpoint, both stacks",
-  "Newman's whole reason for being in this stack: it only ever exercises HTTP, the health probes and the backplane's inject endpoint, because those are REST surfaces a Postman-style collection can drive directly. Everything WebSocket-shaped (the upgrade itself, a close code, a binary frame) is explicitly out of Newman's reach and falls to verify.sh/lib.sh and the Python close-code probe instead: that division of labor is the testing chapter's test-pyramid functional tier.");
+  "Newman's whole reason for being in this stack: it only ever exercises HTTP, the health probes and the backplane's inject endpoint, because those are REST surfaces a Postman-style collection can drive directly. Everything WebSocket-shaped (the upgrade itself, a close code, a binary frame) is explicitly out of Newman's reach and falls to verify.sh/lib.sh and the Python close-code probe instead: that division of labor is the functional tier of the test pyramid.");
 
 code("APPENDIX · k6 WS SMOKE LOAD", "A gated CI check, not the benchmark: one VU, both encodings, one iteration",
   "javascript · k6",
   ["// examples/part5-performance/k6/smoke.js",
-   "// DRQ-023/DRQ-027 -- GATED k6 smoke load for Part 5's JSON-vs-Protobuf",
+   "// GATED k6 smoke load for the JSON-vs-Protobuf",
    "// example. SMOKE-level by design: a handful of VUs, one short",
-   "// iteration each, no ramping -- a fast CI gate, not a load test.",
+   "// iteration each, no ramping, a fast CI gate, not a load test.",
    "import ws from \"k6/ws\";",
    "import { check } from \"k6\";",
    "",
@@ -714,9 +714,9 @@ code("APPENDIX · k6 WS SMOKE LOAD", "A gated CI check, not the benchmark: one V
    "  },",
    "};",
    "// Each VU opens the SAME channel TWICE in one iteration:",
-   "//   1. offering handling-events.v1+json -- asserts 101, echoed",
+   "//   1. offering handling-events.v1+json: asserts 101, echoed",
    "//      subprotocol, 3 TEXT frames, well-formed JSON.",
-   "//   2. offering handling-events.v1+protobuf -- asserts 101, echoed",
+   "//   2. offering handling-events.v1+protobuf: asserts 101, echoed",
    "//      subprotocol, 3 BINARY frames (ArrayBuffer), non-empty."],
   "examples/part5-performance/k6/smoke.js: pinned to k6 2.3.0, 3 VUs, 1 iteration each, gated on every PR",
   "benchmark.js (k6/benchmark.js) is the comparative, local-only sibling this script is not. The README draws the line directly: smoke.js is fast and deterministic, gated in CI; benchmark.js's absolute throughput numbers are host-dependent, which would make a flaky CI threshold if gated the same way. k6/ws (gorilla/websocket-backed) dispatches a distinct binaryMessage event for binary frames, confirmed against the pinned k6 2.3.0 source. No need for k6/experimental/websockets here.");
@@ -731,14 +731,14 @@ diagram("APPENDIX · THE DRIFT GATE", "Four independent CI checks, one merge-all
   addContentTitle(s, "APPENDIX · VERSION MATRIX", "Pinned, surveyed versions behind this deck's claims");
   addStatusTable(s, [
     { code: "Python", name: "3.15.0", purpose: "Current stable; matches every example's requires-python" },
-    { code: "websockets", name: ">=17.2", purpose: "pyproject.toml pin across Part 3-6; serve()'s own default is compression=\"deflate\"" },
+    { code: "websockets", name: ">=17.2", purpose: "pyproject.toml pin across the examples; serve()'s own default is compression=\"deflate\"" },
     { code: "FastAPI", name: ">=0.146.0", purpose: "HTTP/lifecycle surface, side by side with the native WS listener" },
-    { code: "PyJWT", name: "2.15.1", purpose: "Ch17 JWT auth, HS256 shared-secret" },
-    { code: "aiokafka", name: ">=0.14.0", purpose: "Ch16 Kafka backplane; Kafka itself pinned 4.3.1 (KRaft)" },
-    { code: "Redis", name: "8.10.2-alpine", purpose: "Ch18 Redis Pub/Sub backplane (redis.asyncio client)" },
+    { code: "PyJWT", name: "2.15.1", purpose: "JWT auth, HS256 shared-secret" },
+    { code: "aiokafka", name: ">=0.14.0", purpose: "Kafka backplane; Kafka itself pinned 4.3.1 (KRaft)" },
+    { code: "Redis", name: "8.10.2-alpine", purpose: "Redis Pub/Sub backplane (redis.asyncio client)" },
     { code: "k6 / Newman", name: "2.3.0 / 6.2.3", purpose: "Load smoke + functional HTTP, both pinned and gated in CI" },
   ], { colW: [2.2, 2.0, 7.89] });
-  addNotes(s, "Every version here is checked against _plans/version-matrix.md, which is itself a live-surveyed document dated 2026-10-19 for the rows this deck cites, not a representative placeholder. One step-back called out rather than glossed over: on OpenShift Local/CRC specifically, the AMQ Streams operator caps Kafka at 4.2.0 (the compose/minikube path runs 4.3.1), a recorded floor tied to the operator's own supported-version list, not a regression in this project's code. Wire behavior is identical across both versions.");
+  addNotes(s, "Every version here is pinned and was surveyed live on 2026-10-19. One step-back: on OpenShift Local/CRC specifically, the AMQ Streams operator caps Kafka at 4.2.0 (the compose/minikube path runs 4.3.1), a recorded floor tied to the operator's own supported-version list, not a regression in this project's code. Wire behavior is identical across both versions.");
 }
 
 
@@ -751,7 +751,7 @@ diagram("APPENDIX · THE DRIFT GATE", "Four independent CI checks, one merge-all
   s.addImage({ path: `${ASSETS}/qr-websockets-site.png`, x: 2.30, y: 1.78, w: 3.10, h: 3.10 });
   s.addText("The site", { x: 1.55, y: 4.98, w: 4.60, h: 0.40,
     fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
-  s.addText("Chapters, the AsyncAPI contracts, and both-stack runnable examples", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
+  s.addText("The tutorial, the AsyncAPI contracts, and both-stack runnable examples", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
     fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
   s.addText("patterncatalyst.github.io/api-patterns-and-practices-websockets", { x: 1.45, y: 6.12, w: 4.80, h: 0.32,
     fontFace: FONT.mono, fontSize: 10, color: COLOR.red, align: "center", valign: "middle" });
@@ -765,7 +765,7 @@ diagram("APPENDIX · THE DRIFT GATE", "Four independent CI checks, one merge-all
   s.addText("patterncatalyst.github.io/patterncatalyst-workshops-tutorials-list", { x: 7.08, y: 6.12, w: 4.80, h: 0.32,
     fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
 
-  addNotes(s, "This is the Python implementation deck, so the left code takes you to the runnable Python example and contract, the right to the whole series. On the left, the site: the chapters, the AsyncAPI contracts, and the runnable both-stack examples, all public. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Scan whichever is useful; both are on the Pattern Catalyst GitHub organization.");
+  addNotes(s, "This is the Python implementation deck, so the left code takes you to the runnable Python example and contract, the right to the whole series. On the left, the site: the tutorial text, the AsyncAPI contracts, and the runnable both-stack examples, all public. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Scan whichever is useful; both are on the Pattern Catalyst GitHub organization.");
 }
 
 

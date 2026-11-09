@@ -10,7 +10,7 @@ only if it grows enough to warrant it.
 
 ```
 contracts/
-  asyncapi.yaml          the contract — one WebSocket channel, one push message
+  asyncapi.yaml          the contract: one WebSocket channel, one push message
   handling-event.proto   a parallel BINARY encoding of the same message (Part 5)
   buf.yaml               governs handling-event.proto (lint STANDARD, breaking FILE)
   buf.gen.yaml           convenience local stub generation, not a CI dependency
@@ -81,7 +81,7 @@ generate from, rather than a running service.
 
 ## Protobuf: a parallel binary encoding
 
-Part 5 (Ch19, "Binary Protobuf over WebSockets") adds a second wire encoding
+Part 5 (Chapter 19, "Binary Protobuf over WebSockets") adds a second wire encoding
 of the exact same `HandlingEvent` message: `handling-event.proto`.
 `asyncapi.yaml` stays the single source of truth for what the message
 *means*; the proto file is the single source of truth for how it looks as

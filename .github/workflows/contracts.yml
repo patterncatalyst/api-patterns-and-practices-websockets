@@ -33,6 +33,13 @@ jobs:
       - name: asyncapi validate
         run: npx -y @asyncapi/cli@6.2.1 validate contracts/asyncapi.yaml
 
+  wordcount:
+    name: Word-count cap (2,500 words, no floor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: GATE=1 bash scripts/wordcount.sh
+
   breaking:
     name: Detect breaking changes (vs main)
     runs-on: ubuntu-latest

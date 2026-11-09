@@ -105,9 +105,9 @@ edges_2 = []
 
 notes_2 = [
     {"x": 540, "y": 190, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "=> default/stateless mode (this chapter) is the right tool"},
+     "text": "=> default/stateless mode is the right tool"},
     {"x": 540, "y": 425, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "=> needs a durable, replayable log a client can resume from an offset: Chapter 16's Kafka-backed backplane"},
+     "text": "=> needs a durable, replayable log a client can resume from an offset: a Kafka-backed backplane"},
 ]
 
 generate_diagram.emit("15-when-stateless-ok", W2, H2, bands=bands_2, nodes=nodes_2, edges=edges_2, notes=notes_2)

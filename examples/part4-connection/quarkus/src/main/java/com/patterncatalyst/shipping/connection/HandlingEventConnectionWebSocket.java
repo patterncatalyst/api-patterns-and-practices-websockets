@@ -163,7 +163,7 @@ public class HandlingEventConnectionWebSocket {
         return rejectMalformed(reason);
     }
 
-    /** Binary frames are not defined on this channel either — same treatment as an invalid text frame. */
+    /** Binary frames are not defined on this channel either; same treatment as an invalid text frame. */
     @OnBinaryMessage
     public Uni<Void> onBinaryMessage(Buffer data) {
         return rejectMalformed("binary frames are not supported on this channel");
@@ -171,7 +171,7 @@ public class HandlingEventConnectionWebSocket {
 
     /**
      * Sends the {@link ErrorEnvelope} then closes with
-     * {@link CloseCodes#BAD_REQUEST} — composed as ONE chained {@code Uni}
+     * {@link CloseCodes#BAD_REQUEST}, composed as ONE chained {@code Uni}
      * (never a manual nested {@code .subscribe()}; see {@link #onOpen}'s
      * Javadoc) so both calls run inside the single subscription Quarkus
      * itself manages for the {@code Uni<Void>} this method returns.

@@ -6,10 +6,10 @@ implementing the same `contracts/asyncapi.yaml` `handlingEvents` channel:
 
 | Chapter | Concern | Where |
 | --- | --- | --- |
-| Ch12 | Backpressure / flow control | `app/outbound.py` |
-| Ch13 | Error handling | `app/ws_server.py` (`_receive_loop`, `_error_envelope`) |
-| Ch14 | Liveness / heartbeats | `app/ws_server.py` (`create_server`'s `ping_interval`/`ping_timeout`) |
-| Ch17 | Security (JWT auth) | `app/auth.py`, `app/mint_token.py` |
+| Chapter 12 | Backpressure / flow control | `app/outbound.py` |
+| Chapter 13 | Error handling | `app/ws_server.py` (`_receive_loop`, `_error_envelope`) |
+| Chapter 14 | Liveness / heartbeats | `app/ws_server.py` (`create_server`'s `ping_interval`/`ping_timeout`) |
+| Chapter 17 | Security (JWT auth) | `app/auth.py`, `app/mint_token.py` |
 
 The channel (`/ws/v1/bookings/{bookingId}/handling-events`) pushes the same
 three `HandlingEvent`s (RECEIVE, LOAD, CUSTOMS) as Part 3, reusing Part 3's

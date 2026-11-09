@@ -32,7 +32,7 @@ nodes_1 = [
      "style": "box"},
 
     {"x": 140, "y": 220, "w": 620, "h": 90,
-     "lines": ["Live integration: verify.sh + lib.sh, both stacks, real containers",
+     "lines": ["Live integration: both stacks, real containers",
                "ws_first_frame / ws_frames_n / ws_connect_bg / assert_ws_rejected /",
                "wait_for_log_count: docker compose up, assert, compose down"],
      "style": "accent"},

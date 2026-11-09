@@ -25,7 +25,7 @@ logger = logging.getLogger("handling-events-python")
 
 # Matches the AsyncAPI channel address `/ws/v1/bookings/{bookingId}/handling-events`.
 # bookingId is captured but, for this deterministic fixture-replay example,
-# not used to select a different sequence — every connection on this path
+# not used to select a different sequence: every connection on this path
 # replays the same shared fixture (see app/feed.py).
 _CHANNEL_PATH = re.compile(r"^/ws/v1/bookings/(?P<bookingId>[^/]+)/handling-events$")
 

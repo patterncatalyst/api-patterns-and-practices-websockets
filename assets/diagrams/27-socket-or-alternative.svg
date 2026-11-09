@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 540" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="20" y="120" width="940" height="340" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="140" font-size="12" font-weight="700" fill="#1d1d1d">No: reach for the alternative that matches the interaction</text>
+<rect x="280" y="20" width="420" height="60" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="490.0" y="48.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Does it still need both sides sending,</text>
+<text x="490.0" y="65.0" font-size="11.5" fill="#555555" text-anchor="middle">with sub-second delivery held open?</text>
+<rect x="760" y="20" width="200" height="60" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="860.0" y="48.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Keep the WebSocket</text>
+<text x="860.0" y="65.0" font-size="11.5" fill="#555555" text-anchor="middle">duplex, low latency</text>
+<rect x="40" y="165" width="285" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="182.5" y="195.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Server-Sent Events</text>
+<text x="182.5" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">only the server sends to a browser</text>
+<text x="182.5" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">native reconnect, Last-Event-ID</text>
+<rect x="345" y="165" width="285" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="487.5" y="195.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Long-polling</text>
+<text x="487.5" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">the path truncates long-lived</text>
+<text x="487.5" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">responses; plain request cycles</text>
+<rect x="650" y="165" width="285" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="792.5" y="195.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Webhook</text>
+<text x="792.5" y="212.5" font-size="11.5" fill="#555555" text-anchor="middle">service to service, the receiver</text>
+<text x="792.5" y="227.5" font-size="11.5" fill="#555555" text-anchor="middle">hosts a reachable endpoint</text>
+<rect x="40" y="265" width="285" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="182.5" y="295.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">gRPC server-streaming</text>
+<text x="182.5" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">neither end is a browser</text>
+<text x="182.5" y="327.5" font-size="11.5" fill="#555555" text-anchor="middle">typed, HTTP/2 flow control</text>
+<rect x="345" y="265" width="285" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="487.5" y="295.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Request/response</text>
+<text x="487.5" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">nothing is live: ask again</text>
+<text x="487.5" y="327.5" font-size="11.5" fill="#555555" text-anchor="middle">when you need the value</text>
+<rect x="650" y="265" width="285" height="80" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="792.5" y="295.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Message broker</text>
+<text x="792.5" y="312.5" font-size="11.5" fill="#555555" text-anchor="middle">backend to backend, needs</text>
+<text x="792.5" y="327.5" font-size="11.5" fill="#555555" text-anchor="middle">replay and ordering</text>
+<rect x="40" y="370" width="895" height="60" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="487.5" y="398.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">HTTP/2 server push</text>
+<text x="487.5" y="415.0" font-size="11.5" fill="#555555" text-anchor="middle">removed from major browsers: a dead end for browser fan-out</text>
+<path d="M700,50 L760,50" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
+<text x="736.0" y="44.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">Yes</text>
+<text x="736.0" y="44.0" font-size="11" fill="#b8650a" text-anchor="middle">Yes</text>
+<path d="M490,80 L490,120" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="496.0" y="94.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">No</text>
+<text x="496.0" y="94.0" font-size="11" fill="#555" text-anchor="middle">No</text>
+<text x="490" y="490" font-size="12" fill="#555555" text-anchor="middle">Signals to move off: idle tabs, a client channel never used, low update rate, a proxy that breaks Upgrade.</text>
+<text x="490" y="510" font-size="12" fill="#555555" text-anchor="middle">Fan-out cost that grows with instances rather than subscribers is the last one.</text>
+</svg>

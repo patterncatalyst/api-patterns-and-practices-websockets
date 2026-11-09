@@ -69,7 +69,7 @@ edges = [
 
 notes = [
     {"x": 470, "y": 545, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Same shared JWT secret, same close codes on both stacks: verify.sh asserts a client can't tell them apart."},
+     "text": "Same shared JWT secret, same close codes on both stacks: a client can't tell them apart."},
 ]
 
 generate_diagram.emit("part4-connection-architecture", W, H, nodes=nodes, edges=edges, notes=notes)

@@ -80,7 +80,7 @@ cleanup_all() {
 }
 
 if ! command -v uv >/dev/null 2>&1; then
-  echo "verify.sh: FAIL — 'uv' is required (mints JWTs and probes close codes via ephemeral venvs) but not found on PATH" >&2
+  echo "verify.sh: FAIL, 'uv' is required (mints JWTs and probes close codes via ephemeral venvs) but not found on PATH" >&2
   exit 1
 fi
 
@@ -150,7 +150,7 @@ async def main():
         if payload:
             await ws.send(payload)
         # websockets 17.x raises ConnectionClosed(OK|Error) out of the
-        # async-for loop itself once the server closes — catch it here so
+        # async-for loop itself once the server closes; catch it here so
         # ws.close_code is still readable afterward, rather than letting it
         # propagate and lose every frame already received.
         try:
@@ -269,7 +269,7 @@ BADSIG_TOKEN="$(mint_token bad-sig "$SHARED_JWT_SECRET")"
 GARBAGE_TOKEN="not-a-jwt-at-all"
 for name in VALID_TOKEN EXPIRED_TOKEN BADSIG_TOKEN; do
   if [[ -z "${!name}" ]]; then
-    echo "verify.sh: FAIL — $name is empty; token minting failed" >&2
+    echo "verify.sh: FAIL, $name is empty; token minting failed" >&2
     exit 1
   fi
 done
@@ -351,7 +351,7 @@ echo "=== Step 5: Ch12 backpressure — one-off instances with the threshold for
 QUARKUS_IMAGE="$(docker compose -p "$PROJECT" -f "$COMPOSE_FILE" images -q quarkus)"
 PYTHON_IMAGE="$(docker compose -p "$PROJECT" -f "$COMPOSE_FILE" images -q python)"
 if [[ -z "$QUARKUS_IMAGE" || -z "$PYTHON_IMAGE" ]]; then
-  echo "verify.sh: FAIL — could not resolve built image IDs for quarkus/python from compose" >&2
+  echo "verify.sh: FAIL, could not resolve built image IDs for quarkus/python from compose" >&2
   exit 1
 fi
 
@@ -446,7 +446,7 @@ echo
 echo "=== Step 6 complete: Ch14 heartbeat liveness detection of a genuinely silent peer PROVEN LIVE on BOTH stacks ==="
 
 echo
-echo "PASS — Part 4 connection-concerns: Quarkus and Python both implement" \
+echo "PASS: Part 4 connection-concerns: Quarkus and Python both implement" \
      "identical Ch17 auth (accept + 4 reject modes), Ch13 error taxonomy" \
      "(BAD_REQUEST envelope + 4400 close), Ch12 backpressure (4290 close)," \
      "and Ch14 heartbeat liveness detection of a silent peer (proven live" \

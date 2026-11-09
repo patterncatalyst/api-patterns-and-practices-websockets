@@ -42,7 +42,7 @@ nodes_1 = [
      "style": "sub"},
 
     {"x": 260, "y": 410, "w": 380, "h": 40,
-     "lines": ["verify.sh decodes both -> identical field values"],
+     "lines": ["decoding both gives identical field values"],
      "style": "ghost"},
 ]
 

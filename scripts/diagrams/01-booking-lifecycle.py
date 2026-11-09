@@ -40,23 +40,23 @@ band = [{"x": 20, "y": 250, "w": 815, "h": 120,
 
 ey, eh, ew = 290, 52, 150
 events = [
-    (40,  "GATE_IN",             "container gated in"),
+    (40,  "RECEIVE",             "container received"),
     (235, "LOAD / UNLOAD",       "container moves"),
-    (430, "CUSTOMS_HOLD",        "hold opened"),
-    (660, "DELIVERY_CONFIRMED",  "signed at the dock"),
+    (430, "HOLD",        "hold opened"),
+    (660, "DELIVERED",  "signed at the dock"),
 ]
 for ex, title, detail in events:
     nodes.append({"x": ex, "y": ey, "w": ew, "h": eh,
                   "lines": [title, detail], "style": "accent"})
 
 # dashed connectors: the state during which each event is recorded
-# GATE_IN at CONFIRMED->IN_TRANSIT; LOAD/UNLOAD + CUSTOMS_HOLD during IN_TRANSIT;
-# DELIVERY_CONFIRMED at DELIVERED.
+# RECEIVE at CONFIRMED->IN_TRANSIT; LOAD/UNLOAD + HOLD during IN_TRANSIT;
+# DELIVERED at DELIVERED.
 connect = [
-    (sx[1] + sw / 2, 40 + ew / 2),      # CONFIRMED -> GATE_IN
+    (sx[1] + sw / 2, 40 + ew / 2),      # CONFIRMED -> RECEIVE
     (sx[2] + sw / 2, 235 + ew / 2),     # IN_TRANSIT -> LOAD/UNLOAD
-    (sx[2] + sw / 2, 430 + ew / 2),     # IN_TRANSIT -> CUSTOMS_HOLD
-    (sx[3] + sw / 2, 660 + ew / 2),     # DELIVERED -> DELIVERY_CONFIRMED
+    (sx[2] + sw / 2, 430 + ew / 2),     # IN_TRANSIT -> HOLD
+    (sx[3] + sw / 2, 660 + ew / 2),     # DELIVERED -> DELIVERED
 ]
 for x_top, x_bot in connect:
     edges.append({"x1": x_top, "y1": sy + sh, "x2": x_bot, "y2": ey, "dashed": True})

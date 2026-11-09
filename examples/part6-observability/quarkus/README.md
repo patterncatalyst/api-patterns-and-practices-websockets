@@ -123,7 +123,7 @@ wait_for_ws localhost:8080 "$CHANNEL"
 # (a) first frame is the fixture's RECEIVE event
 ws_first_frame "ws://localhost:8080$CHANNEL"
 
-# (b) trace-id log line — check the app's stdout/log for:
+# (b) trace-id log line: check the app's stdout/log for:
 #   otel.trace_id=<hex> span=ws.handling-events.connection bookingId=bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A instance=part6-observability-quarkus
 
 # (c) delivery counter > 0

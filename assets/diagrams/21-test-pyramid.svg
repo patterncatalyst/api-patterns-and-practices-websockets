@@ -9,7 +9,7 @@
 <text x="450.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">12 assertions / 0 failed; ws_close_probe for 4400/4290/1008</text>
 <text x="450.0" y="182.5" font-size="11.5" fill="#555555" text-anchor="middle">the HTTP seam + the close codes websocat can&#x27;t read</text>
 <rect x="140" y="220" width="620" height="90" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
-<text x="450.0" y="255.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Live integration: verify.sh + lib.sh, both stacks, real containers</text>
+<text x="450.0" y="255.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Live integration: both stacks, real containers</text>
 <text x="450.0" y="272.5" font-size="11.5" fill="#555555" text-anchor="middle">ws_first_frame / ws_frames_n / ws_connect_bg / assert_ws_rejected /</text>
 <text x="450.0" y="287.5" font-size="11.5" fill="#555555" text-anchor="middle">wait_for_log_count: docker compose up, assert, compose down</text>
 <rect x="60" y="330" width="780" height="90" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>

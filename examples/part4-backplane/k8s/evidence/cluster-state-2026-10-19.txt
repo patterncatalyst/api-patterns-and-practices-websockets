@@ -3,7 +3,7 @@
 
 ## nodes
 NAME              STATUS   ROLES           AGE     VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION                  CONTAINER-RUNTIME
-part4-backplane   Ready    control-plane   7m56s   v1.37.1   192.168.49.2   <none>        Debian GNU/Linux 12 (bookworm)   7.2.9-200.fc44.x86_64 (amd64)   containerd://2.3.4
+part4-backplane   Ready    control-plane   7m56s   v1.37.1   192.168.49.2   <none>        Debian GNU/Linux 12 (bookworm)   7.2 (amd64)   containerd://2.3.4
 
 ## pods (namespace part4-backplane)
 NAME                                          READY   STATUS    RESTARTS   AGE     IP            NODE              NOMINATED NODE   READINESS GATES

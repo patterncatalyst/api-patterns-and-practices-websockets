@@ -67,7 +67,7 @@ wait_for_log_pattern() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "lib.sh: FAIL — wait_for_log_pattern: '$pattern' not found in $file within ${timeout}s" >&2
+  echo "lib.sh: FAIL, wait_for_log_pattern: '$pattern' not found in $file within ${timeout}s" >&2
   echo "lib.sh: --- $file (tail) ---" >&2
   tail -n 40 "$file" >&2 2>/dev/null || true
   return 1
@@ -91,7 +91,7 @@ wait_for_log_count() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "lib.sh: FAIL — wait_for_log_count: '$pattern' seen $count/$min_count times in $file within ${timeout}s" >&2
+  echo "lib.sh: FAIL, wait_for_log_count: '$pattern' seen $count/$min_count times in $file within ${timeout}s" >&2
   echo "lib.sh: --- $file (tail) ---" >&2
   tail -n 40 "$file" >&2 2>/dev/null || true
   return 1
@@ -184,13 +184,13 @@ CLIENT_WS_HOST=localhost CLIENT_WS_PORT=8081 CLIENT_BOOKING_ID="$EXPECTED_BOOKIN
 CLIENT_PID=$!
 
 wait_for_log_pattern "$CLIENT_LOG" "received CUSTOMS" 30
-echo "lib.sh: ok — reconnect-check client received the initial 3-event sequence" >&2
+echo "lib.sh: ok, reconnect-check client received the initial 3-event sequence" >&2
 
 echo "lib.sh: docker compose -p $PROJECT restart python (forcing the client's connection to drop) ..." >&2
 docker compose -p "$PROJECT" -f "$COMPOSE_FILE" restart python >&2
 
 wait_for_log_pattern "$CLIENT_LOG" "reconnecting in" 60
-echo "lib.sh: ok — reconnect-check client logged a reconnect attempt after the forced disconnect" >&2
+echo "lib.sh: ok, reconnect-check client logged a reconnect attempt after the forced disconnect" >&2
 
 # The restarted container replays the fixture from the top on the new
 # connection (see README.md — this chapter has no per-booking replay), so a
@@ -198,7 +198,7 @@ echo "lib.sh: ok — reconnect-check client logged a reconnect attempt after the
 # receiving, not just that it retried (the first line is already in the log
 # from before the forced disconnect).
 wait_for_log_count "$CLIENT_LOG" "received CUSTOMS" 2 90
-echo "lib.sh: ok — reconnect-check client resumed receiving after reconnecting" >&2
+echo "lib.sh: ok, reconnect-check client resumed receiving after reconnecting" >&2
 
 kill "$CLIENT_PID" >/dev/null 2>&1 || true
 wait "$CLIENT_PID" 2>/dev/null || true
@@ -206,7 +206,7 @@ CLIENT_PID=""
 rm -f "$CLIENT_LOG"
 
 echo
-echo "PASS — Part 3 handling-events: Quarkus and Python both implement" \
+echo "PASS: Part 3 handling-events: Quarkus and Python both implement" \
      "operations.receiveHandlingEvent identically — the same first RECEIVE" \
      "frame, field-for-field, from two independently generated" \
      "implementations of one AsyncAPI contract — and the reference" \

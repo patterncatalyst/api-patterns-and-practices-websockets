@@ -1,7 +1,7 @@
 
 === Step 0: tool checks + crc-admin context + regenerate the contract-derived JSON Schema ===
-Wrote /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
-verify-crc.sh: crc-admin context OK (https://api.crc.testing:6443); schema regenerated at /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+Wrote <repo>/build/handling-event.schema.json
+verify-crc.sh: crc-admin context OK (https://api.crc.testing:6443); schema regenerated at <repo>/build/handling-event.schema.json
 
 === Step 1: preflight — the four Deployments must already be rolled out (run ./openshift/deploy.sh first) ===
 verify-crc.sh: all four app Deployments are already rolled out
@@ -21,7 +21,7 @@ verify-crc.sh: Route https://python-a-part4-backplane.apps-crc.testing/ is servi
 
 --- quarkus/kafka: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
 lib.sh: ok — quarkus/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-crc.sh: ok — quarkus/kafka: seed frame received through the edge-TLS Route and is schema-valid
 
 --- quarkus/kafka: idle-hold, then a late frame must still arrive ---
@@ -39,7 +39,7 @@ verify-crc.sh: ok — quarkus/kafka: instance A's own POD LOG shows it deliverin
 
 --- python/kafka: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
 lib.sh: ok — python/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-crc.sh: ok — python/kafka: seed frame received through the edge-TLS Route and is schema-valid
 
 --- python/kafka: idle-hold, then a late frame must still arrive ---
@@ -70,7 +70,7 @@ verify-crc.sh: Route https://python-a-part4-backplane.apps-crc.testing/ is servi
 
 --- quarkus/redis: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
 lib.sh: ok — quarkus/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-crc.sh: ok — quarkus/redis: seed frame received through the edge-TLS Route and is schema-valid
 
 --- quarkus/redis: idle-hold, then a late frame must still arrive ---
@@ -88,7 +88,7 @@ verify-crc.sh: ok — quarkus/redis: instance A's own POD LOG shows it deliverin
 
 --- python/redis: seed frame + schema validation (through the edge-TLS Route, CA-verified) ---
 lib.sh: ok — python/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: /home/rsedor/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-crc.sh: ok — python/redis: seed frame received through the edge-TLS Route and is schema-valid
 
 --- python/redis: idle-hold, then a late frame must still arrive ---

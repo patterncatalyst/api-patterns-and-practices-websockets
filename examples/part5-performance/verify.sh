@@ -73,7 +73,7 @@ cleanup_all() {
 
 for tool in uv; do
   if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "verify.sh: FAIL — '$tool' is required but not found on PATH" >&2
+    echo "verify.sh: FAIL, '$tool' is required but not found on PATH" >&2
     exit 1
   fi
 done
@@ -157,10 +157,10 @@ else:
     print(f"lib.sh: diff — right-only/different: {only_b}", file=sys.stderr)
 ' "$a" "$b")"
   if [[ "$result" != "true" ]]; then
-    echo "verify.sh: FAIL — ${context}: JSON and Protobuf decoded field values differ" >&2
+    echo "verify.sh: FAIL, ${context}: JSON and Protobuf decoded field values differ" >&2
     return 1
   fi
-  echo "lib.sh: ok — ${context}: JSON and Protobuf decoded field values are identical" >&2
+  echo "lib.sh: ok, ${context}: JSON and Protobuf decoded field values are identical" >&2
 }
 
 # ---------------------------------------------------------------------------
@@ -236,7 +236,7 @@ echo "=== Step 1: generate the Protobuf stub once (from contracts/handling-event
 PROTO_STUB_DIR="$(mktemp -d)"
 protoc -I "$CONTRACTS_DIR" --python_out="$PROTO_STUB_DIR" "$PROTO_FILE"
 if [[ ! -f "$PROTO_STUB_DIR/handling_event_pb2.py" ]]; then
-  echo "verify.sh: FAIL — protoc did not produce handling_event_pb2.py in $PROTO_STUB_DIR" >&2
+  echo "verify.sh: FAIL, protoc did not produce handling_event_pb2.py in $PROTO_STUB_DIR" >&2
   exit 1
 fi
 echo "lib.sh: generated $PROTO_STUB_DIR/handling_event_pb2.py" >&2
@@ -287,7 +287,7 @@ run_stack_performance_tests() {
   proto_decoded="$(decode_protobuf_frame "$bin_file")"
   rm -f "$bin_file"
   if [[ -z "$proto_decoded" ]]; then
-    echo "verify.sh: FAIL — $stack: decode_protobuf_frame produced no output" >&2
+    echo "verify.sh: FAIL, $stack: decode_protobuf_frame produced no output" >&2
     return 1
   fi
   echo "lib.sh: $stack Protobuf frame decoded: $proto_decoded" >&2
@@ -298,12 +298,12 @@ run_stack_performance_tests() {
 
   echo "--- Size: Protobuf frame strictly smaller than the JSON frame ---"
   if (( bin_bytes >= json_bytes )); then
-    echo "verify.sh: FAIL — $stack: Protobuf frame (${bin_bytes}B) is not smaller than the JSON frame (${json_bytes}B)" >&2
+    echo "verify.sh: FAIL, $stack: Protobuf frame (${bin_bytes}B) is not smaller than the JSON frame (${json_bytes}B)" >&2
     return 1
   fi
   local reduction_pct
   reduction_pct="$(python3 -I -c "print(f'{(1 - $bin_bytes / $json_bytes) * 100:.1f}')")"
-  echo "lib.sh: ok — $stack: Protobuf (${bin_bytes}B) < JSON (${json_bytes}B), ${reduction_pct}% smaller" >&2
+  echo "lib.sh: ok, $stack: Protobuf (${bin_bytes}B) < JSON (${json_bytes}B), ${reduction_pct}% smaller" >&2
 
   echo "--- Subprotocol echo: server echoes the offered subprotocol in the 101 response ---"
   local echoed
@@ -326,13 +326,13 @@ run_stack_performance_tests "python" "localhost:8091"
 echo
 echo "=== Step 5: proto-vs-JSON-Schema parity smoke (scripts/check-proto-parity.py) ==="
 if ! ( cd "$SCRIPT_DIR/../.." && uv run --no-project --with "$PROTOBUF_PY_PIN" python3 -I scripts/check-proto-parity.py ); then
-  echo "verify.sh: FAIL — scripts/check-proto-parity.py did not exit 0" >&2
+  echo "verify.sh: FAIL, scripts/check-proto-parity.py did not exit 0" >&2
   exit 1
 fi
-echo "lib.sh: ok — check-proto-parity.py exited 0" >&2
+echo "lib.sh: ok, check-proto-parity.py exited 0" >&2
 
 echo
-echo "PASS — Part 5 performance: Quarkus and Python both negotiate" \
+echo "PASS: Part 5 performance: Quarkus and Python both negotiate" \
      "handling-events.v1+json (JSON text) and handling-events.v1+protobuf" \
      "(Protobuf binary) against the SAME contract, decode to IDENTICAL" \
      "field values on both encodings, the Protobuf frame is strictly" \

@@ -2,197 +2,187 @@
 title: "Message Design"
 order: 6
 part: "Contract-first for Sockets"
-description: "Designing the handling-event message shapes that a contract and both implementations commit to."
-duration: "22 min read"
+description: "One flat handling-event message, a discriminator enum and four field shapes that both stacks deserialize identically."
+duration: "15 min read"
 ---
 
 ## Learning objectives
 
 By the end of this chapter you can:
 
-- Explain why `HandlingEvent` uses one flat schema instead of an explicit envelope, and name the condition under which an explicit envelope would pay for itself.
-- Justify the `eventType` discriminator over one AsyncAPI message per event kind, in terms of evolution cost and cross-stack consistency.
-- Apply the four field-shape conventions this site reuses: prefixed identifiers, dual timestamps, decimal-string `Money`, and a never-sent `*_UNSPECIFIED` enum zero value, and state the failure each one prevents.
-- Distinguish a field that is missing because the schema does not yet define it from one that is defined but legitimately absent on a given message.
-- Configure a Java `record`/Jackson pair and a Python `Pydantic` model so both deserialize `HandlingEvent` identically.
+- Explain why `HandlingEvent` is one flat schema instead of an envelope, and name the condition under which an envelope pays for itself.
+- Justify an `eventType` discriminator over one AsyncAPI message per event kind.
+- Apply four field-shape conventions (prefixed identifiers, dual timestamps, decimal-string `Money`, a never-sent `*_UNSPECIFIED` zero value) and state the failure each prevents.
+- Tell a field the schema doesn't define yet from one that is defined but absent on a given message.
+- Keep a Java `record` and a Pydantic model deserializing the same message identically.
 
 ## Why this matters
 
-The AsyncAPI contract put `contracts/asyncapi.yaml` in place as the thing both stacks generate from and validate against. This chapter is about what goes inside it: the shape of the `HandlingEvent` message itself, field by field, and the decisions that shape carries that a REST JSON body or a gRPC `.proto` message would make differently, or the same way, for the same reasons. A WebSocket connection has no request/response pair to frame a payload against; every message the server pushes has to carry enough of its own context to be useful standing alone, in whatever order it arrives, to a client that might have missed the one before it. That's what message design means on a socket: not "what fields does this event have" but "what does a client need to know, with nothing else to go on, to act on this message correctly."
+A socket has no request and response to frame a payload. Every message the server pushes has to carry enough context to be useful on its own, in whatever order it arrives, to a client that may have missed the one before. Message design on a socket asks what a client needs, with nothing else to go on, to act on this message correctly.
 
-## Envelope vs. payload: one flat object, two roles
+## Envelope and payload: one flat object
 
-A lot of WebSocket tutorials reach for an explicit envelope: a wrapper object with a `type`, a `timestamp`, a `correlationId`, and a nested `data` or `payload` field holding the content. The pattern is common enough to name before explaining why `HandlingEvent` doesn't use it. `contracts/asyncapi.yaml` defines one flat schema:
+Many WebSocket tutorials reach for an explicit envelope: a wrapper with a `type`, a `timestamp`, a `correlationId` and a nested `data` field. REST and gRPC don't need one because the transport supplies it: an HTTP response has a status line and headers, and an RPC has a method name, metadata and status. A WebSocket's status line and headers belong to the one-time upgrade, not to the frames after it. Whatever an envelope would carry has to live in the message body, if it is needed at all.
 
-```yaml
-HandlingEvent:
-  type: object
-  properties:
-    eventId: {...}
-    bookingId: {...}
-    cargoId: {...}
-    eventType: {...}
-    location: {...}
-    occurredAt: {...}
-    registeredAt: {...}
-    voyageNumber: {...}
-    amount: {...}
-  required: [eventId, bookingId, cargoId, eventType, location, occurredAt, registeredAt]
-```
+`contracts/asyncapi.yaml` keeps one flat `HandlingEvent` object. `eventId`, `eventType`, `occurredAt` and `registeredAt` do an envelope's job (identity, discrimination, timing) at the same level as `bookingId`, `location` and `amount`, the fields that say what happened. Envelope and payload are roles the nine fields play, not a nesting the JSON has. A client reads one object and finds both.
 
-No `data` field, no nested `payload`. `eventId`, `eventType`, `occurredAt`, and `registeredAt` do the job an explicit envelope would otherwise do: identity, discrimination, and timing. But they sit at the same level as `bookingId`, `location`, and `amount`, the fields that describe what happened. "Envelope" and "payload" are roles those nine fields play, not a nesting the JSON has. Figure 6.1 draws the split as a conceptual grouping over one object, because that's what it is: a client parsing this message doesn't unwrap anything to get to the content, it reads one object and finds both kinds of information in it.
+{% include excalidraw.html file="06-message-envelope" alt="One flat JSON object, HandlingEvent, with two overlapping groups drawn inside it. The envelope-like group holds eventId, eventType, occurredAt and registeredAt. The payload group holds bookingId, cargoId, location, voyageNumber and amount. A note states there is no wrapper object on the wire." caption="Figure 6.1: the contract keeps one flat message; envelope and payload are roles nine fields play, not a nesting the JSON has." %}
 
-{% include excalidraw.html file="06-message-envelope" alt="A single flat JSON object labeled HandlingEvent, with two overlapping conceptual groups drawn inside it rather than as separate nested fields. The envelope-like group contains eventId, eventType, occurredAt, and registeredAt, labeled identity, discriminator, and timing. The payload group contains bookingId, cargoId, location, voyageNumber, and amount, labeled subject and domain content. A dashed bidirectional arrow between the two groups is labeled same object, two roles. A note states there is no separate wrapper object on the wire." caption="Figure 6.1: The contract keeps one flat message; envelope and payload are roles nine fields play, not a nesting the JSON has." %}
-
-The REST and gRPC sibling sites make a comparable call for a different reason: a REST response's envelope is the HTTP response itself (status code, headers, body), and a gRPC call's envelope is the RPC itself (method name, metadata, status). Neither needs a JSON-level wrapper because the transport already provides one. A WebSocket message has no equivalent: HTTP's status line and headers belong to the one-time upgrade handshake, not to the frames that follow, so whatever an envelope would carry has to live in the message body if it's needed at all. The contract's answer is to need less of it: a single reused message type (next section) turns most of what a generic envelope buys, "which kind of message is this," into a single enum field, not a wrapper.
-
-An explicit envelope pays for itself when a channel carries several distinct message families and a dispatcher needs to branch before it knows which schema to parse against: multiple distinct AsyncAPI `messages` on one channel, not variations of one schema. This channel carries exactly one message type, so a wrapper would solve a problem this contract doesn't have, at the cost of an extra object to allocate and unwrap on every message, on both stacks, forever.
+An explicit envelope pays for itself when a channel carries several distinct message families and a dispatcher has to branch before it knows which schema to parse against. That means several AsyncAPI `messages` on one channel, not variations of one schema. This channel carries one message type, so a wrapper would add an object to allocate and unwrap on every message, on both stacks, for nothing.
 
 ## One message or many: the eventType discriminator
 
-`HandlingEventType` is a seven-member enum: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS`, `CLAIM`, `HOLD`, `DELIVERED`, plus the zero value, `HANDLING_EVENT_TYPE_UNSPECIFIED`, that the server never sends. Every one of those seven kinds rides the same `HandlingEvent` schema; `eventType` is what a consumer switches on to decide what the rest of the message means. `contracts/README.md` names this as a convention: "One reused message shape. `components.messages.HandlingEvent` is defined once and referenced (`$ref`) from both the channel and the operation, never duplicated inline."
+`HandlingEventType` has seven kinds (`RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS`, `CLAIM`, `HOLD`, `DELIVERED`) plus the zero value `HANDLING_EVENT_TYPE_UNSPECIFIED`, which the server never sends. All seven ride the same schema, and `eventType` is what a consumer switches on:
 
-The alternative, one AsyncAPI message schema per event kind, `ReceivedEvent`, `LoadedEvent`, `CustomsEvent`, and so on, is a real design, supported natively via multiple `messages` entries on one channel. It buys per-kind type safety: a `LoadedEvent` schema could make `voyageNumber` required since every LOAD event has one, while a `CustomsEvent` schema could omit the field entirely instead of leaving it nullable. Figure 6.2 puts the two approaches side by side.
+```yaml
+      enum:
+        - HANDLING_EVENT_TYPE_UNSPECIFIED
+        - RECEIVE
+        - LOAD
+        - UNLOAD
+        - CUSTOMS
+        - CLAIM
+        - HOLD
+        - DELIVERED
+```
 
-{% include excalidraw.html file="06-one-vs-many-messages" alt="Two groups compared side by side. On the left, this contract's choice: a single HandlingEvent message box with solid arrows fanning down to four category boxes, RECEIVE, LOAD/UNLOAD, CUSTOMS/CLAIM, and HOLD/DELIVERED, labeled eventType discriminates. On the right, a rejected alternative: a dashed box labeled one AsyncAPI message per event kind, with dashed arrows fanning down to four dashed schema boxes, ReceivedEvent, LoadedEvent, CustomsEvent, and three more schemas. A note below states the same seven event kinds exist either way, and that adding an eighth kind is one new enum value under the chosen design versus a new channel message under the rejected one, in both stacks." caption="Figure 6.2: Same seven event kinds either way; the discriminator puts the branching in one enum instead of seven schemas." %}
+The alternative is one AsyncAPI message per kind (`ReceivedEvent`, `LoadedEvent`, `CustomsEvent`), supported natively through multiple `messages` entries on a channel. It buys per-kind type safety: `LoadedEvent` could require `voyageNumber`, and `CustomsEvent` could omit it.
 
-The cost of per-kind schemas shows up at the edges this contract cares most about: evolution and cross-stack consistency. Adding an eighth event kind to the discriminated design is one new enum value and one new `switch`/`match` arm in code already written to expect the discriminator to grow: the kind of additive change versioning treats as safe by default. Adding an eighth kind to the per-schema design is a new message definition, a new channel reference, and new generated types in both stacks, landing on the same release. Both stacks are required to deserialize this feed identically; one discriminated schema gives them one thing to stay in sync on, where seven schemas give them seven. The per-kind field tightening is real, but this domain doesn't need it badly enough to pay for it: every conditionally required field (`voyageNumber` for LOAD/UNLOAD, `amount` for CUSTOMS or CLAIM) is already optional in the one shared schema, which is the next section's subject.
+{% include excalidraw.html file="06-one-vs-many-messages" alt="Two designs side by side. Left, the chosen one: a single HandlingEvent message with arrows fanning to four groups of event kinds, labeled eventType discriminates. Right, the rejected one: a dashed box, one AsyncAPI message per event kind, fanning to dashed per-kind schemas." caption="Figure 6.2: same seven event kinds either way; the discriminator puts the branching in one enum instead of seven schemas." %}
 
-## Field shapes that survive: IDs, timestamps, Money, enums
+| | One schema and a discriminator | One schema per kind |
+|---|---|---|
+| Adding an eighth kind | One enum value and one new `switch` arm | A new message definition, a new channel reference and new generated types in both stacks, released together |
+| Staying in sync across stacks | One shape | Seven shapes |
+| Per-kind required fields | Optional in the shared schema | Required where they apply |
 
-Message design is mostly about choosing field shapes that won't need to change meaning later, because a client already deployed against the old meaning has no way to find out it changed. `HandlingEvent` reuses four shapes from the series' shared glossary rather than inventing socket-specific ones.
+The tightening of per-kind schemas is real, but this domain doesn't need it. Every conditionally required field (`voyageNumber` for `LOAD` and `UNLOAD`, `amount` for `CUSTOMS`) is already optional in the shared schema.
 
-**Identifiers carry their type in the string.** `eventId` matches `^evt_[0-9A-Za-z]{26}$`, `bookingId` matches `^bkg_[0-9A-Za-z]{26}$`, `cargoId` matches `^crg_[0-9A-Za-z]{26}$`. A bare ULID or UUID is indistinguishable from any other ULID in the codebase; a client that logs an unprefixed ID, or pastes one into the wrong variable, finds out it mixed up a booking and a cargo only when a lookup fails downstream, if it fails at all. The `evt_`/`bkg_`/`crg_` prefix makes the mistake visible in the string itself: the same convention the REST and gRPC sibling sites use for `Booking.id` and `Cargo.id`, carried onto the socket so all three transports share one set of identifiers.
+## Field shapes that survive
 
-**Timestamps are two fields, not one, because they answer two different questions.** `occurredAt` is when the handling event physically happened; `registeredAt` is when the system recorded it. The contract is explicit that these differ whenever registration is delayed, a paper manifest keyed in after the fact is the example it gives, and that `registeredAt >= occurredAt` always holds. Collapsing these into one `timestamp` field forces a choice between two true facts, and whichever one a client assumes it's getting, it will eventually be wrong for a delayed event, not a corner case in a domain with paper manifests and customs holds.
+A deployed client has no way to learn that a field changed meaning, so choose shapes that won't need to. `HandlingEvent` reuses four from the shared glossary of the REST and gRPC books.
 
-**Money is a decimal string, never a float.** `amount` matches `^\d+\.\d{2}$`: `"125.00"`, not `125.00` as a JSON number and not `12500` as integer cents. `contracts/README.md` calls this the WebSocket analog of the REST and gRPC sites' Money-as-decimal-string convention, for the same reason the gRPC site gives for `string amount` over `double amount` in Protobuf: JSON numbers are IEEE 754 doubles, and `0.1 + 0.2` not equaling `0.3` in nearly every mainstream language is the famous symptom of a general problem, binary floating point can't represent most decimal fractions exactly. A `Money` field that's a JSON number looks fine in every manual test and drifts by fractions of a cent under real traffic, on a value that has a name on an invoice. A decimal string sidesteps the problem by never asking a float to hold the value; parsing it into a fixed-point type (`BigDecimal`, Python's `Decimal`) is the consuming code's job, not the wire format's.
+**Identifiers carry their type.** `eventId` matches `^evt_[0-9A-Za-z]{26}$`, `bookingId` matches `^bkg_[0-9A-Za-z]{26}$` and `cargoId` matches `^crg_[0-9A-Za-z]{26}$`. A bare ULID looks like any other ULID, so a client that swaps a booking and a cargo finds out only when a lookup fails downstream. The prefix makes the mistake visible in the string, and all three transports share one set of identifiers.
 
-**Enums get an explicit, never-sent zero value.** `HandlingEventType`'s zero member is `HANDLING_EVENT_TYPE_UNSPECIFIED`, matching the `*_UNSPECIFIED` convention the gRPC site's `BookingState` enum uses, for the same reason: JSON has no notion of an enum's default, but a deserializer in a language with enums has to pick something when it meets a value it doesn't recognize, and "the first declared member" is a common default that turns an unrecognized or missing value into whatever happens to be declared first, with no signal that a substitution occurred. Naming that slot `UNSPECIFIED` and documenting that the server never sends it makes an `UNSPECIFIED` showing up client-side unambiguous evidence of a bug, a contract mismatch, a bad fallback, a corrupted message, rather than a real `RECEIVE` event relabeled by accident.
+**Two timestamps answer two questions.** `occurredAt` is when the event physically happened and `registeredAt` is when the system recorded it. `registeredAt` is always greater than or equal to `occurredAt`, and they differ whenever registration is delayed, such as a paper manifest keyed in later. One `timestamp` field forces a choice between two true facts, and whichever a client assumes will be wrong for a delayed event.
 
-**Optional fields stay nullable, not defaulted to a stand-in value.** `voyageNumber` is absent for events that aren't tied to a voyage (`CUSTOMS`, `CLAIM`) and present for `LOAD`/`UNLOAD`; `amount` is absent unless the event itself carries a charge. Neither is required in the schema, and neither has a sentinel default like `""` or `"0.00"` standing in for "not applicable." A sentinel value is a trap for exactly the kind of code this chapter is trying to prevent: a client that sums every `amount` field across a stream of events, without checking for absence first, folds a stray `"0.00"` from every CUSTOMS event into the total as if it were a real zero-dollar charge, a different fact from "this event has no charge."
+**Money is a decimal string.** `amount` matches `^\d+\.\d{2}$`: `"125.00"`, not the JSON number `125.00` and not integer cents:
 
-## Text vs. binary on the wire: JSON now, Protobuf later
+```yaml
+      pattern: '^\d+\.\d{2}$'
+      examples:
+        - '125.00'
+```
 
-`contracts/asyncapi.yaml` declares `contentType: application/json` on the `HandlingEvent` message, and every design decision in this chapter, the decimal-string `Money`, the string-prefixed IDs, the string-named enum values, assumes a text format underneath it. That's a choice for this point in the book, not an assumption that JSON is the only format a `HandlingEvent` could ever take. Re-encoding this exact message as binary Protobuf later, unchanged in meaning, is where most of the shapes this chapter defends don't survive the move unchanged.
+JSON numbers are IEEE 754 doubles, and binary floating point can't represent most decimal fractions exactly. A numeric `Money` field looks fine in every manual test and drifts by fractions of a cent under traffic. A string never asks a float to hold the value; parsing into `BigDecimal` or Python's `Decimal` is the consumer's job.
 
-A Protobuf `Money` settles the string-vs-float argument the same way (`string amount = 1`), but a Protobuf enum's zero value isn't a readable string like `"HANDLING_EVENT_TYPE_UNSPECIFIED"` on the wire; it's a VARINT-encoded `0`, and the human-readable name exists only in the `.proto` file and the generated code around it. An ID prefix like `evt_` stops paying for itself as clearly once the field is binary-framed rather than eyeballed in a dev tools Network tab, it still protects against mixing up an `eventId` and a `cargoId` in code, but a client debugging a raw binary capture doesn't get to read `"evt_01HZY3..."` off the wire the way it can with JSON today. And the two timestamp fields, ISO 8601 strings here, become a `google.protobuf.Timestamp`, two fixed-width integers instead of a parsed string, the same well-known-type substitution the gRPC site's domain-modeling chapter covers.
+**Enums get an explicit zero value.** JSON has no default for an enum, yet a deserializer in a language with enums has to pick something when it meets a value it doesn't recognize. If that is the first declared member, an unrecognized or missing value silently becomes whatever is declared first. A documented `UNSPECIFIED` that the server never sends makes one appearing client-side unambiguous evidence of a bug, a contract mismatch or a corrupted message, not a `RECEIVE` event relabeled by accident.
 
-None of that argues for Protobuf now. JSON is debuggable with nothing more than browser dev tools or `wscat`, every language already has a JSON parser loaded, and a schema mismatch fails loudly instead of as an opaque byte-offset error. Protobuf's wins, smaller messages, no per-field name repeated on every message, no text-scanning parse, matter most at a scale and latency budget this book hasn't reached yet. The binary protobuf treatment later re-specifies this same `HandlingEvent` as a `.proto` message and benchmarks it against the JSON form this chapter builds on, field shape by field shape.
+**Optional fields stay absent, not defaulted.** `voyageNumber` is absent on `CUSTOMS` and `CLAIM` and present on `LOAD` and `UNLOAD`. `amount` is absent unless the event carries a charge. A sentinel like `""` or `"0.00"` is a trap: a client summing every `amount` would fold a stray `"0.00"` from each `CUSTOMS` event into the total as a real zero-dollar charge, which is a different fact from "no charge".
 
-## Nullability, defaults, and forward-compatibility
+The fixture both stacks replay shows the optional fields where they apply, a `LOAD` with a voyage and a `CUSTOMS` with a fee:
 
-`HandlingEvent` draws a hard line between two kinds of absence that are easy to conflate and expensive to conflate wrong: a field missing because this schema version never defined it, and a field present in the schema but legitimately unset on this message. `voyageNumber` and `amount` are the second kind: defined, typed, sometimes absent, checked as a normal code path, not an error case. The `required` list (`eventId`, `bookingId`, `cargoId`, `eventType`, `location`, `occurredAt`, `registeredAt`) keeps that checking bounded: those seven fields are guaranteed on every message this contract's version ever produces, so a client reads them without a null check, and everything outside that list needs one.
+```json
+  {
+    "eventId": "evt_01HZY3M2W9Y5E8R7C3P0D1U6F9",
+    "bookingId": "bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A",
+    "cargoId": "crg_01HZY3N4F6K1W9P3R7T0Y2Q8M5",
+    "eventType": "LOAD",
+    "location": "USNYC",
+    "voyageNumber": "0042E",
+    "occurredAt": "2026-01-15T14:30:00Z",
+    "registeredAt": "2026-01-15T14:30:03Z"
+  },
+  {
+    "eventId": "evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0",
+    "bookingId": "bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A",
+    "cargoId": "crg_01HZY3N4F6K1W9P3R7T0Y2Q8M5",
+    "eventType": "CUSTOMS",
+    "location": "NLRTM",
+    "amount": "125.00",
+    "occurredAt": "2026-01-18T09:15:00Z",
+    "registeredAt": "2026-01-18T09:15:10Z"
+  }
+```
 
-The first kind of absence, a field this version of the schema doesn't know about yet, is what versioning and evolution is about, and the design choice that sets it up is made here: every field in `HandlingEvent` is additive-safe to introduce later because the message already treats unset fields as routine, not exceptional. A hypothetical `containerTemperature` field, added for a future refrigerated-cargo use case, arrives optional, absent on every event that predates it, and a client that already treats `voyageNumber`'s absence as normal has no new failure mode to learn. A schema that instead treated every field as always-present would have no established pattern for a new field's absence on old messages, and "does this client crash on a message from the new version" becomes a live question every time the schema grows. Designing for nullability from the first message is what makes later versioning a continuation of an existing habit, not a retrofit.
+Compare a message that makes the opposite choice on each point:
 
-## Designing for the two stacks
+| Choice | Failure it invites |
+|---|---|
+| `"type": "load"` with no `UNSPECIFIED` member | A future event kind has no safe fallback: a strict deserializer throws, a lenient one picks an arbitrary default and says nothing |
+| Bare UUIDs for `id`, `booking`, `cargo` | Swapping `booking` and `cargo` produces no symptom until a lookup against the wrong collection fails |
+| One `when` instead of `occurredAt` and `registeredAt` | No way to tell afterward which moment it means |
+| `"loc": "Rotterdam"` instead of a UN/LOCODE | Ambiguous (which facility) and unparseable against the `Location` pattern |
+| `"charge": 125.0` as a JSON number | The float drift above, now summed across thousands of events |
 
-Both the Quarkus WebSockets Next stack and the Python FastAPI/`websockets` stack are required to deserialize this feed identically, not "compatibly," identically: the same message, parsed on both stacks, produces the same field values, the same enum member, the same notion of which fields are present. That's easiest to meet when the message design itself does the work, rather than leaving it to a mapping layer on one side to paper over a shape mismatch.
+## Text now, Protobuf alongside
 
-A Java `record` and a Pydantic `BaseModel` land on the same representation almost without trying when the wire shapes are already the lowest common denominator across both type systems: a string stays a string (neither stack parses `amount` into a float, both keep it as `BigDecimal`/`Decimal` from a string), an enum unknown to one side degrades to `UNSPECIFIED` instead of throwing, and a missing optional field becomes `null`/`None` rather than a type-specific sentinel. Jackson and Pydantic both support all three behaviors out of the box; the discipline is specifying them explicitly instead of relying on each library's unannotated default, which differs between them (Jackson defaults to failing on an unrecognized enum value; Pydantic's default depends on how the field is typed).
+The message declares `contentType: application/json`, and the decimal-string `Money`, prefixed IDs and string-named enum values all assume a text format. JSON is debuggable with browser dev tools or `wscat`, every language has a parser loaded, and a schema mismatch fails loudly. Protobuf wins on message size and parse cost, which matter once throughput or latency budgets do.
 
-{% include codetabs.html langs="Quarkus|Python" %}
+`contracts/handling-event.proto` already encodes the same fields in binary, and the `Sec-WebSocket-Protocol` value `handling-events.v1+protobuf` selects it. The shapes survive the move with one change: the enum zero value becomes a varint `0`, readable by name only in the `.proto` file. The `evt_` prefix still protects code from mixing up ids, but nobody reads it off a binary capture the way they read it in a dev tools Network tab. The timestamps, `amount` and `location` stay plain `string` fields rather than `google.protobuf.Timestamp`, so a value decoded from either encoding is byte-for-byte the same string.
+
+## Nullability and forward compatibility
+
+Two kinds of absence are easy to conflate and expensive to conflate wrong: a field the schema version never defined, and a field defined but unset on this message. `voyageNumber` and `amount` are the second kind: typed, sometimes absent, a normal code path. The `required` list bounds the checking. Those seven fields are on every message, so a client reads them without a null check, and every other field needs one.
+
+The first kind of absence is a newer schema reaching an older client. Because the message already treats unset fields as routine, a new optional field such as a hypothetical `containerTemperature` arrives absent on every older event, and a client that handles `voyageNumber`'s absence has no new failure mode to learn. A schema that treated every field as always present would have no habit for a new field's absence, and each addition would raise whether old clients crash.
+
+## Two stacks, one message
+
+Both stacks must deserialize the feed identically: the same field values, the same enum member and the same set of present fields. That is easiest when the wire shapes are already the common denominator of both type systems.
+
+- Strings stay strings. Neither stack parses `amount` into a float.
+- Absent optional fields become `null` in Java and `None` in Python, not a type-specific sentinel. Both stacks omit them from the frame instead of sending `null`.
+- Enum handling is where the libraries diverge, so state the behavior explicitly instead of trusting each default. Jackson fails on an unrecognized enum string unless configured to fall back to a default member (`@JsonEnumDefaultValue` with `READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE`), and Pydantic rejects it unless a validator or default says otherwise. The examples configure neither fallback, so both stacks reject a value outside the contract's enum instead of relabeling it.
+
+The Quarkus side is a record that mirrors the schema field for field. `@JsonInclude(NON_NULL)` omits absent optionals:
 
 ```java
-// Quarkus WebSockets Next — a record mirrors the flat schema directly
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record HandlingEvent(
-    String eventId,
-    String bookingId,
-    String cargoId,
-    HandlingEventType eventType,
-    String location,
-    Instant occurredAt,
-    Instant registeredAt,
-    String voyageNumber,   // null when absent — no sentinel
-    String amount          // kept as String; BigDecimal parsing is explicit, not automatic
-) {
-    @JsonCreator
-    public static HandlingEvent fromJson(/* ... */) { /* ... */ }
-}
-
-public enum HandlingEventType {
-    @JsonEnumDefaultValue HANDLING_EVENT_TYPE_UNSPECIFIED,
-    RECEIVE, LOAD, UNLOAD, CUSTOMS, CLAIM, HOLD, DELIVERED
+        String eventId,
+        String bookingId,
+        String cargoId,
+        HandlingEventType eventType,
+        String location,
+        Instant occurredAt,
+        Instant registeredAt,
+        String voyageNumber,
+        String amount) {
 }
 ```
 
-```python
-# Python — Pydantic mirrors the same flat schema, same optionality
-class HandlingEventType(str, Enum):
-    HANDLING_EVENT_TYPE_UNSPECIFIED = "HANDLING_EVENT_TYPE_UNSPECIFIED"
-    RECEIVE = "RECEIVE"
-    LOAD = "LOAD"
-    UNLOAD = "UNLOAD"
-    CUSTOMS = "CUSTOMS"
-    CLAIM = "CLAIM"
-    HOLD = "HOLD"
-    DELIVERED = "DELIVERED"
+On the Python side the Pydantic `HandlingEvent` is generated from the schema extracted from the contract and regenerated on every build. It isn't hand-edited, so its optionality can't drift from the contract.
 
-class HandlingEvent(BaseModel):
-    event_id: str = Field(alias="eventId")
-    booking_id: str = Field(alias="bookingId")
-    cargo_id: str = Field(alias="cargoId")
-    event_type: HandlingEventType = Field(
-        alias="eventType",
-        default=HandlingEventType.HANDLING_EVENT_TYPE_UNSPECIFIED,
-    )
-    location: str
-    occurred_at: datetime = Field(alias="occurredAt")
-    registered_at: datetime = Field(alias="registeredAt")
-    voyage_number: str | None = Field(alias="voyageNumber", default=None)
-    amount: str | None = None  # left as str; Decimal(amount) is explicit at use sites
+> **Decision**
+>
+> Keep `HandlingEvent` as one flat, reused message discriminated by `eventType`: prefixed IDs, two timestamps, `Money` as a decimal string, an explicit `*_UNSPECIFIED` zero value, and every field optional unless every event kind has it. Reach for a multi-schema envelope only when a channel carries distinct message families with no shared shape to discriminate within.
+
+> **🤖 Explore with your agent**
+>
+> "Review contracts/asyncapi.yaml and examples/part3-handling-events/fixtures/handling-events.json against the message-design rules: every id prefixed (evt_, bkg_, crg_), occurredAt and registeredAt both present with registeredAt not earlier than occurredAt, amount a decimal string, optional fields absent instead of defaulted, and no wrapper object. Report each violation with its line, or say there are none, then run ./verify.sh in examples/part3-handling-events."
+>
+> Check: the review lists no violations and `./verify.sh` prints `PASS:`.
+
+## Build, run, observe
+
+The message lives in `contracts/asyncapi.yaml`, and both stacks replay `fixtures/handling-events.json` from the shared example in `examples/part3-handling-events`:
+
+```bash
+npx -y @asyncapi/cli@6.2.1 validate contracts/asyncapi.yaml
+cd examples/part3-handling-events
+./verify.sh
 ```
 
-Both sides default an unrecognized `eventType` to `HANDLING_EVENT_TYPE_UNSPECIFIED` instead of raising, `@JsonEnumDefaultValue` on the Java side, a model default on the Python side, so a client running slightly behind the contract's enum growth degrades to "I don't recognize this event kind" instead of crashing the connection. Both keep `amount` as a wire-shaped string instead of eagerly parsing it into a numeric type at deserialization time, keeping the one failure mode (a malformed decimal string) at the call site that converts it, not at every message's construction.
+`verify.sh` brings up Quarkus on port 8080 and Python on 8081, captures the first frame each pushes on `/ws/v1/bookings/{bookingId}/handling-events`, validates it against the schema extracted from the contract, and checks that both stacks' frames agree field by field. It prints `PASS:` when they do. Both stacks omit absent optional fields from the frame instead of emitting `null`.
 
-## On the wire
-
-A real `HandlingEvent` push, matching the contract exactly:
-
-```json
-{
-  "eventId": "evt_01HZY3M1V8X4D7Q6B2N9C0T5E8",
-  "bookingId": "bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A",
-  "cargoId": "crg_01HZY3N4F6K1W9P3R7T0Y2Q8M5",
-  "eventType": "LOAD",
-  "location": "NLRTM",
-  "occurredAt": "2026-03-14T08:12:00Z",
-  "registeredAt": "2026-03-14T08:14:33Z",
-  "voyageNumber": "MSC-0417W",
-  "amount": "125.00"
-}
-```
-
-Field by field: `eventId` is this event's own identity, prefixed and ULID-shaped so it sorts chronologically and reads unambiguously in a log. `bookingId` and `cargoId` name what the event is about, prefixed so neither can be mistaken for the other or for `eventId`. `eventType` is `"LOAD"`: a string enum member, not an integer code, so the message is self-describing without a lookup table. `location` is a bare UN/LOCODE string, `"NLRTM"`, no nested `{ "code": "NLRTM", "name": "Rotterdam" }`, because the code is the identifier and a display name is a presentation concern for a lookup table the client already has, not for every event. `occurredAt` and `registeredAt` differ by two minutes here, the ordinary case where a scanner or terminal operator triggers the event and the system records it shortly after. `voyageNumber` and `amount` are present because this LOAD carries a voyage and a handling charge; both would be absent on a CUSTOMS or CLAIM event that doesn't.
-
-A poorly designed variant of the same event, keeping the same facts but making every choice this chapter argues against:
-
-```json
-{
-  "type": "load",
-  "id": "a1b2c3d4-...",
-  "booking": "a9f0e1d2-...",
-  "cargo": "b3c4d5e6-...",
-  "when": "2026-03-14T08:12:00Z",
-  "loc": "Rotterdam",
-  "voyage": "MSC-0417W",
-  "charge": 125.0
-}
-```
-
-Every change costs something a client eventually pays for. `type: "load"` with no `UNSPECIFIED` member means an unrecognized future event kind has no safe fallback: a strict deserializer throws, a lenient one picks an arbitrary default with no record that it did. `id`, `booking`, and `cargo` are bare UUIDs with no prefix, so a bug that swaps `booking` and `cargo` produces no visible symptom until a lookup against the wrong collection fails downstream. Collapsing `occurredAt`/`registeredAt` into one `when` throws away a distinction the domain depends on: there's no way to tell, after the fact, which moment it refers to. `loc: "Rotterdam"` is a display name instead of a UN/LOCODE, ambiguous (which Rotterdam facility) and unparseable against the shared glossary's `Location` pattern. And `charge: 125.0` is a JSON number: the exact representation problem the Money section opens with, now live in a message a client is going to sum across a feed of thousands.
-
-## Where this goes next
-
-Every design choice in this chapter was made with one eye on versioning: the discriminated `eventType` enum, the optional `voyageNumber`/`amount` fields, and the required-vs-optional split are what make it possible to add an eighth event kind, a new optional field, or a stricter validation rule without breaking a client that's already connected. Versioning and evolution names that explicitly: what counts as an additive, safe change versus a breaking one, how the `/ws/v1/...` channel path's version relates to the schema's own evolution, and what a client should do with a field it doesn't recognize.
-
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Keep `HandlingEvent` as one flat, reused message discriminated by `eventType`, with IDs that carry a type prefix, two timestamps instead of one, Money as a decimal string, an explicit `*_UNSPECIFIED` enum zero value, and every non-identity field optional unless every event kind has it. None of these are socket-specific inventions: they're the REST and gRPC sibling sites' domain conventions carried onto a channel that has no request/response pair to lean on instead. Reach for a multi-schema envelope only when a channel carries distinct message families with no shared shape to discriminate within; this feed has one family, and the discriminator already does the job a wrapper would.</p></div>
+- Change `eventId` in the fixture to a value without the `evt_` prefix: it breaks the contract pattern, the Python stack's generated model raises a validation error when it loads the fixture, and the Quarkus contract test rejects the event against the extracted schema.
+- Set `amount` on the `CUSTOMS` event to `"125"`: it breaks the `Money` pattern and is rejected the same way.
 
 ## For deeper coverage
 
-- Gregor Hohpe & Bobby Woolf, *Enterprise Integration Patterns* (Addison-Wesley, 2003): the Message, Message Envelope, and Document Message patterns this chapter's "roles, not nesting" argument is built on.
-- Olaf Zimmermann, Mirko Stocker, Daniel Lübke, Uwe Zdun & Cesare Pautasso, *Patterns for API Design* (Addison-Wesley, 2022): field-level design conventions (identifiers, enumerations, nullability) applied here to one asynchronous message instead of a synchronous request/response pair.
-- *Cloud Native Design Patterns*, "API Metadata" chapter: the discriminator-vs-schema-per-kind trade-off this chapter walks, generalized to metadata design across an API surface.
-- *Cloud Native Design Patterns*, "Event-Driven" chapter: designing one event shape to survive the event's own evolution, the same problem `HandlingEvent`'s nullable fields solve here.
+- Gregor Hohpe & Bobby Woolf, *Enterprise Integration Patterns* (Addison-Wesley, 2003): the Message, Message Envelope and Document Message patterns behind the roles-not-nesting argument.
+- Olaf Zimmermann, Mirko Stocker, Daniel Lübke, Uwe Zdun & Cesare Pautasso, *Patterns for API Design* (Addison-Wesley, 2022): field-level design conventions (identifiers, enumerations, nullability), applied here to one asynchronous message.
+- *Cloud Native Design Patterns*, "API Metadata" chapter: the discriminator-versus-schema-per-kind trade-off, generalized across an API surface.
+- *Cloud Native Design Patterns*, "Event-Driven" chapter: designing one event shape to survive the event's own evolution.
 - [AsyncAPI 3.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.0.0): the `components.schemas` and `components.messages` sections `HandlingEvent` is defined under.

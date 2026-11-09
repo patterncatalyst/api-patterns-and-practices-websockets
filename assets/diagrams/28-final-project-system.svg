@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" font-family="'Red Hat Text', system-ui, sans-serif" role="img">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker><marker id="am" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8870c"/></marker></defs>
+<rect x="280" y="20" width="440" height="370" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="292" y="40" font-size="12" font-weight="700" fill="#1d1d1d">handlingEvents channel, Quarkus and Python stacks</text>
+<rect x="20" y="410" width="620" height="170" rx="12" fill="#fafafa" stroke="#ddd"/>
+<text x="32" y="430" font-size="12" font-weight="700" fill="#1d1d1d">Deploy</text>
+<rect x="20" y="70" width="220" height="80" rx="9" fill="#fff3e0" stroke="#e8870c" stroke-width="2"/>
+<text x="130.0" y="100.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Contract</text>
+<text x="130.0" y="117.5" font-size="11.5" fill="#555555" text-anchor="middle">asyncapi.yaml</text>
+<text x="130.0" y="132.5" font-size="11.5" fill="#555555" text-anchor="middle">handling-event.proto</text>
+<rect x="20" y="200" width="220" height="70" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="130.0" y="233.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Fixture</text>
+<text x="130.0" y="250.0" font-size="11.5" fill="#555555" text-anchor="middle">RECEIVE, LOAD, CUSTOMS</text>
+<rect x="300" y="60" width="400" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="500.0" y="83.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Connection</text>
+<text x="500.0" y="100.0" font-size="11.5" fill="#555555" text-anchor="middle">JWT at upgrade, close codes 1008 and 4400</text>
+<rect x="300" y="122" width="400" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="500.0" y="145.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Send path</text>
+<text x="500.0" y="162.0" font-size="11.5" fill="#555555" text-anchor="middle">backpressure 4290, heartbeat sweep</text>
+<rect x="300" y="184" width="400" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="500.0" y="207.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Encoding</text>
+<text x="500.0" y="224.0" font-size="11.5" fill="#555555" text-anchor="middle">Sec-WebSocket-Protocol: JSON or Protobuf</text>
+<rect x="300" y="246" width="400" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="500.0" y="269.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Backplane</text>
+<text x="500.0" y="286.0" font-size="11.5" fill="#555555" text-anchor="middle">stateless | kafka | redis, ?afterEventId replay</text>
+<rect x="300" y="308" width="400" height="50" rx="9" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+<text x="500.0" y="331.0" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Observability</text>
+<text x="500.0" y="348.0" font-size="11.5" fill="#555555" text-anchor="middle">connection span, delivered-events counter</text>
+<rect x="770" y="100" width="200" height="90" rx="9" fill="#eef4fb" stroke="#2f6db5" stroke-width="2"/>
+<text x="870.0" y="135.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Client</text>
+<text x="870.0" y="152.5" font-size="11.5" fill="#555555" text-anchor="middle">wss, ?token=</text>
+<text x="870.0" y="167.5" font-size="11.5" fill="#555555" text-anchor="middle">offers a subprotocol</text>
+<rect x="770" y="240" width="200" height="90" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="870.0" y="275.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">Inject endpoint</text>
+<text x="870.0" y="292.5" font-size="11.5" fill="#555555" text-anchor="middle">POST /internal/bookings/</text>
+<text x="870.0" y="307.5" font-size="11.5" fill="#555555" text-anchor="middle">{bookingId}/handling-events</text>
+<rect x="50" y="450" width="270" height="90" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="185.0" y="485.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">minikube</text>
+<text x="185.0" y="502.5" font-size="11.5" fill="#555555" text-anchor="middle">ingress-nginx, Strimzi Kafka</text>
+<text x="185.0" y="517.5" font-size="11.5" fill="#555555" text-anchor="middle">Redis toggle</text>
+<rect x="340" y="450" width="270" height="90" rx="9" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="475.0" y="485.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">OpenShift Local</text>
+<text x="475.0" y="502.5" font-size="11.5" fill="#555555" text-anchor="middle">Routes, AMQ Streams Kafka</text>
+<text x="475.0" y="517.5" font-size="11.5" fill="#555555" text-anchor="middle">Redis toggle</text>
+<rect x="700" y="450" width="270" height="90" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5"/>
+<text x="835.0" y="485.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">lgtm</text>
+<text x="835.0" y="502.5" font-size="11.5" fill="#555555" text-anchor="middle">Grafana stack</text>
+<text x="835.0" y="517.5" font-size="11.5" fill="#555555" text-anchor="middle">traces and metrics</text>
+<path d="M240,110 L280,110" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="266.0" y="104.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">types</text>
+<text x="266.0" y="104.0" font-size="11" fill="#555" text-anchor="middle">types</text>
+<path d="M240,235 L280,235" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="266.0" y="229.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">seed</text>
+<text x="266.0" y="229.0" font-size="11" fill="#555" text-anchor="middle">seed</text>
+<path d="M720,145 L770,145" fill="none" stroke="#b8650a" stroke-width="2" marker-start="url(#am)" marker-end="url(#am)"/>
+<text x="751.0" y="139.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">frames</text>
+<text x="751.0" y="139.0" font-size="11" fill="#b8650a" text-anchor="middle">frames</text>
+<path d="M770,285 L720,285" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="751.0" y="279.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">inject</text>
+<text x="751.0" y="279.0" font-size="11" fill="#555" text-anchor="middle">inject</text>
+<path d="M330,390 L330,410" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="336.0" y="394.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">runs on</text>
+<text x="336.0" y="394.0" font-size="11" fill="#555" text-anchor="middle">runs on</text>
+<path d="M700,333 L835,450" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
+<text x="742.5" y="401.5" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">OTLP</text>
+<text x="742.5" y="401.5" font-size="11" fill="#555" text-anchor="middle">OTLP</text>
+</svg>

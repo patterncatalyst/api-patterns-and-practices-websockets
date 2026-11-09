@@ -105,7 +105,7 @@ wait_for_ws localhost:8091 "/ws/v1/bookings/${BOOKING}/handling-events"
 json_frame="$(websocat -1 -n -t --protocol handling-events.v1+json "$URL" </dev/null)"
 schema_validate "$json_frame" build/handling-event.schema.json
 
-# Protobuf (binary) — websocat prints raw bytes; pipe to a small decoder
+# Protobuf (binary): websocat prints raw bytes; pipe to a small decoder
 # built on the generated stub to confirm it parses and matches the JSON
 # frame's values (see tests/test_contract.py for the same assertion in
 # pure Python).

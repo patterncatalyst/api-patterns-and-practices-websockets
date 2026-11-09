@@ -102,7 +102,7 @@ async def _replay(websocket: ServerConnection, booking_id: str) -> None:
             # loop open and `send` as new handling events are recorded.
             # Here we just hold the connection open so the channel's
             # long-lived-per-booking semantics still hold, until the client
-            # disconnects — matching examples/part3-handling-events.
+            # disconnects, matching examples/part3-handling-events.
             await websocket.wait_closed()
         except ConnectionClosed:
             span.set_attribute("ws.disconnect_reason", "client_disconnected")

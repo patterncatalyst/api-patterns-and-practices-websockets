@@ -83,7 +83,7 @@ async def _replay(websocket: ServerConnection) -> None:
     BINARY frame (`ws.send(bytes)`) or a JSON TEXT frame (`ws.send(str)`),
     depending on the subprotocol negotiated for this connection
     (`websocket.subprotocol`, set by `_select_subprotocol` during the
-    handshake) — never both on the same connection.
+    handshake), never both on the same connection.
     """
     protobuf = _is_protobuf(websocket)
     logger.info(
@@ -132,7 +132,7 @@ def create_server(host: str, port: int):
     callers `async with` it (see app/main.py) to start/stop the listener.
     `subprotocols` advertises the three supported values; `select_subprotocol`
     overrides the library's default negotiation to also accept a client that
-    offers none at all — see `_select_subprotocol`.
+    offers none at all; see `_select_subprotocol`.
     """
     return serve(
         handler,

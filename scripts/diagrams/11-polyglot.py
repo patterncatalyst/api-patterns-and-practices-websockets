@@ -48,7 +48,7 @@ nodes1 = [
      "style": "box"},
 
     {"x": 225, "y": 345, "w": 450, "h": 95,
-     "lines": ["verify.sh Step 3: cross-stack agreement",
+     "lines": ["Cross-stack agreement check",
                "same eventId / eventType / bookingId / cargoId / location / occurredAt / registeredAt",
                "JSON key order differs (Jackson vs. Pydantic): values are identical"],
      "style": "ink"},
@@ -99,7 +99,7 @@ nodes2 = [
      "style": "box"},
 
     {"x": 250, "y": 375, "w": 210, "h": 70,
-     "lines": ["examples matrix", "verify.sh per example, 3x retry"],
+     "lines": ["examples matrix", "live check per example, 3x retry"],
      "style": "box"},
 
     {"x": 540, "y": 175, "w": 220, "h": 110,

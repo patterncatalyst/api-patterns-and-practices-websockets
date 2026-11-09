@@ -2,209 +2,118 @@
 title: "Versioning and Evolution"
 order: 7
 part: "Contract-first for Sockets"
-description: "Evolving a socket's contract without breaking a client that's already connected."
-duration: "20 min read"
+description: "Classify contract changes as safe or breaking, pick a versioning lever, and retire an old version without cutting off a connected client."
+duration: "16 min read"
 ---
 
 ## Learning objectives
 
 By the end of this chapter you can:
 
-- Classify a proposed change to `HandlingEvent` or its channel as breaking or safe, using the test "does any code compiled before this change have to look at the part that's different."
-- Explain why an already-open WebSocket connection has no REST or gRPC-unary analog for contract renegotiation, and name the three populations a rolling deploy creates at once.
-- Choose among channel-path, subprotocol, and message-field versioning for a given kind of change, and state what each lever does to a connection that is already open.
-- Implement a defensive `HandlingEventType` deserializer (`fromWire` / `unknown_becomes_unspecified`) that degrades an unrecognized enum value to `UNSPECIFIED` instead of failing the connection.
-- Size and close a dual-publish window using observed connection lifetimes and an application-defined close code in the `4000`–`4999` range.
+- Classify a change to `HandlingEvent` or its channel as breaking or safe with one test: does any code compiled before the change have to look at the part that's different.
+- Explain why an open WebSocket connection has no REST or unary-gRPC analog for renegotiating a contract, and name the three client populations a rolling deploy creates.
+- Choose among channel-path, subprotocol and message-field versioning, and say what each does to a connection that is already open.
+- Make an enum deserializer degrade an unrecognized value to `UNSPECIFIED` instead of failing.
+- Size and close a dual-publish window using observed connection lifetimes and an application-defined close code in the `4000` to `4999` range.
 
 ## Why this matters
 
-`contracts/asyncapi.yaml` fixed the shape of one message, `HandlingEvent`, on one channel, `/ws/v1/bookings/{% raw %}{bookingId}{% endraw %}/handling-events`, and message design settled what belongs in that shape. Neither answered the question that matters the moment this contract ships a second time: what happens to a client already running against version one when version one changes underneath it? A REST client makes one request, gets one response, and is gone; its next request, whenever that is, picks up whatever the server looks like by then. A gRPC unary call behaves the same way. A WebSocket connection doesn't get that luxury: it opens once and stays open for as long as a booking is worth watching, minutes or days, and every message the server pushes down it has to make sense to whatever code the client compiled before the connection opened. This chapter is about keeping that promise as the contract moves: what counts as breaking it, the three places a version number can live, why `HandlingEventType`'s unspecified zero matters more here than it looks like it should, and the one problem a socket has that nothing else in this series does: the client is already on the call when you change what you're saying.
+A REST client makes one request, gets one response and is gone; its next request meets whatever the server looks like then. A WebSocket opens once and stays open for as long as a booking is worth watching, minutes or days. Every message the server pushes has to make sense to code that was compiled before the connection opened. So the question for a second release of the contract is what happens to a client already running against the first.
 
-## What counts as breaking, for a socket
+## What counts as breaking
 
-A gRPC message on the wire carries field numbers, not names, and an old reader skips a field number it doesn't recognize by construction: protobuf's wire format does the forward-compatibility work without any application code written for it. JSON over a WebSocket carries field *names*, and whether an old reader skips a name it doesn't recognize is a property of whatever JSON library deserialized the message, not of the wire format. Jackson's `ObjectMapper` fails closed on an unrecognized property unless `FAIL_ON_UNKNOWN_PROPERTIES` is turned off; a Pydantic model raises a validation error on an extra field unless `model_config = ConfigDict(extra="ignore")` says otherwise. The generated classes either stack produces don't inherit permissiveness automatically; it has to be configured on the deserializer, on both sides of this contract. That single fact reframes everything below: a change this chapter calls "safe" is only safe because this site's two implementations are built to tolerate it, not because JSON itself guarantees tolerance the way protobuf does.
+A gRPC message carries field numbers, and an old reader skips a number it doesn't recognize by construction. JSON over a WebSocket carries field names, and whether an old reader skips an unknown name is a property of its deserializer, not of the wire format. A plain Jackson `ObjectMapper` fails on an unrecognized property unless `FAIL_ON_UNKNOWN_PROPERTIES` is disabled; the `ObjectMapper` Quarkus manages disables it by default (`quarkus.jackson.fail-on-unknown-properties`). A Pydantic model ignores extras by default and raises only with `extra="forbid"`. Tolerance has to be configured on both sides, and every "safe" change below is safe only because the consumers are built to tolerate it.
 
-With that tolerance assumed, and it holds only because both stacks configure for it, which "On the wire" below shows directly, a short list of changes to `HandlingEvent`, the channel, or the subprotocol breaks an already-running client, and a longer list doesn't:
+| Part of the contract | Safe | Breaking |
+|---|---|---|
+| Field | Add an optional field (`carrierRemarks`). An old reader configured to ignore unknown properties drops it | Remove a field a client reads (`amount`); the client now handles `null` for a value the schema guaranteed |
+| Enum | Add a member (`REROUTED`), if every consumer maps an unrecognized value to a generic path | Repurpose a member in place: `CUSTOMS` keeps its name and changes meaning, and nothing fails while the client draws the wrong conclusion |
+| Shape | Add a channel path version (`/ws/v2/...`) beside the untouched `/ws/v1/...` | Change a type or unit in place: `amount` from the string `"125.00"` to the number `125.00`, or `occurredAt` from ISO 8601 to a Unix timestamp |
+| Requirement | Add a second subprotocol token while the first still serves, so a client that offers only the old one still connects | Make an optional field required: `voyageNumber` is absent on `CUSTOMS` by design, and rejecting its absence fails producers that never set it |
 
-Breaking, because an old client misreads bytes it already expected to understand:
+{% include excalidraw.html file="07-evolution-gate" alt="A matrix of contract changes in four columns: Field, Enum, Shape, Requirement. The safe row holds the additions (optional field, new enum member, new path version, second subprotocol). The breaking row holds the mutation of the same part (removed field, repurposed member, changed type, newly required field), each linked by a dashed line to the safe cell above it." caption="Figure 7.1: the evolution gate, four kinds of contract change, each with a safe addition above and the breaking mutation of the same thing below." %}
 
-- **Removing a field a client already reads.** `voyageNumber` or `amount` disappearing from the payload isn't skipped the way an *added* field is: code that extracts it starts handling `null`/`None` for a value the schema used to guarantee was there, a code path nobody tested.
-- **Changing a field's type or unit in place**, same name, different wire representation: `amount` moving from the decimal string `"125.00"` to the JSON number `125.00`, or `occurredAt` moving from an ISO-8601 string to a Unix timestamp. Every existing parser built for the old shape either can't decode the new value or decodes it into something nobody intended.
-- **Repurposing an existing enum member's meaning in place.** `CUSTOMS` continuing to exist as a string but meaning something different than it did when an old client's `switch` was written against it is indistinguishable, on the wire, from no change at all; nothing fails, the client draws the wrong conclusion from every event of that type from then on.
-- **Making a previously optional field required.** `voyageNumber` is absent on every `CUSTOMS` or `CLAIM` event by design; a client has code for "this field might not be there." If a later revision starts rejecting a message that's missing it, any older producer that never populated it starts failing validation it used to pass.
+The call is never whether a diff is big or small. If any code compiled before the change has to look at the part that's different, the change is breaking. Changing `Money` from `type: string` with a `^\d+\.\d{2}$` pattern to `type: number` keeps the field name, its position and its meaning, and still breaks every already-connected client that parses `amount` as a string. That is why the decimal-string convention exists: a type this fragile deserves a representation that can't drift into an almost-compatible shape unnoticed.
 
-Safe, because an old client's deserializer never has to look at the new part at all:
+## The already-connected client
 
-- **Adding a new optional field.** `carrierRemarks` showing up on `HandlingEvent` is bytes an old reader, configured to ignore unrecognized properties, drops on the floor, exactly the way an old protobuf reader drops an unknown field number.
-- **Adding a new enum member**, as long as every consumer of `HandlingEventType` treats a value it doesn't recognize as "handle me generically" rather than "this can only ever be one of the seven values I was compiled with." The enum evolution section below is the whole story on that second half of the sentence.
-- **Adding a new channel path version.** `/ws/v2/bookings/{% raw %}{bookingId}{% endraw %}/handling-events` existing alongside the untouched `/ws/v1/...` path changes nothing about any connection already open there; it's a new route, not an edit to the old one.
-- **Adding a second subprotocol token while still serving the first.** A server that still accepts `handling-events.v1` and now also accepts `handling-events.v2` breaks nothing for a client that only ever offered `v1`.
+A client that connected at 9:00 is still on that connection at 10:00, and the next day if nothing closes it. After a 9:15 deploy, every message it receives is whatever the new server code sends, over a socket it opened against the old contract and never renegotiated. Three consequences follow:
 
-{% include excalidraw.html file="07-evolution-gate" alt="A matrix of changes to the handling-event contract, aligned in four topic columns: Field, Enum, Shape, Requirement. Safe row: add an optional field (carrierRemarks), add a new enum member (REROUTED), add a new channel path version (/ws/v2/), add a second subprotocol while the old one still serves. Breaking row, aligned under it by topic: remove a field a client already reads (amount), repurpose an enum member's meaning in place (CUSTOMS), change a field's type or unit in place (Money as a string becoming a number), make a previously optional field required. A dashed line connects each safe cell to the breaking cell below it, showing the same part of the contract handled two different ways." caption="Figure 7.1: the evolution gate, four kinds of contract change, each with a safe addition above and the breaking mutation of the same thing below." %}
+1. **Three populations exist at once for the whole rollout.** Clients on an instance not yet replaced; clients that were disconnected when theirs was replaced and reconnected to an old or new instance depending on rollout progress; and clients connecting for the first time after it finishes. All three must be served correctly at every moment.
+2. **There is no mid-connection renegotiation.** Subprotocol, extensions and path are fixed at the handshake. The server can propose a move with a close frame and reason, but can't force when the client acts on it.
+3. **"Already connected" can mean days.** A mobile client that opens a socket at launch and holds it until force-quit outlives a short deprecation window. Sizing a window against deploy duration instead of observed connection lifetime is the commonest way to underestimate this.
 
-Read the two lists column by column: each pair is the same part of the contract, handled two different ways. The judgment call is never "is this change big or small"; it's "does any code compiled before this change ships have to look at the part that's different," and if the answer is yes, the change is breaking regardless of how small the diff looks in a pull request.
+A gRPC stream or a long-poll loop meets a version of the same problem. On a WebSocket feed it is the common case, because every connection is long-lived by design.
 
-## The already-connected-client problem
+## Versioning levers: path, subprotocol, field
 
-Here is the part with no REST or gRPC unary analog at all. A REST client's contract is renegotiated, implicitly, on every request: it sends a request, gets a response built against whatever the server looks like *right now*, and is done: there was never a multi-message commitment to any particular version. A WebSocket connection makes exactly that commitment, for however long it stays open. A client that connected at 9:00 AM, before a 9:15 AM deploy changed what the server pushes, is still on that connection at 10:00 and the next day if nothing closes it: every message arriving from 9:15 onward is whatever the *new* server code decided to send, over a socket the client opened against the *old* contract and never had a chance to renegotiate.
+A breaking change has to reach new clients without cutting off connected ones. The three places a version can live differ in when an open connection finds out.
 
-That has three concrete consequences a rolling deploy makes unavoidable, not hypothetical:
+**Put the version where the change is: the path for a different channel, the subprotocol for a different payload contract on the same channel, a message field for a change that must reach connections already open.**
 
-1. **Three populations exist at once, for the whole length of a rollout.** Clients still on an instance that hasn't been replaced yet; clients that got disconnected when their instance was replaced and reconnected mid-rollout, landing on an old or a new instance depending on how far the rollout has progressed; clients connecting for the first time after the rollout finishes. All three have to be served correctly by whatever the contract looks like at that moment; there's no window where only one population exists to design for.
-2. **There is no mid-connection renegotiation.** Subprotocol, extensions, and the channel path are fixed at handshake time; nothing lets either side agree to a new contract version without closing the connection. The server can *propose* a move, a close frame with a reason, but can't *force* when the client acts on it.
-3. **"Already connected" can mean "for days."** A connection opened the day before a breaking change ships can still be alive when a shorter deprecation window closes, if this feed's typical connection lifetime runs to hours or days rather than minutes, a mobile client that opens a socket at launch and holds it until the app is force-quit, say. Sizing a deprecation window against deploy duration instead of observed connection lifetime is the most common way this problem gets underestimated.
+| Lever | What changes | Effect on an open connection | Cost |
+|---|---|---|---|
+| Channel path (`/ws/v1/...` to `/ws/v2/...`) | The channel itself: a new message shape, a different parameter set | None. A connection's path is fixed at the handshake, so v1 keeps receiving what the v1 route sends | Two route handlers side by side |
+| Subprotocol (`Sec-WebSocket-Protocol`, for example `handling-events.v2`) | The payload contract on the same address | None. The handler reads the negotiated token and serializes to match, as an HTTP endpoint reads `Accept` | One handler branching per connection; reconnect to pick up the new shape |
+| Message field (`schemaVersion` in the JSON) | The payload, underneath connections that can't be relied on to reconnect | Takes effect immediately, with no new handshake | Every handler branches on `schemaVersion` forever |
 
-None of this is solved by anything already decided about this contract: `/ws/v1/...` and `handling-events.v1` exist precisely because the contract anticipated needing a lever here. The next section is what pulling each of those levers does to a connection that's already open.
-
-## Versioning strategies: channel path, subprotocol, message field
-
-Three places a version can live, and each answers a different question about when an already-open connection finds out something changed.
-
-**Channel path**, `/ws/v1/...` becoming `/ws/v2/...`, is the coarsest lever and the one the contract's README already commits this contract to for a fully incompatible redesign. A server registers both paths at once, running two route handlers side by side; a connection's path is fixed the moment the handshake completes, so a client on `/ws/v1/...` keeps receiving whatever that route sends for the rest of its life, unaffected by whatever `/ws/v2/...` does in parallel. This is the right lever when the change is structural enough that expressing both shapes through one handler would mean branching on version everywhere inside it: an entirely new message shape, a different parameter set, a channel that means something different now.
-
-**Subprotocol**, `Sec-WebSocket-Protocol: handling-events.v1` versus `handling-events.v2`, negotiated in the same handshake that already carries this token per the contract's `servers.local.bindings.ws` block, is a finer-grained lever than the path. One channel path, one route handler, but the handler reads which subprotocol this *particular* connection negotiated and serializes outgoing messages to match it, the way an HTTP endpoint reads an `Accept` header to choose a representation. Reach for this when the channel's addressing hasn't changed, still one connection per booking, but the payload shape has, and standing up a second route would duplicate connection-lifecycle code (auth, backpressure, heartbeats) that has nothing to do with the version difference.
-
-**Message-level version field**, a `schemaVersion` property inside the JSON payload itself, is the finest-grained lever and the only one that doesn't require a new handshake at all. A connection negotiated months ago can start receiving `schemaVersion: 2` payloads without ever reconnecting, because nothing about the handshake pinned it to a payload shape; only the message body did. This is the right lever for a change that has to land on connections already open, without waiting for every client to reconnect on its own schedule: a gradual, flag-driven payload enrichment, say. It's also the most expensive lever to live with long-term: every message handler has to branch on `schemaVersion` forever, because the connection no longer guarantees one shape for its whole life the way path and subprotocol versioning both do.
-
-The three don't compete so much as answer different-sized questions. Bump the path when the channel itself is different. Bump the subprotocol when the channel is the same but the payload contract isn't, and reconnecting to pick up the new shape is acceptable. Add a message field when the payload needs to change underneath connections that cannot be relied on to reconnect on any particular schedule.
+The contract already commits to the path: a breaking change to the message shape becomes `/ws/v2/...`. It also fixes the subprotocol family. `servers.local.bindings.ws` lists `handling-events.v1`, `handling-events.v1+json` and `handling-events.v1+protobuf`, where the `+json` or `+protobuf` suffix selects the encoding within version 1. In either stack the connection handler can read the negotiated subprotocol per connection, and a second path is a second route.
 
 ## Enum evolution and the unspecified zero
 
-`HandlingEventType`'s zero value, `HANDLING_EVENT_TYPE_UNSPECIFIED`, is never sent by the server (`contracts/README.md` says so directly), and it is tempting to read that as "the enum already has a forward-compatibility story built in: anything we don't recognize becomes `UNSPECIFIED`." It doesn't, not automatically, and the gap between what the zero value buys and what it sounds like it buys is worth being precise about.
+`HANDLING_EVENT_TYPE_UNSPECIFIED` is never sent, and it is tempting to read that as built-in forward compatibility: anything unrecognized becomes `UNSPECIFIED`. It isn't. The zero value gives the type a safe default before a value is assigned: a field initialized before the first message, a default argument, a test placeholder. It doesn't rescue a future value a client doesn't know yet.
 
-What `UNSPECIFIED` solves is a narrower, real problem: giving the type a safe default to initialize into *before* a value has been assigned. A language whose enum-equivalent construct needs some starting value (a struct field set up before the first message arrives, a default argument, a test fixture placeholder) has a documented thing to put there instead of `null` or a sentinel that means something different depending on which engineer invented it. That's the same role `*_UNSPECIFIED` plays in every enum across this series' gRPC sibling site, carried over here even though the mechanism underneath is different.
+Protobuf enums are open: an unrecognized integer is preserved, so a reader compiled before a new member existed doesn't fail on it. A JSON string enum is closed by default in both stacks, so an unrecognized string is a validation failure, not a fallback to the zero value, unless the deserialization path maps it. Adding `REROUTED` is safe only if every consumer already has that mapping. Otherwise adding a member breaks every client not yet updated, and nothing in the deploy flags it.
 
-What it does *not* do is rescue a *future* value a client doesn't recognize *yet*. Protobuf enums are open by design: an unrecognized integer on the wire is preserved rather than rejected, so a reader compiled before a new member existed doesn't fail over its mere presence. A JSON string enum, as generated by a typical Pydantic model or a Java/Kotlin `enum` deserialized by Jackson, is closed by default: an unrecognized string is a validation failure, not a fallback to the zero value, unless the deserialization path is written to catch that failure and map it to `UNSPECIFIED`. Adding `REROUTED` to `HandlingEventType` is a safe change by the earlier section's reckoning only if every consumer of that enum was written with that catch-and-fall-back branch already in place. Without it, "add a new enum member" becomes breaking for any client that hasn't been updated yet, with nothing in the deploy to flag it: the gap between "the zero value exists" and "the zero value is doing forward-compatibility work."
+| Stack | Unknown property | Unknown enum value |
+|---|---|---|
+| Jackson | Fails by default on a plain `ObjectMapper`; disable `FAIL_ON_UNKNOWN_PROPERTIES` or use `@JsonIgnoreProperties(ignoreUnknown = true)` | Fails unless `READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE` is enabled with `@JsonEnumDefaultValue` on the zero member, or a `@JsonCreator` factory maps it |
+| Pydantic | Ignored by default; `extra="forbid"` raises | Raises `ValidationError` unless a `field_validator(..., mode="before")` maps unknown values to `HANDLING_EVENT_TYPE_UNSPECIFIED` |
 
-{% include codetabs.html langs="Quarkus|Python" %}
-
-```java
-// Quarkus — deserialize HandlingEventType defensively, not exhaustively
-public enum HandlingEventType {
-    HANDLING_EVENT_TYPE_UNSPECIFIED, RECEIVE, LOAD, UNLOAD,
-    CUSTOMS, CLAIM, HOLD, DELIVERED;
-
-    @JsonCreator
-    public static HandlingEventType fromWire(String raw) {
-        try {
-            return valueOf(raw);
-        } catch (IllegalArgumentException unrecognized) {
-            // a future member this build predates — don't fail the connection
-            return HANDLING_EVENT_TYPE_UNSPECIFIED;
-        }
-    }
-}
-```
-
-```python
-# Python — the same fallback, via a validator rather than a try/except in every caller
-from pydantic import field_validator
-
-class HandlingEvent(BaseModel):
-    event_type: HandlingEventType
-
-    @field_validator("event_type", mode="before")
-    @classmethod
-    def unknown_becomes_unspecified(cls, value: str) -> str:
-        if value not in HandlingEventType._value2member_map_:
-            return "HANDLING_EVENT_TYPE_UNSPECIFIED"
-        return value
-```
-
-Both snippets do the same thing: move the "what if this is a value I don't recognize" decision out of every call site and into one place, so a future `REROUTED` lands as `UNSPECIFIED`, and whatever a handler already does for `UNSPECIFIED`, instead of raising a deserialization error that tears down the whole message, or the whole connection, over one event type a build predates.
+Put the mapping in one place, not at each call site, so a future `REROUTED` lands as `UNSPECIFIED` and takes whatever path a handler already has for it instead of tearing down the message or the connection. The reference `HandlingEventType` mirrors the contract and sets no fallback; a consumer that has to survive new members adds one.
 
 ## Deprecation and dual-publish windows
 
-A dual-publish window is the period during which a server serves both the old and the new shape of something at once, both subprotocol tokens, both channel paths, or an old field alongside the new one that replaces it, so that neither population of already-connected clients from the section above ever sees a contract break mid-connection. Closing that window too early reopens exactly the problem it exists to prevent; the question is how to size it and how to close it as a planned step rather than by accident.
+A dual-publish window is the period during which a server serves both the old and new shape at once (both subprotocol tokens, both paths, or an old field beside its replacement), so no already-connected client sees a break mid-connection.
 
-Size the window against the connection population's actual behavior, not the deploy's duration. A twenty-minute deploy says nothing about how long the longest-lived client connection stays open: a dashboard tab left open overnight, a worker holding a socket for a long-running job, a mobile client that only reconnects when relaunched. The right input is a histogram of this feed's own connection durations: the window needs to outlast whatever was already open when the new shape started being served, which in practice means watching the old version's active-connection count reach zero, not assuming a calendar date is close enough.
+Size it against the connection population, not the deploy. A twenty-minute deploy says nothing about how long the longest-lived connection stays open: a dashboard tab left overnight, a worker holding a socket for a long job, a mobile client that reconnects only on relaunch. Take a histogram of this feed's connection durations. The window has to outlast whatever was open when the new shape began, which means watching the old version's active-connection count reach zero, not trusting a calendar date.
 
-Close it in two steps, not one. First, stop *offering* the old version to anything new: drop the deprecated subprotocol token from new handshakes, or stop routing new connections to the old channel path, while every connection that already negotiated the old version keeps running untouched. Second, once telemetry shows the old version at zero live connections, not "probably none left," an actual zero, close any stragglers with an application-defined close code in the `4000`–`4999` range this feed reserves for its own reasons (`4010`, say: "this channel version is retired, reconnect on `/ws/v2/...`") rather than a generic `1001` that gives a client's retry logic nothing to act on.
+{% include excalidraw.html file="07-connected-client-migration" alt="A dual-publish window in three lanes across time: the server, a v1 client connected before the change, and a v2 client connecting after. At deploy time the server serves v1 and v2 together and the v1 client keeps reading v1. When the window closes the server serves v2 only, closes the lingering v1 client with a deprecation close code, and the client reconnects on v2." caption="Figure 7.2: a connection opened before the deploy outlives it; the dual-publish window keeps that connection correct until it reconnects or the server closes it as planned." %}
 
-{% include excalidraw.html file="07-connected-client-migration" alt="A dual-publish window shown as three lanes across time: Server, a v1 client already connected before the change ships, and a v2 client that connects after. Before the deploy, the server serves v1 only and the v1 client is connected reading v1. At deploy time t0, the server starts serving v1 and v2 together; the v1 client stays connected and ignores the new field or enum member it doesn't recognize, while a v2 client connects and reads the new shape. When the dual-publish window closes, the server drops to v2 only, the lingering v1 client is closed with a deprecation close code and must reconnect on v2, and every connection is now on the new shape." caption="Figure 7.2: a connection opened before t0 outlives the deploy that changed the contract; the dual-publish window is what keeps it alive and correct until it reconnects or the server closes it as planned." %}
+Close the window in two steps:
 
-## On the wire
+1. Stop offering the old version to anything new. Drop the deprecated subprotocol token from new handshakes, or stop routing new connections to the old path. Connections that already negotiated it run untouched.
+2. When telemetry shows zero live connections on the old version, an actual zero and not "probably none left", close any stragglers with an application-defined close code in `4000` to `4999`, such as `4010` meaning "this channel version is retired, reconnect on `/ws/v2/...`". A generic `1001` gives a client's retry logic nothing to act on.
 
-Here is the safe addition from the evolution gate, applied to the real contract: a new optional field and a new enum member, shown as a diff against `contracts/asyncapi.yaml`.
+> **Decision**
+>
+> Pick the lever by what an open connection may keep assuming: the path for a structural break, the subprotocol for a payload break where a reconnect is acceptable, a message field for a change that must reach connections already open. Size the dual-publish window by observed connection lifetime, and close it in two steps: stop offering the old version, then close stragglers with a code a reconnect loop can act on.
 
-```yaml
-# contracts/asyncapi.yaml — components.schemas.HandlingEventType, before
-HandlingEventType:
-  type: string
-  enum:
-    - HANDLING_EVENT_TYPE_UNSPECIFIED
-    - RECEIVE
-    - LOAD
-    - UNLOAD
-    - CUSTOMS
-    - CLAIM
-    - HOLD
-    - DELIVERED
+> **🤖 Explore with your agent**
+>
+> "In contracts/asyncapi.yaml, add REROUTED to components.schemas.HandlingEventType and an optional carrierRemarks string to HandlingEvent, leaving `required` unchanged. Then check how examples/part3-handling-events/quarkus deserializes HandlingEventType and unknown properties, and tell me which of the two changes would break a client built the way the Java record and enum are written. Do not change handler code."
+>
+> Check: `npx -y @asyncapi/cli@6.2.1 validate contracts/asyncapi.yaml` exits 0, and the reply names the enum (no fallback on an unknown string) as the risk and states the unknown-property behavior from the Jackson configuration it found.
+
+## Build, run, observe
+
+Evolution is a contract change first. After every edit:
+
+```bash
+npx -y @asyncapi/cli@6.2.1 validate contracts/asyncapi.yaml
+cd examples/part3-handling-events
+./verify.sh
 ```
 
-```yaml
-# contracts/asyncapi.yaml — components.schemas.HandlingEventType, after
-HandlingEventType:
-  type: string
-  enum:
-    - HANDLING_EVENT_TYPE_UNSPECIFIED
-    - RECEIVE
-    - LOAD
-    - UNLOAD
-    - CUSTOMS
-    - CLAIM
-    - HOLD
-    - DELIVERED
-    - REROUTED           # new member — cargo diverted mid-voyage to a new port
-```
+`verify.sh` brings up both stacks (Quarkus on port 8080, Python on 8081) and checks that each pushes frames that validate against the schema extracted from the contract, and that the two agree. It prints `PASS:` when they do.
 
-```yaml
-# contracts/asyncapi.yaml — components.schemas.HandlingEvent.properties, after
-    voyageNumber:
-      type: string
-    carrierRemarks:        # new optional field — free-text note from the carrier
-      type: string
-      description: >
-        Optional free-text remark attached by the carrier system, present only
-        when one was supplied. Absent on every event type before this field
-        existed and on any event a carrier doesn't annotate.
-    amount:
-      $ref: '#/components/schemas/Money'
-```
-
-Neither addition touches `required`, neither reuses an existing property name or enum member, and both are exactly the kind of change the evolution gate calls safe: an old reader never has to look at anything it wasn't already looking at. What an old reader does when the first `REROUTED` event or the first `carrierRemarks` field arrives depends on how it was built: the opening section's claim that JSON's tolerance is a deserializer setting, not a protocol guarantee, made concrete. A Jackson `ObjectMapper` with default settings throws `UnrecognizedPropertyException` on `carrierRemarks`; the same mapper with `FAIL_ON_UNKNOWN_PROPERTIES` disabled drops the field without complaint, the way an old protobuf reader skips an unknown field number. A Pydantic model with `extra="forbid"` raises a `ValidationError` on the same payload; one configured `extra="ignore"` does not. `REROUTED` hits the identical fork, resolved by the enum-evolution section's `fromWire`/`unknown_becomes_unspecified` pattern. Both stacks in this site's examples sit on the permissive side of both forks, which is the configuration choice that makes "add a field" and "add an enum member" land as safe in practice and not only in theory.
-
-Here is the breaking change the evolution gate warns against, on the same contract, so the failure mode is as concrete as the safe one:
-
-```yaml
-# contracts/asyncapi.yaml — components.schemas.Money, before (decimal string)
-Money:
-  type: string
-  pattern: '^\d+\.\d{2}$'
-  examples:
-    - '125.00'
-```
-
-```yaml
-# contracts/asyncapi.yaml — components.schemas.Money, after (BREAKING — do not ship)
-Money:
-  type: number
-  examples:
-    - 125.00
-```
-
-The field is still called `amount`, still sits in the same place in the payload, and still means the same thing conceptually: a quoted price. None of that saves an already-connected client. Every piece of code that parses `amount` as a string (`^\d+\.\d{2}$`-validated, compared for equality against another decimal string) now receives a JSON number instead, and a Pydantic field typed `str` or a Java field typed `String` populated via Jackson both raise a validation error on a raw `125.0`. This is the "change a field's type in place" row from the evolution gate, and exactly why the Money-as-decimal-string convention exists on this contract in the first place: a type this fragile to get wrong deserves a representation that can't drift into a different, almost-compatible shape without anyone noticing.
-
-## Where this goes next
-
-The contract-first work closes here with a contract that validates, a message shape already settled, and now a documented answer for every way that shape is allowed to move without breaking a client holding a connection open against an earlier version of it. What follows is where that contract stops being paper: building the Quarkus WebSockets Next side of `handlingEvents`, building the Python side, and finally proving both independently-built implementations agree with each other because they both agree with this file, not because either one imports the other. Every evolution rule this chapter named gets its first real test the moment two actual handlers, on two actual stacks, have to honor the same dual-publish window at the same time.
-
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>This contract versions at three granularities: channel path for a structural break, subprotocol for a payload-shape break with an acceptable reconnect, and a message-level field for a change that has to reach connections already open, and picks among them by asking what an already-open connection is allowed to keep assuming. A gRPC streaming call or a long-poll loop both run into a version of this same already-connected problem; a WebSocket makes it the common case instead of an edge case, because every connection this feed serves is long-lived by design. The one discipline that makes all three levers work is sizing the dual-publish window against observed connection lifetimes rather than deploy duration, and closing it in two steps: stop offering the old version to anything new, then close the stragglers with a close code a client's reconnect logic can act on. Skipping either step doesn't save time; it moves the breakage from a planned window a reader can watch in a diagram to an unplanned one a client discovers in production.</p></div>
+- Add `carrierRemarks` as an optional string to `components.schemas.HandlingEvent`: validation still passes and `required` is unchanged. This is a safe addition.
+- Add `REROUTED` to `HandlingEventType`: the Python model picks it up when it is regenerated on build, while the hand-kept Quarkus enum has no `REROUTED` until you add it. The Quarkus enum test compares against its own copy of the eight member names, so it still passes: a hand-kept mirror drifts silently.
 
 ## For deeper coverage
 
-- J. J. Geewax, *API Design Patterns* (Manning, 2021): the compatibility and versioning patterns this chapter's breaking/safe classification draws on, generalized across API styles.
+- J. J. Geewax, *API Design Patterns* (Manning, 2021): the compatibility and versioning patterns behind the breaking and safe classification.
 - Olaf Zimmermann, Mirko Stocker, Daniel Lübke, Uwe Zdun & Cesare Pautasso, *Patterns for API Design* (Addison-Wesley, 2022): message-level evolution patterns for a channel that can't renegotiate mid-connection.
-- *Cloud Native Design Patterns*, "Versioning & Evolution" chapter: the channel-path, subprotocol, and payload-field levers this chapter applies to one WebSocket feed, treated at the level of an API's whole lifecycle.
-- [AsyncAPI 3.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.0.0): the `servers`/`channels` structure that makes `/ws/v1/...` and `/ws/v2/...` two independently addressable routes.
-- [Semantic Versioning](https://semver.org/): the additive-vs-breaking vocabulary this chapter's evolution gate maps onto a schema instead of a package version number.
+- *Cloud Native Design Patterns*, "Versioning & Evolution" chapter: the path, subprotocol and payload-field levers at the level of an API's whole lifecycle.
+- [AsyncAPI 3.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.0.0): the `servers` and `channels` structure that makes `/ws/v1/...` and `/ws/v2/...` two independently addressable routes.
+- [Semantic Versioning](https://semver.org/): the additive-versus-breaking vocabulary, mapped here onto a schema.

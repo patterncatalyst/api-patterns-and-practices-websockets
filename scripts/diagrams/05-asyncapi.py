@@ -84,9 +84,9 @@ nodes_2 = [
 
 edges_2 = [
     {"x1": 350, "y1": 100, "x2": 210, "y2": 160,
-     "label": "validates against (r02); generates from (r03)"},
+     "label": "validates against; generates from"},
     {"x1": 470, "y1": 100, "x2": 610, "y2": 160,
-     "label": "validates against (r02); generates from (r03)"},
+     "label": "validates against; generates from"},
     {"x1": 360, "y1": 215, "x2": 460, "y2": 215,
      "label": "same channel, same message shape", "dashed": True, "bidir": True},
 ]

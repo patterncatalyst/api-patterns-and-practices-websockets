@@ -75,7 +75,7 @@ class OutboundQueue:
     def enqueue(self, frame: str) -> None:
         """Enqueue one outbound frame (a JSON string). On a full queue,
         applies the configured policy immediately rather than blocking the
-        producer — see module docstring.
+        producer; see the module docstring.
         """
         try:
             self._queue.put_nowait(frame)
@@ -93,7 +93,7 @@ class OutboundQueue:
                 await asyncio.wait_for(websocket.send(frame), timeout=SEND_TIMEOUT_S)
             except asyncio.TimeoutError:
                 self._on_backpressure(
-                    f"send() exceeded {SEND_TIMEOUT_S}s — peer is not draining its receive buffer"
+                    f"send() exceeded {SEND_TIMEOUT_S}s, peer is not draining its receive buffer"
                 )
 
     def _on_backpressure(self, detail: str) -> None:

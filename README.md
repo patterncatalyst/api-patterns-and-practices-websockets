@@ -16,7 +16,7 @@ that hasn't changed.
 
 ## What's here
 
-- **29 chapters (Ch0–Ch28) plus an OpenShift Local (CRC) appendix:** from the real-time
+- **29 chapters (Chapters 0 to 28) plus an OpenShift Local (CRC) appendix:** from the real-time
   problem and the WebSocket decision framework through the protocol itself, AsyncAPI 3
   contract design and versioning, building the same feed in both stacks, backpressure,
   error handling, heartbeats, stateless and Kafka-backed reconnect, security, fan-out

@@ -84,7 +84,7 @@ public class EventBuffer {
             case DROP_OLDEST -> {
                 if (!queue.offer(message)) {
                     String dropped = queue.poll();
-                    Log.warnf("handling-events client: buffer full (capacity=%d) — dropped oldest frame: %s",
+                    Log.warnf("handling-events client: buffer full (capacity=%d): dropped oldest frame: %s",
                             capacity, dropped);
                     queue.offer(message);
                 }

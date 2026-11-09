@@ -82,7 +82,7 @@ uv run pytest                 # schema conformance + trace-id log line + counter
 
 uv run opentelemetry-instrument python -m app.main     # starts both listeners, OTel wired
 # or, without the OTel wrapper (SDK still runs; FastAPI auto-instrumentation
-# just doesn't attach — see app/main.py's docstring):
+# just doesn't attach; see app/main.py's docstring):
 uv run python -m app.main
 ```
 

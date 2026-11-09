@@ -53,7 +53,7 @@ REPORT_DIR="$SCRIPT_DIR/newman/reports"
 NEWMAN_VERSION="${NEWMAN_VERSION:-6.2.3}"
 
 if ! command -v npx >/dev/null 2>&1; then
-  echo "verify.sh: FAIL — npx (Node.js) is required to run the pinned 'npx newman@${NEWMAN_VERSION}'" >&2
+  echo "verify.sh: FAIL, npx (Node.js) is required to run the pinned 'npx newman@${NEWMAN_VERSION}'" >&2
   exit 1
 fi
 
@@ -74,7 +74,7 @@ wait_for_http() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "verify.sh: FAIL — HTTP $url did not answer within ${timeout}s" >&2
+  echo "verify.sh: FAIL, HTTP $url did not answer within ${timeout}s" >&2
   return 1
 }
 
@@ -102,14 +102,14 @@ if npx -y "newman@${NEWMAN_VERSION}" run "$COLLECTION" \
     --reporters cli,json \
     --reporter-json-export "$REPORT_JSON"; then
   echo
-  echo "PASS — Part 6 functional-HTTP: newman (pinned ${NEWMAN_VERSION}) ran" \
+  echo "PASS: Part 6 functional-HTTP: newman (pinned ${NEWMAN_VERSION}) ran" \
        "examples/part6-testing/newman/collection.json against the live" \
        "part4-backplane stack (both stacks' inject endpoint, both Python" \
        "instances' /healthz) with 0 failed assertions. Report:" \
        "$REPORT_JSON"
 else
   rc=$?
-  echo "verify.sh: FAIL — newman run exited $rc (see CLI output above / $REPORT_JSON)" >&2
+  echo "verify.sh: FAIL, newman run exited $rc (see CLI output above / $REPORT_JSON)" >&2
   exit "$rc"
 fi
 

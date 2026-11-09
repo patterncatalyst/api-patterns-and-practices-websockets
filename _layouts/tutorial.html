@@ -19,7 +19,7 @@ layout: default
 {%- comment -%}
   Overview/outline pages are excluded from tutorial_docs (the sorted chapter
   list), so current_index is never set for them. Treat the outline as sitting
-  before the first chapter: no prev, and next = the first chapter (Ch0), not
+  before the first chapter: no prev, and next = the first chapter (Chapter 0), not
   tutorial_docs[1]. For a normal chapter, derive prev/next from its index.
 {%- endcomment -%}
 {%- assign overview_doc = site.docs | where_exp: "d", "d.overview == true" | first -%}

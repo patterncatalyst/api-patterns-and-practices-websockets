@@ -2,7 +2,7 @@
 title: "Testing WebSockets"
 order: 21
 part: "Testing, Debugging & Observability"
-description: "Testing a protocol you can't curl: connection lifecycle, message assertions, and both stacks' test harnesses."
+description: "Five test layers for a protocol you can't curl: conformance, live integration, close-code probes, Newman and k6."
 duration: "20 min read"
 ---
 
@@ -10,47 +10,57 @@ duration: "20 min read"
 
 By the end of this chapter you can:
 
-- Write unit/conformance tests (`test_contract.py`, `HandlingEventContractTest`) that validate a frame against `build/handling-event.schema.json` with no socket and no container.
-- Drive live integration checks with `examples/_lib/lib.sh`'s shared vocabulary (`ws_first_frame`, `ws_connect_bg`, `assert_ws_rejected`, `wait_for_log_count`) against real `docker compose` containers.
-- Read a close code a `websocat`-based probe can't see, using the `ws_close_probe` Python helper's `ws.close_code`, and assert on values like `4400`/`4290`.
-- Scope Newman to the plain-HTTP seams around a WebSocket-only contract and `k6` to connection load, split between `smoke.js` (gated) and `benchmark.js` (local-only).
-- Explain how the `drift` CI job and `scripts/check-proto-parity.py` keep every test layer pointed at the same contract-derived schema.
+- Write conformance tests that validate a frame against `build/handling-event.schema.json` with no socket and no container.
+- Drive live integration checks with the shared `lib.sh` helpers (`ws_first_frame`, `ws_connect_bg`, `assert_ws_rejected`, `wait_for_log_count`) against real `docker compose` containers.
+- Read a close code that `websocat` can't see, using a Python `websockets` probe, and assert on values like 4400 and 4290.
+- Scope Newman to the plain-HTTP seams around a WebSocket-only contract, and k6 to connection load split between a gated smoke check and a local benchmark.
+- Keep every test layer pointed at one contract-derived schema with a CI drift gate.
 
 ## Why this matters
 
-Every chapter from Part 3 forward has ended the same way: a `verify.sh` runs, a schema validates, a PASS line prints. This chapter is where that recurring machinery finally gets named and explained as a system, rather than cited piecemeal chapter by chapter. The problem it solves is specific to this protocol: `curl` proves an HTTP endpoint exists by making one request and reading one response, and most test tooling built for the web assumes that shape. A WebSocket channel has no single request/response to curl: it has an upgrade handshake, a sequence of pushed frames, a close code that may or may not carry meaning, and in this site's case an identical contract implemented twice, in Quarkus and in Python, that has to agree with itself as much as with `contracts/asyncapi.yaml`. Five distinct kinds of test already exist in this repo to cover that shape: schema and proto conformance tests that never open a socket, `verify.sh`/`lib.sh` integration tests that open real sockets against real containers, a Python close-code probe for the one signal `websocat` can't read, a Newman collection for the plain HTTP seams sitting next to the WebSocket channel, and k6 for load (one gated, one not). None of this is new code; it is the existing corpus, finally walked end to end.
+`curl` proves an HTTP endpoint exists with one request and one response, and most web test tooling assumes that shape. A WebSocket channel has an upgrade handshake, a sequence of pushed frames and a close code that may or may not carry meaning. Here it also has one contract implemented twice, in Quarkus and in Python, which has to agree with itself as much as with `contracts/asyncapi.yaml`.
 
-## Unit and conformance: proving the shape without a socket
+Five kinds of test cover that shape:
 
-The cheapest tests in this repo never touch a network. Every Python example ships a `tests/test_contract.py`, and every Quarkus example ships a `HandlingEventContractTest`: plain JUnit, not `@QuarkusTest`, because neither test needs the WebSocket endpoint running; both exercise serialization of the production model types directly. `test_fixture_is_three_events_in_order` and `test_emitted_frames_validate_against_schema` on the Python side, `fixtureEventsValidateAgainstContractSchema` and `firstFixtureEventIsTheReceiveEvent` on the Quarkus side, both load the same classpath fixture (`fixtures/handling-events.json`, copied onto Quarkus's test classpath by a Maven execution, imported directly by Python) and validate every emitted frame against `build/handling-event.schema.json`: the self-contained JSON Schema `scripts/extract-message-schema.py` extracts from `contracts/asyncapi.yaml`. Both also assert `HandlingEventType` carries exactly the contract's eight enum members, in order, on both stacks: a schema mismatch or a missing enum member fails the test the moment it happens, not the moment someone notices a frame looks wrong in production.
+| Layer | Opens a socket | Sees | Blind to |
+|---|---|---|---|
+| Unit and conformance | No | Schema shape, enum parity, Protobuf round trip and value parity, wire size | Anything over a live connection |
+| Live integration (`verify.sh` and `lib.sh`) | Yes, via `websocat` | Frame contents, reconnect and resume, fan-out, idle behavior | Close codes |
+| Close-code probe | Yes, via Python `websockets` | Exact close code, error envelope, frame count before close | Everything the other layers cover |
+| Newman | HTTP only | Health and inject endpoints | The WebSocket channel |
+| k6 | Yes | Connect success, frame shape, bytes per frame, negotiation | Field-level correctness |
+
+{% include excalidraw.html file="21-test-pyramid" alt="A pyramid of four tiers, narrowest at the top: load (k6 smoke gated, benchmark local only), functional (Newman plus the Python close-code probe), live integration (verify.sh plus lib.sh on both stacks), and unit and conformance (no socket, no container, runs in milliseconds). Beneath it, the contract drift gate regenerates the schema and reruns every layer that reads it." caption="Figure 21.1: the WebSocket test pyramid, narrower and slower toward the top, all gated on the same contract-derived schema." %}
+
+## Unit and conformance: the shape without a socket
+
+The cheapest tests never touch a network. Every Python example ships `tests/test_contract.py`, and every Quarkus example ships `HandlingEventContractTest`: plain JUnit, not `@QuarkusTest`, because neither needs the endpoint running. Both load the same fixture (`fixtures/handling-events.json`) and validate every emitted frame against `build/handling-event.schema.json`, the self-contained JSON Schema that `scripts/extract-message-schema.py` extracts from `contracts/asyncapi.yaml`. Both also check that `HandlingEventType` carries exactly the contract's eight enum members, in order. A schema mismatch or a missing member fails at test time, not when someone notices a bad frame in production.
 
 {% include codetabs.html langs="Quarkus|Python" %}
 
 ```java
-// examples/part3-handling-events/quarkus/src/test/java/.../HandlingEventContractTest.java
-@Test
-void fixtureEventsValidateAgainstContractSchema() {
-    List<HandlingEvent> events = loadFixtureEvents();
-    assertFalse(events.isEmpty(), "fixture must contain at least one event");
+    @Test
+    void fixtureEventsValidateAgainstContractSchema() {
+        List<HandlingEvent> events = loadFixtureEvents();
+        assertFalse(events.isEmpty(), "fixture must contain at least one event");
 
-    for (HandlingEvent event : events) {
-        JsonNode node = MAPPER.valueToTree(event);
-        Set<ValidationMessage> errors = schema.validate(node);
-        assertTrue(errors.isEmpty(),
-                () -> "schema violations for " + event.eventId() + ": " + errors);
+        for (HandlingEvent event : events) {
+            JsonNode node = MAPPER.valueToTree(event);
+            Set<ValidationMessage> errors = schema.validate(node);
+            assertTrue(errors.isEmpty(),
+                    () -> "schema violations for " + event.eventId() + ": " + errors);
+        }
     }
-}
 
-@Test
-void firstFixtureEventIsTheReceiveEvent() {
-    HandlingEvent first = loadFixtureEvents().get(0);
-    assertEquals(HandlingEventType.RECEIVE, first.eventType());
-    assertEquals("evt_01HZY3M1V8X4D7Q6B2N9C0T5E8", first.eventId());
-    assertEquals("bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A", first.bookingId());
-}
+    @Test
+    void firstFixtureEventIsTheReceiveEvent() {
+        HandlingEvent first = loadFixtureEvents().get(0);
+        assertEquals(HandlingEventType.RECEIVE, first.eventType());
+        assertEquals("evt_01HZY3M1V8X4D7Q6B2N9C0T5E8", first.eventId());
+        assertEquals("bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A", first.bookingId());
+    }
 ```
 ```python
-# examples/part3-handling-events/python/tests/test_contract.py
 def test_emitted_frames_validate_against_schema(validator: Draft202012Validator) -> None:
     frames = sequence_as_json()
     assert len(frames) == 3
@@ -68,153 +78,109 @@ def test_first_frame_is_the_receive_event_matching_the_fixture() -> None:
     assert first["eventType"] == "RECEIVE"
 ```
 
-The two tests read almost like a translation exercise, and that is the point: `loadFixtureEvents()`/`load_fixture()` read the identical classpath/package fixture, `schema.validate(node)`/`validator.iter_errors(doc)` both walk the identical extracted `build/handling-event.schema.json`, and both assert the identical fixture identifiers (`evt_01HZY3M1V8X4D7Q6B2N9C0T5E8`, `bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A`) on the first emitted event. A reviewer checking whether the two stacks still agree on "what a conformant frame looks like" does not need to run either suite to see the answer; the two method bodies say it side by side.
+The two stacks assert the same things side by side: the same fixture, the same extracted schema, the same first-event identifiers. A reviewer can see whether they still agree on "what a conformant frame looks like" without running either.
 
-{% include excalidraw.html file="21-test-pyramid" alt="A pyramid of stacked tiers, narrowest at the top. Top tier: Load, k6, smoke.js gated, benchmark.js local-only. Second tier: Functional, two tools in one tier, Newman plus the python close-code probe, 12 assertions zero failed, the HTTP seam plus close codes websocat cannot read. Third, widest accent box: Live integration, verify.sh plus lib.sh, both stacks, real containers, ws_first_frame, ws_frames_n, ws_connect_bg, assert_ws_rejected, wait_for_log_count, docker compose up, assert, compose down. Fourth, widest box: Unit and conformance, pytest test_contract.py plus Quarkus HandlingEventContractTest, schema_validate against build slash handling-event.schema.json, proto round trip HandlingEventProtoRoundTripTest, no socket, no container, runs in milliseconds. Below the pyramid, a light ink emphasis box reads the contract-drift gate, regenerate the schema, re-run every layer that reads it, on every change to contracts slash asyncapi.yaml. A ghost caption notes this chapter, debugging, and anti-patterns are prose citing this existing corpus, with only observability adding new runnable code." caption="Figure 21.1: the WebSocket test pyramid: five tools across four tiers, narrower and slower toward the top, all gated on the same contract-derived schema." %}
+The Protobuf example adds a second pass. It drives each fixture event through Protobuf (model to proto, to bytes, back to proto, back to a value) and checks that the result validates against the same schema the JSON path uses and equals the JSON value field for field, not merely "a valid shape". It also checks that the Protobuf frame is smaller than the JSON frame, the unit-level half of the wire-size claim, proven in milliseconds before any load run.
 
-Part 5's fork of this test adds a second conformance pass without replacing the first. `examples/part5-performance/python/tests/test_contract.py`'s `test_proto_round_trip_matches_schema_and_json_values` and the Quarkus sibling `HandlingEventProtoRoundTripTest.everyFixtureEventRoundTripsThroughProtobufUnchanged` both drive the same fixture through Protobuf (model to proto, proto to bytes, bytes back to proto, proto back to a value) and assert two things a plain "it parsed" check would miss: the round-tripped value validates against the identical schema the JSON path validates against, and it equals the JSON path's value field-for-field, not merely "a valid shape." A third assertion, `protobufFrameIsSmallerThanTheEquivalentJsonFrame`/`test_proto_wire_bytes_are_smaller_than_the_equivalent_json_frame`, is the unit-level half of the binary-protobuf wire-size claim: proven on every fixture event, in milliseconds, long before a k6 run ever touches the network to confirm it holds under load too.
+Later examples fork the conformance tests without losing that floor. The connection example adds socket-free unit tests for token validation and the error-envelope shape. The backplane example tests the stateless backplane's in-process fan-out against `asyncio.Queue` directly, with no broker. The observability example checks a trace-id log line and a Prometheus counter increment with no collector running. Every fork keeps the schema-conformance tests at the top, because every example replays the same fixture against the same contract.
 
-{% include codetabs.html langs="Quarkus|Python" %}
+## Live integration: verify.sh and lib.sh
 
-```java
-// examples/part5-performance/quarkus/src/test/java/.../HandlingEventProtoRoundTripTest.java
-@Test
-void everyFixtureEventRoundTripsThroughProtobufUnchanged() throws InvalidProtocolBufferException {
-    List<HandlingEvent> events = HandlingEventContractTest.loadFixtureEvents();
-    assertFalse(events.isEmpty(), "fixture must contain at least one event");
+Unit tests prove the model serializes. They say nothing about whether the process on the port sends it over a wire. `examples/_lib/lib.sh` is the shared harness that every `verify.sh` sources to answer that against containers `docker compose up --build` starts fresh each run.
 
-    for (HandlingEvent original : events) {
-        byte[] protoBytes = HandlingEventProtoMapper.toProto(original).toByteArray();
-        HandlingEventOuterClass.HandlingEvent parsed =
-                HandlingEventOuterClass.HandlingEvent.parseFrom(protoBytes);
-        HandlingEvent roundTripped = HandlingEventProtoMapper.fromProto(parsed);
+| Helper | Does |
+|---|---|
+| `wait_for_ws` | Polls until a real WebSocket upgrade succeeds |
+| `wait_for_tcp` | Polls a port for brokers that speak neither WebSocket nor HTTP |
+| `ws_first_frame`, `ws_frames_n` | Connect, read exactly one or N frames, print them |
+| `ws_connect_bg` | Hold a background connection, append every frame to a logfile, return a PID |
+| `assert_ws_rejected` | Prove a connection attempt was refused |
+| `ws_idle_hold` | Hold a connection open without sending, to observe heartbeat and idle timeouts |
+| `wait_for_log_pattern`, `wait_for_log_count` | Poll a file for a line once, or a specific number of times |
+| `schema_validate`, `json_field` | Apply the same JSON Schema to frames that came off a live socket |
 
-        assertEquals(original, roundTripped,
-                () -> "proto round trip changed " + original.eventId());
-    }
-}
-```
-```python
-# examples/part5-performance/python/tests/test_contract.py
-def test_proto_round_trip_matches_schema_and_json_values(
-    validator: Draft202012Validator,
-) -> None:
-    for event in sequence():
-        proto = to_proto(event)
-        wire_bytes = proto.SerializeToString()
+The harness needs only Docker and Python. `ensure_websocat` and `ensure_protoc` download pinned binaries into a cached `.bin` directory on first use. `schema_validate` prefers a `jsonschema` already on `PATH`, falls back to an ephemeral `uv run --with jsonschema`, and uses a minimal hand-rolled validator (not full Draft 2020-12) only if neither is available.
 
-        decoded = HandlingEventProto()
-        decoded.ParseFromString(wire_bytes)
-        decoded_dict = proto_to_dict(decoded)
+Every `verify.sh` starts with the same Step 0: `python3 -I scripts/extract-message-schema.py build/handling-event.schema.json`. That keeps the unit and integration layers reading the same schema file instead of two copies that can drift. A script that skipped it would still pass today and return stale results the moment the contract changed.
 
-        errors = list(validator.iter_errors(decoded_dict))
-        assert not errors, f"{decoded_dict} failed schema validation: {errors}"
+Three scripts show how far the vocabulary stretches:
 
-        json_dict = json.loads(event.model_dump_json(exclude_none=True))
-        assert decoded_dict == json_dict, (
-            f"proto round-trip drift for {json_dict['eventId']}: "
-            f"{decoded_dict} != {json_dict}"
-        )
-```
+- **Baseline (handling events).** Bring up both stacks, capture each first frame with `ws_first_frame`, schema-validate it and compare it to the fixture's `RECEIVE` event field by field. Then compare the two stacks against each other, because a schema permits a range of valid values and two correct implementations can still diverge inside it. A reconnect step starts the Python reference client, forces `docker compose restart python`, and uses `wait_for_log_count`, not `wait_for_log_pattern` again, to assert a second "received CUSTOMS" line, which proves the client resumed rather than retrying once and giving up.
+- **Connection concerns.** Auth mints one shared-secret JWT and replays it against both stacks: valid, expired, bad signature and garbage, each asserted with `assert_ws_rejected`. Backpressure runs one-off containers with the threshold forced to trip on the first fixture burst: `EXAMPLE_BACKPRESSURE_MAX_PENDING_SENDS=0` on Quarkus and `OUTBOUND_QUEUE_MAXSIZE=1` on Python, because Python's bounded queue treats `maxsize<=0` as unbounded. Heartbeat containers force a short detection window (`EXAMPLE_HEARTBEAT_LIVENESS_TIMEOUT=5s` and `EXAMPLE_HEARTBEAT_SWEEP_INTERVAL=1s` on Quarkus, `WS_PING_TIMEOUT_S=3` on Python) and wait up to 25 seconds for a detection path that takes about 16, a margin for a slow CI host that doesn't turn the wait into a timeout test.
+- **Backplane.** Four app instances (`quarkus-a`, `quarkus-b`, `python-a`, `python-b`) run through three compose lifecycles: default stateless, `--profile kafka` and `--profile redis`. Each scenario generates a fresh booking id with `gen_id`, so replay and fan-out checks never cross-contaminate on the shared topic. A `BG_PIDS` array and one `cleanup_all` trap kill every background client on exit, so a mid-scenario failure leaks no `websocat` process. The stages show that stateless mode loses a gap-era event, Kafka mode replays it after reconnect (deduplicated by `eventId`; a rare duplicate from the replay and live race is the accepted cost of at-least-once delivery), and a scale-out event crosses instances over both brokers. The fan-out is asserted from the client's received frame and from instance A's own log line naming itself as the deliverer.
 
-Later parts fork this suite further without losing the floor it sets. `part4-connection`'s `test_contract.py` adds pure-Python unit tests for `app/auth.py` (`test_validate_token_rejects_an_expired_token`, `test_validate_token_rejects_a_bad_signature`, no socket) and for the error-envelope shape; `part4-backplane`'s adds unit tests for the `StatelessBackplane`'s in-process fan-out, run against `asyncio.Queue` directly rather than a live broker; `part6-observability`'s adds a regex-matched trace-id log-line assertion and a Prometheus counter increment check, both exercised with no OTLP collector running at all. Every fork keeps the same four schema-conformance tests at the top of the file (`test_fixture_is_three_events_in_order` through `test_sequence_events_validate_as_generated_model_instances`) because every one of these examples still replays the identical fixture against the identical contract; forking the test file is cheap, and losing that shared floor by accident is the drift this layer exists to catch first.
+## What websocat can't see: close codes
 
-## Live integration: verify.sh and lib.sh against real containers
+`websocat` is the right tool for nearly everything in `lib.sh`. It can't read the close code a server sent. A client that completes the 101 handshake and then receives a policy-violation close exits 0, which an exit code alone can't tell from a connection the server means to keep open. `assert_ws_rejected` sidesteps this for auth by checking whether any frame arrived (it omits websocat's exit-on-EOF flag, which would tear down the read side before a server-sent frame could arrive). That proves only that nothing came through. It can't name the code, and the error taxonomy and backpressure policy depend on specific numbers: 4400 for a malformed client frame, 4290 for a backpressure overrun, 1008 for rejected auth.
 
-Unit tests prove the model serializes correctly; they say nothing about whether the thing listening on a port sends that model over a wire at all. `examples/_lib/lib.sh` is the shared harness every example's `verify.sh` sources to answer that question live, against containers `docker compose up --build` brings up fresh each run. Its vocabulary is narrow and specific: `wait_for_ws` polls a host:port/path until a real WebSocket upgrade succeeds; `ws_first_frame` and `ws_frames_n` connect, read exactly one or exactly N frames, and print them for the caller to assert on; `ws_connect_bg` opens a long-lived background connection and appends every frame it receives to a logfile, returning a PID the caller kills when done; `assert_ws_rejected` proves a connection attempt was refused; `ws_idle_hold` holds a connection open without sending anything, to observe heartbeat and idle-timeout behavior; `wait_for_log_pattern`/`wait_for_log_count` poll a file for a line to appear once, or a specific number of times. `schema_validate` and `json_field` round out the set: the same JSON Schema the unit tests validate against, now applied to frames that came off a live socket.
+`ws_close_probe` uses Python's `websockets` library instead, fetched into an ephemeral `uv run --with websockets` environment. The library exposes `ws.close_code` after the connection closes. The probe sends one optional payload, counts the frames it drains, catches `ConnectionClosed` (which `websockets` 17 raises out of the `async for` loop and would otherwise lose the code with it) and prints one line of JSON: frame count, whether a `BAD_REQUEST` envelope arrived, and the numeric code. The error step asserts 4400 from it, and the backpressure step asserts 4290.
 
-None of that vocabulary requires a CI runner to pre-install anything beyond Docker and Python. `lib.sh`'s `ensure_websocat` and `ensure_protoc` download a pinned binary (websocat 1.14.1, protoc 36.2, the same version-matrix pins from the lab setup, cited throughout this book) into a cached `.bin` directory on first use, the identical philosophy `schema_validate` falls back to for `jsonschema` itself: prefer whatever is already on `PATH`, fall back to an ephemeral `uv run --with jsonschema` install, and only reach for a hand-rolled minimal validator (covering `type`, `required`, `enum`, and a handful of string/number constraints, explicitly not a full Draft 2020-12 implementation) if neither is available. A `verify.sh` that needs `websocat` to exist never requires a separate CI workflow step to install it; the first call to `wait_for_ws` or `ws_first_frame` provisions it, the same way the example apps' own Dockerfiles provision their runtimes.
+A third probe goes lower still for heartbeat liveness. It hand-writes the opening handshake over a bare socket, confirms the 101, then sends nothing. Both websocat and `websockets` answer pings automatically at the protocol level and can never manufacture a silent peer. Each tool is the minimum client that can observe its signal: `websocat` for content, `websockets` for close codes, a bare socket for a peer that answers nothing.
 
-Every `verify.sh` this corpus ships starts with the identical Step 0: `python3 -I scripts/extract-message-schema.py build/handling-event.schema.json`, the same extraction `test_contract.py` and `HandlingEventContractTest` both depend on, regenerated fresh before a single container comes up. That shared first step is what keeps the unit layer and the integration layer pointed at the same schema file rather than two copies that could drift apart without either side noticing: a `verify.sh` that skipped it would still pass today and start returning stale results the moment the contract changed underneath it, with no fresh extraction left to catch the gap.
+{% include excalidraw.html file="21-layer-visibility" alt="Five boxes show what each test layer can and can't observe. Unit and conformance sees schema shape and value parity but nothing over a live connection. Live integration via websocat sees frame contents, reconnect and fan-out but not close codes. The Python close-code probe sees exact close codes and the error envelope. Newman sees the HTTP seam but not the WebSocket channel. k6 sees connect success and bytes per frame, with the smoke check gated and the benchmark local only." caption="Figure 21.2: what each of the five test layers can and can't observe about a live WebSocket connection." %}
 
-Four `verify.sh` scripts show how far that shared vocabulary stretches. `part3-handling-events/verify.sh` is the baseline: bring up both stacks, capture each one's first frame with `ws_first_frame`, schema-validate it, assert it matches the fixture's known `RECEIVE` event field-by-field, then cross-check the two stacks' frames against *each other*: not against a shared expectation twice, but against one another directly, because a schema permits a range of valid values and two independently correct implementations could still diverge inside that range. Its Step 4 goes further: it starts the real Python reference client (`uv run --project clients/python python -m app.client`) against the Python server, waits for `wait_for_log_pattern` to see "received CUSTOMS," forces a `docker compose restart python`, waits for a logged reconnect attempt, then uses `wait_for_log_count` (not `wait_for_log_pattern` again) to assert a *second* "received CUSTOMS" line, proving the client resumed receiving after the forced disconnect rather than merely retrying once and giving up.
+## Functional HTTP around the socket: Newman
 
-`part4-connection/verify.sh` layers four connection concerns onto that baseline, each with its own determinism story. Auth mints a shared-secret JWT with `uv run --with pyjwt` once and reuses it against both stacks: valid, expired, bad-signature, and garbage-token cases, each asserted with `assert_ws_rejected`. Backpressure runs *one-off containers* with the threshold forced to the smallest value that trips deterministically on the first fixture burst: `EXAMPLE_BACKPRESSURE_MAX_PENDING_SENDS=0` on Quarkus (0 pending trips before anything sends, confirmed in that guard's own Javadoc), `OUTBOUND_QUEUE_MAXSIZE=1` on Python, because Python's bounded queue treats `maxsize<=0` as *unbounded*, the opposite of the "0 is most deterministic" assumption a naive reading would make. Heartbeats run their own one-off containers with the detection window forced short (`EXAMPLE_HEARTBEAT_LIVENESS_TIMEOUT=5s`/`EXAMPLE_HEARTBEAT_SWEEP_INTERVAL=1s` on Quarkus, `WS_PING_TIMEOUT_S=3` on Python) and budget a generous 25-second wait for a detection path the script's own comment clocks at roughly 16 seconds observed live, comfortable margin for a slower CI host without the wait becoming a de facto timeout test.
+The contract is WebSocket-only, but the apps around it are not. `/healthz` probes and the backplane example's `POST /internal/bookings/{bookingId}/handling-events` inject endpoint, which the gap, replay and fan-out scenarios depend on, are plain HTTP, and plain HTTP has a mature functional-test tool. The split is by shape: k6 for sustained-connection load against the WebSocket channel, Newman (Postman's CLI runner) for REST-shaped seams. The Newman example has no application of its own; its collection runs against the backplane example's compose stack, the richest HTTP surface in the repo.
 
-`part4-backplane/verify.sh` is the richest harness in the corpus: it brings up four app instances every time (`quarkus-a`/`quarkus-b`/`python-a`/`python-b`) and runs three full compose lifecycles in sequence (default/stateless, `--profile kafka`, `--profile redis`), each stage generating its own fresh bookingId per scenario (`gen_id`) so that Kafka-replay and fan-out proofs never cross-contaminate on the one shared broker topic every instance reads. The broker stages reach for a helper the earlier scripts never need: `wait_for_tcp localhost 9092 90` for Kafka, `wait_for_tcp localhost 6379 60` for Redis, because neither broker speaks WebSocket or HTTP and `wait_for_ws` has nothing to poll. A `BG_PIDS` array tracks every `ws_connect_bg` background client this script opens across all three stages, so the single `cleanup_all` trap can kill and reap every one of them on the way out: a failure mid-scenario never leaks a background `websocat` process the way a per-scenario `kill` alone might if the script exited before reaching it. The three stages together prove the stateless reconnect mode drops a gap-era event with no record of it ever existing, the Kafka-backed reconnect mode replays that event after reconnect (deduped by `eventId`; a documented, benign at-most-2 replay/live race is the accepted tradeoff of at-least-once delivery), and the scale-out fan-out crosses instances over both brokers, asserted both from the *client's* received frame and from instance A's own server log line naming itself as the deliverer.
+The six requests carry twelve assertions:
 
-## What websocat can't see: close codes and the python probe
+| Request | Target | Expected |
+|---|---|---|
+| `GET /healthz` | Both Python instances | `200`, body exactly `{"status":"ok"}` |
+| Inject, schema-valid body | Quarkus | `202` |
+| Inject, malformed `eventType` | Quarkus | `400` |
+| Inject, schema-valid body | Python | `202`, body echoes `status`, `eventId`, `bookingId` |
+| Inject, bad `bookingId` pattern and bad `eventType` | Python | `422`, `detail[]` names both fields |
 
-`websocat` is the right tool for almost everything `lib.sh` does: it is what `wait_for_ws`, `ws_first_frame`, `ws_frames_n`, and `ws_connect_bg` all shell out to. It is the wrong tool for exactly one thing this chapter's error and backpressure tests both need: reading the WebSocket close *code* a server sent. `part4-connection/verify.sh`'s own comment on `ws_close_probe` spells out why an exit-code check alone isn't enough: a client that completes the 101 handshake and then receives a policy-violation close frame exits 0, indistinguishable by exit code alone from a connection the server intends to keep open. `assert_ws_rejected` sidesteps this for the auth case by checking whether *any* frame arrived at all (it leaves out websocat's `-E`/exit-on-eof flag, because that flag would tear down the read side before a server-sent frame had a chance to arrive), but that trick only proves "nothing came through"; it can't name *which* numbered close code closed the connection, and the error-handling taxonomy and the backpressure-and-flow-control policy both hinge on specific numbers: 4400 for a malformed client frame, 4290 for a backpressure overrun, 1008 for a rejected auth attempt.
+The Quarkus record has no bean validation, so only Jackson's enum deserialization, surfaced through RESTEasy Reactive's unreadable-entity mapper, rejects the malformed body. Pydantic v2 validates the pattern and the enum independently, so the collection checks both offending fields rather than the status alone; a regression that dropped one violation would otherwise pass. The runner is a pinned `npx newman@6.2.3` rather than the `docker.io/postman/newman` image, because no image tag newer than 6.1.3 exists and the project upgrades the tool instead of downgrading the pin.
 
-`ws_close_probe` closes that gap by reaching for a different client entirely: Python's `websockets` library, fetched into an ephemeral `uv run --with websockets` venv, connected directly rather than through websocat. `websockets` exposes `ws.close_code` as a first-class attribute after the connection closes (exactly the thing websocat has no equivalent flag for), so the probe sends one optional payload, drains every frame into a count, catches the library's own `ConnectionClosed` exception (needed because `websockets` 17.x raises it *out of* the `async for` loop instead of letting the loop end on its own, which would otherwise lose `close_code` along with the exception), and prints one line of JSON: frame count, whether a `BAD_REQUEST` envelope was seen, and the numeric close code. `run_stack_auth_and_error_tests` reads that JSON straight into `assert_eq "4400" "$close_code"`; the backpressure step reads the same shape for `4290`. A third probe, `raw_silent_client_close_wait`, goes one layer lower still for the heartbeat-liveness check: it hand-writes the WebSocket opening handshake over a bare `socket` (no WebSocket library at all, spec-compliant or otherwise), confirms the 101 response, and then sends *nothing* for the rest of its run, because both websocat and the `websockets` library answer ping frames automatically at the protocol level and can never manufacture a silent peer. Each tool is the minimum client capable of observing the one signal its step needs: `websocat` for content, `websockets` for close codes, a bare socket for a peer that answers nothing at all.
+The observability example's HTTP surface (`/q/metrics` on Quarkus, a Prometheus endpoint on Python) is outside this collection. The `handling_events_delivered_total` counter is registered in a `@PostConstruct` on a per-connection WebSockets Next bean, so it is absent from `/q/metrics` until a connection has opened once. A Newman request before any socket connects would prove nothing about the metric. That example's own `verify.sh` drives the connection and scrapes the result, which keeps "functional HTTP" from blurring into "HTTP plus WebSocket plus the observability stack".
 
-{% include excalidraw.html file="21-layer-visibility" alt="Five boxes in a grid. Unit and conformance: no socket, sees schema shape, enum parity, proto JSON value parity, wire size assertion, blind to anything over a live connection. Live integration, accent box: websocat via lib.sh, sees frame contents, field semantics, reconnect and resume, fan-out, idle-hold, blind to close codes, exit code alone cannot tell rejected from accepted and still open. Functional close-code probe: python plus websockets library, sees exact close_code 4400, 4290, 1008, the BAD_REQUEST envelope, frame count before close, because the websockets library exposes ws.close_code and websocat has no equivalent. Functional HTTP, Newman: sees the HTTP seam around the socket, healthz, inject endpoint 202 400 422, 12 assertions zero failed, blind to the WebSocket channel itself since the contract is WS only. Load, k6 smoke gated: sees connect success, 3-frame shape, p95 session time, deterministic rate equals 1.0 threshold fails the PR. Load, k6 benchmark local-only: sees bytes per frame, connects per second, negotiation outcome, timing-sensitive, connects per second moves with host ephemeral-port state, never cited as a bare number. Below, a light ink emphasis box: deterministic across every run is schema validation, round-trips, close codes, frame field values, negotiation yes or no; timing-sensitive is idle-hold windows, heartbeat detection delay, raw connects per second, bounded, never asserted exactly. A ghost caption reads each layer's blind spot is why the next layer up exists, none of the five alone proves the channel correct." caption="Figure 21.2: what each of the five test layers can and can't observe about a live WebSocket connection." %}
+## Load and the drift gate
 
-## Functional HTTP around the socket: Newman and the test-tooling split by shape
+k6 splits two ways. `smoke.js` exists for the connection, backplane and performance examples, and the `k6-smoke` CI job runs it against all of them: the connection example's two stacks each on their own port with a freshly minted token, the backplane's default-profile `quarkus-a` and `python-a` with no auth, and both performance stacks over both negotiated subprotocols in one iteration. It checks that JSON frames arrive as `message` events and Protobuf frames as `binaryMessage` events without decoding either; decoding belongs to `verify.sh` against a generated stub. Its `thresholds: { checks: ["rate==1.0"] }` fails the PR on any failed check. `benchmark.js` is cited in prose and never asserted, because one script measured 100% connect success on a fresh container and single digits after the host's ephemeral port range filled.
 
-`contracts/asyncapi.yaml` is WebSocket-only, but the example apps around it are not: `/healthz` liveness probes, and `part4-backplane`'s `POST /internal/bookings/{% raw %}{bookingId}{% endraw %}/handling-events` inject endpoint that every gap/replay/fan-out scenario above depends on, are plain HTTP, and plain HTTP has a mature, purpose-built functional-test tool that nothing in `lib.sh` needs to reinvent. This site splits its test tooling by shape: k6 for sustained-connection load against the WebSocket channel, Newman (Postman's CLI runner) for functional assertions against REST-shaped HTTP seams. `examples/part6-testing` is that Newman example, and it has no application of its own: `newman/collection.json` runs against `part4-backplane`'s already-existing compose stack, the richest HTTP surface in the repo.
+A deterministic assertion (schema pass, close code, assertion count, `rate==1.0`) belongs in a gate. A timing-sensitive number (heartbeat detection window, idle-hold duration, raw connects per second) gets a generous bound or stays in prose.
 
-The collection's six requests carry twelve assertions, captured in `newman/reports/newman-report.json` at `0` failed every time it has run: `GET /healthz` on both Python instances, asserted at status `200` with a body exactly `{"status":"ok"}`; `POST .../handling-events` with a schema-valid body against Quarkus, asserted `202`; the same against Quarkus with a malformed `eventType` enum value, asserted `400`: the Java `HandlingEvent` record carries no bean validation of its own, so only Jackson's enum deserialization, surfaced through RESTEasy Reactive's default unreadable-entity mapper, rejects it; the schema-valid case against Python, asserted `202` with the response body echoing back `status`/`eventId`/`bookingId`; and the malformed case against Python (a bad `bookingId` pattern *and* a bad `eventType` together) asserted `422`, with the response's `detail[]` array checked for entries naming *both* offending fields, because Pydantic v2 validates the pattern and the enum independently and a test that only checked the status code would miss a regression that dropped one of the two violations without failing anything. `part6-testing/verify.sh` runs this with a pinned `npx newman@6.2.3` rather than the `docker.io/postman/newman` image, because no image tag newer than `6.1.3` exists yet and this project's standing policy is to upgrade the tool rather than downgrade the pin.
+Two CI jobs keep the layers on one contract:
 
-This example's own README draws a scope line worth keeping, because it is the same discipline the whole five-layer structure depends on: `part6-observability`'s HTTP surface (`/q/metrics` on Quarkus, a Prometheus endpoint on Python) is explicitly out of this collection, not because it is unimportant but because proving it live needs a WebSocket connection opened first. Its `handling_events_delivered_total` Micrometer counter is registered in a `@PostConstruct` on a *per-connection* WebSockets Next bean, so it is absent from `/q/metrics` entirely until at least one connection has opened once: a Newman request against that endpoint before any socket ever connects would prove nothing about whether the metric works, only that it hasn't been touched yet. `part6-observability`'s own `verify.sh` already owns driving that connection and scraping the result; folding the same proof into this Newman collection would blur "functional HTTP" into "functional HTTP plus WebSocket plus the observability stack," exactly the boundary kept between tools by splitting them by shape instead of by chapter.
+- **`drift`** loops over `DRIFT_APPS` (the handling-events, connection, backplane and performance examples). For each it regenerates `build/handling-event.schema.json` from `contracts/asyncapi.yaml`, regenerates the Python model and, where present, the Protobuf stub, runs `pytest tests/test_contract.py`, and runs the Quarkus conformance tests against the fresh schema. A contract change that breaks any app's model or assumptions fails every affected app in one pass. A new app is added to one list, not four near-duplicate step blocks.
+- **`buf lint/build/breaking` plus AsyncAPI-to-proto parity** covers what `drift` can't: nothing there looks at `contracts/handling-event.proto` in isolation, so a field renamed on only one half of the contract would pass every app's tests as long as each app checks only its own half. `scripts/check-proto-parity.py` diffs the compiled proto descriptor against the same extracted schema, and it always runs, even when `buf breaking` has no baseline yet. It sits one level below the round-trip tests: those prove one app's generated code round-trips against its schema, and this proves the two contract source files never drifted apart before any code generation ran.
 
-## Load, and the drift gate that ties every layer back to the contract
+The `examples` matrix job discovers every `examples/*/verify.sh`, runs each with up to three retries under a 45-minute cap sized for the backplane's three stages, sets `fail-fast: false` so one failure doesn't cancel the rest, and gates the PR on all of them, alongside the always-gated `k6-smoke` job.
 
-The throughput-optimization work already walked the measurement discipline inside k6's own split (`smoke.js` gated and deterministic, `benchmark.js` local-only because absolute throughput is host-dependent); this chapter places that split inside the five-layer picture rather than re-deriving it. `smoke.js` exists for `part4-connection`, `part4-backplane`, and `part5-performance`, and the `k6-smoke` CI job runs it against every one of them in a single workflow: `part4-connection`'s Quarkus and Python instances each get their own invocation on `:8080`/`:8081` against a freshly minted shared-secret token, `part4-backplane`'s default-profile `quarkus-a`/`python-a` get a no-auth smoke pass, and `part5-performance`'s both stacks get a pass over *both* negotiated subprotocols (`handling-events.v1+json` and `handling-events.v1+protobuf`) in the same iteration, checking that JSON frames arrive as `message` events and Protobuf frames arrive as `binaryMessage` events without decoding either payload (that decode belongs to `verify.sh`, against a real generated stub). Its `thresholds: { checks: ["rate==1.0"] }` is the one assertion in this whole corpus that fails a PR the instant a single check fails, anywhere, which is exactly the "deterministic, not timing-sensitive" property every layer below it also aims for, enforced here at the k6-runner level instead of a bash `assert_eq`. `benchmark.js`'s connects/sec and bytes/frame numbers are the opposite case: cited in prose (the throughput-optimization table), never asserted as a CI gate, because the same script measured 100% connect success on a freshly restarted container and as low as single digits after the host's ephemeral TCP range filled up from prior runs: a true number about that host at that moment, not a property of the framework under test.
+> **Decision**
+>
+> Test a WebSocket channel in five layers. Conformance tests validate shape and round-trip values with no socket. `verify.sh` with `lib.sh` proves frame contents, reconnect and fan-out against real containers. A `websockets` probe reads the close codes `websocat` can't. Newman covers the HTTP seams, and k6 splits into a gated `smoke.js` and a local `benchmark.js`. Gate only deterministic assertions, and let the `drift` job tie every layer to the schema extracted from `contracts/asyncapi.yaml`.
 
-What keeps five independently-runnable layers pointed at the same contract is a sixth piece of CI, the `drift` job. It loops over `DRIFT_APPS` (`part3-handling-events part4-connection part4-backplane part5-performance`) and for each one: regenerates `build/handling-event.schema.json` from `contracts/asyncapi.yaml`, regenerates that app's Python model (plus, where present, its Protobuf stub via `generate-proto.sh`), runs `uv run pytest tests/test_contract.py -v`, then runs the Quarkus side's `HandlingEventContractTest` (and `HandlingEventProtoRoundTripTest` where it exists) against the same freshly-extracted schema. A change to the contract that breaks any app's model regeneration, or any app's conformance assumptions, fails this job on every affected app in one pass without needing a human to notice first: DRY, so a Part 6+ app only needs adding to one list, not four near-duplicate step blocks. The `examples` matrix job sits one layer up from that: it discovers every `examples/*/verify.sh` automatically via a `discover-examples` job, runs each with up to three retries inside a 45-minute per-job cap sized for `part4-backplane`'s three-stage broker lifecycle, `fail-fast: false` so one example's failure doesn't cancel the rest of the matrix mid-run, and gates the whole PR on every one of them passing, alongside the separate, always-gated `k6-smoke` job. Five layers, one contract, one schema file they all read: the drift gate is what makes "both stacks agree" a property CI checks on every change, not a claim a chapter makes once and hopes stays true.
-
-A separate job, `buf lint/build/breaking + AsyncAPI<->proto parity`, closes one more gap the app-level `drift` job can't reach: nothing in that loop ever looks at `contracts/handling-event.proto` in isolation, so a field renamed or dropped on only one side of the two contract halves (the AsyncAPI JSON schema and the Protobuf schema introduced for binary encoding over WebSockets) would pass every app's conformance test as long as each app only checks itself against its own half. `scripts/check-proto-parity.py` is the gate for exactly that case: it diffs the compiled proto descriptor against the same freshly-extracted `build/handling-event.schema.json` every other layer reads, always run in this job regardless of whether `buf breaking` finds a baseline to diff against yet. It sits conceptually one level below the `HandlingEventProtoRoundTripTest`/`test_proto_round_trip_matches_schema_and_json_values` pair from the first section of this chapter: those two prove one app's generated proto code round-trips correctly against its own schema; `check-proto-parity.py` proves the two *contract source files* never drifted apart from each other in the first place, before any app-level code generation even runs.
-
-## On the wire
-
-A real `verify.sh` PASS line, from `part4-connection` after every auth, error-taxonomy, backpressure, and heartbeat assertion above has run against both stacks:
-
-```
-PASS — Part 4 connection-concerns: Quarkus and Python both implement
-identical Ch17 auth (accept + 4 reject modes), Ch13 error taxonomy
-(BAD_REQUEST envelope + 4400 close), Ch12 backpressure (4290 close),
-and Ch14 heartbeat liveness detection of a silent peer (proven live
-on both stacks within a short, env-configured window) against the
-SAME shared JWT secret.
-```
-
-`part4-backplane`'s, after all three compose stages (stateless, kafka, redis):
-
-```
-PASS — Part 4 backplane: Quarkus and Python both implement the SAME
-reconnect + scale-out behavior (PROTOCOL.md) — Ch15 stateless mode
-loses a gap-era event, Ch16 kafka mode replays it after reconnect
-(dedup by eventId, no more than the documented benign duplicate),
-and Ch18 an event injected through instance B reaches a client
-connected to instance A over BOTH the Kafka and the Redis backplane,
-with instance A's own log confirming it did the delivering.
-```
-
-Run the Newman collection the same way CI does, from the repo root, and its captured JSON report (`newman/reports/newman-report.json`, regenerated every run) is the exact per-run tally this chapter's functional-HTTP section cites:
-
-```json
-{
-  "items":      { "total": 6,  "failed": 0 },
-  "requests":   { "total": 6,  "failed": 0 },
-  "tests":      { "total": 6,  "failed": 0 },
-  "assertions": { "total": 12, "failed": 0 }
-}
-```
-
-Six requests, twelve `pm.test` assertions across them, zero failures: `/healthz` on both Python instances, the inject endpoint's `202`/`400`/`422` cases on both stacks. A passing `k6/smoke.js` run was confirmed live against both stacks on this project's own CI runner (2026-10-19, the same capture cited for throughput optimization): 54/54 checks on Quarkus `:8090`, 54/54 on Python `:8091`, both JSON-as-TEXT and Protobuf-as-BINARY, gated on every PR via the `k6-smoke` job.
-
-## Where this goes next
-
-This chapter named five layers that already existed scattered across twenty chapters of examples and gave them one shared vocabulary: unit/conformance tests that never touch a socket, `verify.sh`/`lib.sh` integration tests that open real ones against real containers, a Python close-code probe for the one signal `websocat` can't read, Newman for the plain-HTTP seams sitting next to the contract, and k6 split cleanly between a gated smoke check and a local-only comparative benchmark. The thread running through all five is the same one the throughput-optimization discussion ended on: a deterministic assertion (a schema pass, a close code, an assertion count, a `rate==1.0` threshold) belongs in a gate; a timing-sensitive number (a heartbeat detection window, an idle-hold duration, a raw connects/sec figure) gets a generous bound or stays in prose, never a tight CI assertion. The `drift` job is what keeps all five pointed at the one artifact they ultimately read: `contracts/asyncapi.yaml`, by way of the schema it extracts to.
-
-Debugging picks up where this chapter's blind spots end: when a live connection misbehaves in a way none of these five layers caught (a client stuck mid-handshake, a frame that never arrived, a close code a probe wasn't watching for), diagnosing it uses the same tools this chapter inventoried, turned toward diagnosis instead of a pass/fail gate. Observability is where the one piece of new code in this part lands: live OpenTelemetry over a WebSocket connection, verified headless the same way every `verify.sh` in this chapter has been. Part 6 closes by naming the anti-patterns a team reaches for when it skips straight to shipping without any of this five-layer structure underneath it.
-
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Treat WebSocket testing as five layers, not one suite: unit/conformance (<code>test_contract.py</code>, <code>HandlingEventContractTest</code>/<code>HandlingEventProtoRoundTripTest</code>) validates shape and round-trip values with no socket and no container, in milliseconds. Live integration (<code>verify.sh</code>/<code>lib.sh</code>, both stacks, real <code>docker compose</code> containers) proves frame contents, reconnect/resume, and cross-instance fan-out that a unit test structurally cannot reach. A dedicated close-code probe (Python's <code>websockets</code> library, not <code>websocat</code>) exists because <code>ws.close_code</code> is the one signal this project's primary WebSocket client can't read: checking exit code alone cannot distinguish a rejected connection from one the server still intends to hold open. Newman covers the plain-HTTP seams around the WS-only contract: 12 assertions, 0 failed, against <code>/healthz</code> and the inject endpoint's 202/400/422 cases. k6 splits cleanly between <code>smoke.js</code> (gated, <code>rate==1.0</code>, fails the PR on any failed check) and <code>benchmark.js</code> (local-only, because absolute throughput is host-dependent). One CI job, <code>drift</code>, ties every layer back to the same contract-derived schema on every change to <code>contracts/asyncapi.yaml</code>: the property that makes "both stacks agree" something CI checks continuously, not a claim a chapter makes once.</p></div>
+> **🤖 Explore with your agent**
+>
+> "In `examples/part4-connection/verify.sh`, the auth checks use `assert_ws_rejected`, which proves only that no frame arrived. Add a `ws_close_probe` call that sends an expired token to the Quarkus (`:8080`) and Python (`:8081`) channels and asserts close code 1008, the same way the error-taxonomy step asserts 4400. Then sort every existing assertion in the script into one of the five layers (conformance, `lib.sh`, close-code probe, Newman, k6) and name any timing-sensitive one that should get a generous bound instead of a gate."
+>
+> Check: `./verify.sh` still prints `PASS`, and the new step prints the numeric close code 1008 for each stack.
 
 ## Build, run, observe
 
 ```bash
-cd examples/part6-testing && ./verify.sh
+cd examples/part6-testing
+./verify.sh
 ```
 
-Brings up part4-backplane's existing compose stack and runs the Newman collection against both stacks' health and inject endpoints, asserting a schema-valid event is accepted and a malformed one is rejected. It prints PASS once every assertion holds on both stacks; see `examples/part6-testing/README.md` for full output.
+`verify.sh` brings up the backplane example's default-profile compose stack (no Kafka or Redis needed), waits for the Python `:8082` health endpoint and the Quarkus `:8080` listener, runs the Newman collection and tears the stack down. It prints `PASS` when Newman exits 0. A JSON run report lands in `newman/reports/` (gitignored, regenerated every run) with the tally: 6 requests, 12 assertions, 0 failed.
+
+To run the collection against a stack you started by hand, skipping the compose lifecycle:
+
+```bash
+npx newman@6.2.3 run newman/collection.json -e newman/environment.json
+```
+
+Experiment: remove Step 0 from a `verify.sh`. It still passes today, then returns stale results as soon as the contract changes underneath it.
 
 ## For deeper coverage
 
-- Sam Newman, *Building Microservices*, 2nd ed. (O'Reilly, 2021): testing strategy across independently-deployable services, the same shape this chapter applies to two independently-built stacks implementing one contract.
-- *Cloud Native Design Patterns*, "API Testing with Newman" chapter: the Newman-collection pattern this chapter scopes to the plain-HTTP seams around a WebSocket-only contract.
-- *Cloud Native Design Patterns*, "Anti-Patterns" chapter: the companion catalogue of testing and operational anti-patterns this site draws on for its own list.
-- [Python `websockets` library documentation](https://websockets.readthedocs.io/en/stable/): the `close_code` attribute and connection API this chapter's `ws_close_probe` and proto-round-trip tests depend on.
-- [Quarkus: Testing Your Application](https://quarkus.io/guides/getting-started-testing): the JUnit-based testing model behind `HandlingEventContractTest` and `HandlingEventProtoRoundTripTest`.
+- Sam Newman, *Building Microservices*, 2nd ed. (O'Reilly, 2021): testing strategy across independently-deployable services, the same shape as two independently built stacks implementing one contract.
+- *Cloud Native Design Patterns*, "API Testing with Newman" chapter: the Newman-collection pattern, scoped here to the plain-HTTP seams around a WebSocket-only contract.
+- *Cloud Native Design Patterns*, "Anti-Patterns" chapter: the companion catalogue of testing and operational anti-patterns.
+- [Python `websockets` library documentation](https://websockets.readthedocs.io/en/stable/): the `close_code` attribute and connection API the close-code probe depends on.
+- [Quarkus: Testing Your Application](https://quarkus.io/guides/getting-started-testing): the JUnit-based testing model behind the plain-JUnit conformance tests.

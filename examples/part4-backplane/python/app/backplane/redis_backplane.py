@@ -50,7 +50,7 @@ class RedisBackplane(Backplane):
         await self._client.publish(_channel(booking_id), event.model_dump_json(exclude_none=True))
 
     async def subscribe(self, booking_id: str, after_event_id: str | None) -> AsyncIterator[HandlingEvent]:
-        del after_event_id  # unused — see module docstring: no history in Pub/Sub
+        del after_event_id  # unused; see module docstring: no history in Pub/Sub
         if self._client is None:
             raise RuntimeError("RedisBackplane.start() was not called")
         pubsub = self._client.pubsub()
@@ -60,7 +60,7 @@ class RedisBackplane(Backplane):
             async for message in pubsub.listen():
                 if message.get("type") != "message":
                     # The first message on a fresh subscribe() is always a
-                    # "subscribe" confirmation, not an app payload — skip it
+                    # "subscribe" confirmation, not an app payload; skip it
                     # (and any other non-"message" control event).
                     continue
                 yield HandlingEvent.model_validate_json(message["data"])

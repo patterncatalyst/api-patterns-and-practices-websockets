@@ -76,7 +76,7 @@ ensure_websocat() {
     Linux) target="${arch}-unknown-linux-musl" ;;
     Darwin) target="${arch}-apple-darwin" ;;
     *)
-      echo "lib.sh: FAIL — unsupported OS '$os' for websocat auto-download; install websocat manually" >&2
+      echo "lib.sh: FAIL, unsupported OS '$os' for websocat auto-download; install websocat manually" >&2
       return 1
       ;;
   esac
@@ -84,12 +84,12 @@ ensure_websocat() {
   echo "lib.sh: downloading websocat ${WEBSOCAT_VERSION} (${os}/${arch}) ..." >&2
   mkdir -p "$LGTM_BIN_DIR"
   if ! curl -fsSL "$url" -o "$bin"; then
-    echo "lib.sh: FAIL — could not download websocat from $url" >&2
+    echo "lib.sh: FAIL, could not download websocat from $url" >&2
     return 1
   fi
   chmod +x "$bin"
   if ! "$bin" --version >/dev/null 2>&1; then
-    echo "lib.sh: FAIL — downloaded websocat binary at $bin did not run" >&2
+    echo "lib.sh: FAIL, downloaded websocat binary at $bin did not run" >&2
     return 1
   fi
   export PATH="$LGTM_BIN_DIR:$PATH"
@@ -133,7 +133,7 @@ ensure_protoc() {
     Linux) asset="protoc-${PROTOC_VERSION}-linux-${arch}.zip" ;;
     Darwin) asset="protoc-${PROTOC_VERSION}-osx-${arch}.zip" ;;
     *)
-      echo "lib.sh: FAIL — unsupported OS '$os' for protoc auto-download; install protoc manually" >&2
+      echo "lib.sh: FAIL, unsupported OS '$os' for protoc auto-download; install protoc manually" >&2
       return 1
       ;;
   esac
@@ -143,12 +143,12 @@ ensure_protoc() {
   local zip
   zip="$(mktemp)"
   if ! curl -fsSL "$url" -o "$zip"; then
-    echo "lib.sh: FAIL — could not download protoc from $url" >&2
+    echo "lib.sh: FAIL, could not download protoc from $url" >&2
     rm -f "$zip"
     return 1
   fi
   if ! command -v unzip >/dev/null 2>&1; then
-    echo "lib.sh: FAIL — 'unzip' is required to extract the downloaded protoc archive" >&2
+    echo "lib.sh: FAIL, 'unzip' is required to extract the downloaded protoc archive" >&2
     rm -f "$zip"
     return 1
   fi
@@ -160,7 +160,7 @@ ensure_protoc() {
   rm -rf "$extract_dir"
   chmod +x "$bin"
   if ! "$bin" --version >/dev/null 2>&1; then
-    echo "lib.sh: FAIL — downloaded protoc binary at $bin did not run" >&2
+    echo "lib.sh: FAIL, downloaded protoc binary at $bin did not run" >&2
     return 1
   fi
   export PATH="$LGTM_BIN_DIR:$PATH"
@@ -269,7 +269,7 @@ wait_for_ws() {
     waited=$(( waited + interval ))
   done
 
-  echo "lib.sh: FAIL — WebSocket $url did not accept an upgrade within ${timeout}s" >&2
+  echo "lib.sh: FAIL, WebSocket $url did not accept an upgrade within ${timeout}s" >&2
   return 1
 }
 
@@ -288,7 +288,7 @@ ws_first_frame() {
   local out rc=0
   out="$(timeout "$timeout" websocat $WEBSOCAT_OPTS -1 -n -t "$url" </dev/null)" || rc=$?
   if (( rc != 0 )); then
-    echo "lib.sh: FAIL — ws_first_frame $url: no frame received within ${timeout}s (exit $rc)" >&2
+    echo "lib.sh: FAIL, ws_first_frame $url: no frame received within ${timeout}s (exit $rc)" >&2
     return 1
   fi
   printf '%s\n' "$out"
@@ -315,13 +315,13 @@ ws_frames_n() {
   local out rc=0
   out="$(timeout "$timeout" websocat $WEBSOCAT_OPTS --max-messages-rev "$n" -n -t "$url" </dev/null)" || rc=$?
   if (( rc != 0 )); then
-    echo "lib.sh: FAIL — ws_frames_n $url: did not receive $n frame(s) within ${timeout}s (exit $rc)" >&2
+    echo "lib.sh: FAIL, ws_frames_n $url: did not receive $n frame(s) within ${timeout}s (exit $rc)" >&2
     return 1
   fi
   local got
   got="$(printf '%s\n' "$out" | grep -c '^' || true)"
   if (( got != n )); then
-    echo "lib.sh: FAIL — ws_frames_n $url: expected $n frame(s), got $got" >&2
+    echo "lib.sh: FAIL, ws_frames_n $url: expected $n frame(s), got $got" >&2
     printf '%s\n' "$out" >&2
     return 1
   fi
@@ -399,10 +399,10 @@ assert_ws_rejected() {
   local out
   out="$(timeout "$timeout" websocat $WEBSOCAT_OPTS -1 -n -t "$url" </dev/null 2>/dev/null)" || true
   if [[ -n "$out" ]]; then
-    echo "lib.sh: FAIL — ${context}: $url: connection was accepted and sent data, expected rejection" >&2
+    echo "lib.sh: FAIL, ${context}: $url: connection was accepted and sent data, expected rejection" >&2
     return 1
   fi
-  echo "lib.sh: ok — ${context}: $url: connection was rejected (no frame received)" >&2
+  echo "lib.sh: ok, ${context}: $url: connection was rejected (no frame received)" >&2
 }
 
 # ws_idle_hold <ws-url> <seconds>
@@ -456,7 +456,7 @@ wait_for_log_pattern() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "lib.sh: FAIL — wait_for_log_pattern: '$pattern' not found in $file within ${timeout}s" >&2
+  echo "lib.sh: FAIL, wait_for_log_pattern: '$pattern' not found in $file within ${timeout}s" >&2
   echo "lib.sh: --- $file (tail) ---" >&2
   tail -n 40 "$file" >&2 2>/dev/null || true
   return 1
@@ -480,7 +480,7 @@ wait_for_log_count() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "lib.sh: FAIL — wait_for_log_count: '$pattern' seen $count/$min_count times in $file within ${timeout}s" >&2
+  echo "lib.sh: FAIL, wait_for_log_count: '$pattern' seen $count/$min_count times in $file within ${timeout}s" >&2
   echo "lib.sh: --- $file (tail) ---" >&2
   tail -n 40 "$file" >&2 2>/dev/null || true
   return 1
@@ -530,7 +530,7 @@ wait_for_tcp() {
     waited=$(( waited + interval ))
   done
 
-  echo "lib.sh: FAIL — TCP $host:$port did not accept a connection within ${timeout}s" >&2
+  echo "lib.sh: FAIL, TCP $host:$port did not accept a connection within ${timeout}s" >&2
   return 1
 }
 
@@ -568,10 +568,10 @@ assert_eq() {
   local actual="$2"
   local context="${3:-equality}"
   if [[ "$expected" != "$actual" ]]; then
-    echo "lib.sh: FAIL — ${context}: expected '$expected', got '$actual'" >&2
+    echo "lib.sh: FAIL, ${context}: expected '$expected', got '$actual'" >&2
     return 1
   fi
-  echo "lib.sh: ok — ${context}: '$actual'" >&2
+  echo "lib.sh: ok, ${context}: '$actual'" >&2
 }
 
 # assert_contains <needle> <haystack> <context>
@@ -580,10 +580,10 @@ assert_contains() {
   local haystack="$2"
   local context="${3:-contains}"
   if [[ "$haystack" != *"$needle"* ]]; then
-    echo "lib.sh: FAIL — ${context}: '$needle' not found" >&2
+    echo "lib.sh: FAIL, ${context}: '$needle' not found" >&2
     return 1
   fi
-  echo "lib.sh: ok — ${context}: found '$needle'" >&2
+  echo "lib.sh: ok, ${context}: found '$needle'" >&2
 }
 
 # ---------------------------------------------------------------------------
@@ -620,7 +620,7 @@ schema_validate() {
   fi
 
   if [[ ! -f "$schema_file" ]]; then
-    echo "lib.sh: FAIL — schema file not found: $schema_file" >&2
+    echo "lib.sh: FAIL, schema file not found: $schema_file" >&2
     return 1
   fi
 
@@ -637,19 +637,19 @@ errors = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
 if errors:
     for e in errors:
         path = "$" + "".join(f"[{p!r}]" for p in e.path)
-        print(f"lib.sh: FAIL — schema_validate: {path}: {e.message}", file=sys.stderr)
+        print(f"lib.sh: FAIL, schema_validate: {path}: {e.message}", file=sys.stderr)
     sys.exit(1)
 '
 
   if python3 -I -c 'import jsonschema' >/dev/null 2>&1; then
     python3 -I -c "$validator_src" "$doc_json" "$schema_file" \
-      && { echo "lib.sh: ok — schema_validate: $schema_file" >&2; return 0; } \
+      && { echo "lib.sh: ok, schema_validate: $schema_file" >&2; return 0; } \
       || return 1
   fi
 
   if command -v uv >/dev/null 2>&1; then
     uv run --with jsonschema python3 -I -c "$validator_src" "$doc_json" "$schema_file" \
-      && { echo "lib.sh: ok — schema_validate: $schema_file" >&2; return 0; } \
+      && { echo "lib.sh: ok, schema_validate: $schema_file" >&2; return 0; } \
       || return 1
   fi
 
@@ -730,7 +730,7 @@ def check(value, sch, path):
 check(doc, schema, "$")
 if errors:
     for e in errors:
-        print(f"lib.sh: FAIL — schema_validate (fallback): {e}", file=sys.stderr)
+        print(f"lib.sh: FAIL, schema_validate (fallback): {e}", file=sys.stderr)
     sys.exit(1)
 ' "$doc_json" "$schema_file"
 }

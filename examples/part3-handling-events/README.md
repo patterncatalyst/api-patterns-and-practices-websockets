@@ -95,7 +95,7 @@ To poke at it by hand instead, using the shared harness
 (`../_lib/lib.sh`):
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 source ../_lib/lib.sh
 ensure_websocat
 wait_for_ws localhost:8080 /ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events

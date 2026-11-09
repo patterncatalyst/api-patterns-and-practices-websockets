@@ -52,13 +52,13 @@ gd.emit(
     840,
     260,
     nodes=[
-        {"x": 40, "y": 90, "w": 230, "h": 90, "lines": ["Docker Compose", "this chapter", "fastest inner loop"], "style": "ink"},
-        {"x": 320, "y": 90, "w": 230, "h": 90, "lines": ["minikube", "docker driver + containerd", "later chapter"], "style": "box"},
-        {"x": 600, "y": 90, "w": 220, "h": 90, "lines": ["OpenShift Local (CRC)", "separate appendix", "Appendix A"], "style": "box"},
+        {"x": 40, "y": 90, "w": 230, "h": 90, "lines": ["Docker Compose", "fastest inner loop"], "style": "ink"},
+        {"x": 320, "y": 90, "w": 230, "h": 90, "lines": ["minikube", "docker driver + containerd", "Ingress edge"], "style": "box"},
+        {"x": 600, "y": 90, "w": 220, "h": 90, "lines": ["OpenShift Local (CRC)", "edge-TLS Route"], "style": "box"},
     ],
     edges=[
-        {"x1": 270, "y1": 135, "x2": 320, "y2": 135, "label": "same contract, same services"},
-        {"x1": 550, "y1": 135, "x2": 600, "y2": 135, "label": "same contract, separate track"},
+        {"x1": 270, "y1": 135, "x2": 320, "y2": 135, "label": "same images"},
+        {"x1": 550, "y1": 135, "x2": 600, "y2": 135, "label": "same env keys"},
     ],
     notes=[
         {"x": 40, "y": 220, "text": "Every tier runs the identical Quarkus and Python images; only the orchestrator and the ingress path change.", "size": 12, "color": "#555555"},

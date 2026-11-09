@@ -54,7 +54,7 @@ edges = [
 
 notes = [
     {"x": 430, "y": 400, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Neither stack reads the other's source: both push the identical RECEIVE/LOAD/CUSTOMS sequence, verified by verify.sh."},
+     "text": "Neither stack reads the other's source: both push the identical RECEIVE/LOAD/CUSTOMS sequence."},
 ]
 
 generate_diagram.emit("part3-architecture", W, H, nodes=nodes, edges=edges, notes=notes)
