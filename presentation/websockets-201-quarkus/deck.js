@@ -15,8 +15,8 @@ const {
   addStatusTable, addCaption, addCodeSlide, addDiagramSlide, addSectionDivider, addNotes,
 } = H;
 
-const OUT = "WebSockets_201_Quarkus-r1.1.pptx";
-const REV = "r1.1";
+const OUT = "WebSockets_201_Quarkus-r1.2.pptx";
+const REV = "r1.2";
 const LANG = "Java · Quarkus WebSockets Next";
 
 const pres = newDeck();
@@ -74,13 +74,13 @@ function statusTable(eyebrow, title, rows, notes, opts) {
     { x: 6.00, y: 5.10, w: 6.80, h: 0.75, fontFace: FONT.body, fontSize: 16, italic: true, color: COLOR.caption, align: "left", valign: "top" });
   s.addText(REV, { x: 11.85, y: 5.85, w: 0.95, h: 0.30, fontFace: FONT.mono, fontSize: 11, color: COLOR.caption, align: "right", valign: "middle" });
   try { s.addImage({ path: `${ASSETS}/logo-candidate-2.png`, x: 11.10, y: 6.80, w: 1.55, h: 0.37 }); } catch (e) {}
-  addNotes(s, "This is the 201-Quarkus companion deck, the WebSockets Next implementation of the one channel this site builds everywhere: operations.receiveHandlingEvent from contracts/asyncapi.yaml, one connection per booking, server push only. It follows the chapters in build order, Part 3 through the deploy appendix, and every code slide is transcribed from a real file under examples/. The Python sibling app exists throughout and is named where the two stacks differ in a way that matters; this deck does not re-teach that side.");
+  addNotes(s, "This is the 201-Quarkus companion deck, the WebSockets Next implementation of the one channel this site builds everywhere: operations.receiveHandlingEvent from contracts/asyncapi.yaml, one connection per booking, server push only. It follows the example in build order, from the first endpoint through the deploy appendix, and every code slide is transcribed from a real file under examples/. The Python sibling app exists throughout and is named where the two stacks differ in a way that matters; this deck does not re-teach that side.");
 }
 
 // ===== 2. AGENDA ================================================================
 {
   const s = S();
-  addContentTitle(s, "201 · QUARKUS WEBSOCKETS NEXT", "Six sections, same order the chapters build in");
+  addContentTitle(s, "201 · QUARKUS WEBSOCKETS NEXT", "Six sections, in build order");
   addTwoColBullets(s,
     ["01: The Quarkus Endpoint: @OnOpen, Multi, the record, the contract test",
      "02: Connection Concerns: backpressure, errors, heartbeats, auth",
@@ -89,7 +89,7 @@ function statusTable(eyebrow, title, rows, notes, opts) {
      "05: Testing, Debugging, Observability",
      "06: Deploy: Compose, minikube, OpenShift Local",
      { text: "Appendix: minikube/CRC manifests, the version matrix, lifecycle edge cases", muted: true }]);
-  addNotes(s, "Six sections, in the order the chapters actually build the feed: get an endpoint open and pushing, harden the one connection, cross instances with a backplane, make the wire cheaper, prove and watch all of it, then run it somewhere real. Cross-references in the notes are by concept: the channel, the close code, the backplane mode, never by slide number, so trimming a section for time doesn't break a reference elsewhere in the deck.");
+  addNotes(s, "Six sections, in the order the feed is built: get an endpoint open and pushing, harden the one connection, cross instances with a backplane, make the wire cheaper, prove and watch all of it, then run it somewhere real. Cross-references in the notes are by concept: the channel, the close code, the backplane mode, never by slide number, so trimming a section for time doesn't break a reference elsewhere in the deck.");
 }
 
 // ===== SECTION 01 — THE QUARKUS ENDPOINT (Ch08) ================================
@@ -117,7 +117,7 @@ code("THE QUARKUS ENDPOINT · THE CLASS", "One @WebSocket class, one @OnOpen, a 
    "    }",
    "}"],
   "examples/part3-handling-events/quarkus/src/main/java/.../handlingevents/HandlingEventWebSocket.java",
-  "This is the whole endpoint: no onClose, no onTextMessage, because the contract's operations.receiveHandlingEvent declares exactly one direction. Returning Multi<HandlingEvent> directly from @OnOpen establishes a persistent server-push stream for the connection's lifetime; WebSockets Next serializes each emitted item to JSON and sends it as one text frame, in emission order. The fixture replay here is a stand-in for a live event source a later chapter swaps in; the endpoint shape doesn't change when that happens.");
+  "This is the whole endpoint: no onClose, no onTextMessage, because the contract's operations.receiveHandlingEvent declares exactly one direction. Returning Multi<HandlingEvent> directly from @OnOpen establishes a persistent server-push stream for the connection's lifetime; WebSockets Next serializes each emitted item to JSON and sends it as one text frame, in emission order. The fixture replay here is a stand-in for a live event source swapped in later; the endpoint shape doesn't change when that happens.");
 
 diagram("THE QUARKUS ENDPOINT · THE LIFECYCLE", "One callback implemented, because the contract declares one operation",
   "08-ws-endpoint-lifecycle",
@@ -163,7 +163,7 @@ code("THE QUARKUS ENDPOINT · THE RECORD", "HandlingEvent mirrors the contract s
 diagram("THE QUARKUS ENDPOINT · THE PUSH FLOW", "One Multi, three items, three ordered frames",
   "08-multi-push-flow",
   "Figure 8.2: one Multi, three items, three ordered text frames; completion of the stream does not close the connection.",
-  "Worth saying explicitly because it surprises people coming from HTTP: the Multi completing after the third fixture event does not close the WebSocket. The connection stays open with nothing left to push until a later chapter gives it something to push (live events, or a reconnect replay). Completion-of-stream and close-of-connection are two separate events on this channel, and conflating them is a common first mistake.");
+  "Worth saying explicitly because it surprises people coming from HTTP: the Multi completing after the third fixture event does not close the WebSocket. The connection stays open with nothing left to push until a later step gives it something to push (live events, or a reconnect replay). Completion-of-stream and close-of-connection are two separate events on this channel, and conflating them is a common first mistake.");
 
 content("THE QUARKUS ENDPOINT · WHY WEBSOCKETS NEXT", "Not legacy quarkus-websockets",
   ["WebSockets Next is Quarkus's newer, Vert.x-native WebSocket extension: the one with @OnOpen/@OnTextMessage/@OnBinaryMessage annotations, Multi/Uni return types, and a CDI-scoped WebSocketConnection, not the older JSR 356-style quarkus-websockets.",
@@ -216,7 +216,7 @@ code("CONNECTION CONCERNS · THE BACKPRESSURE GUARD", "Count outstanding sends; 
    "    private Uni<Void> applyPolicy(WebSocketConnection connection, String bookingId,",
    "            AtomicBoolean closeRequested, String detail) {",
    "        if (policy == Policy.DROP) {",
-   "            Log.warnf(\"outbound backpressure %s: %s — dropping event\", bookingId, detail);",
+   "            Log.warnf(\"outbound backpressure %s: %s, dropping event\", bookingId, detail);",
    "            return Uni.createFrom().voidItem();",
    "        }",
    "        if (closeRequested.compareAndSet(false, true)) {",
@@ -233,20 +233,20 @@ content("CONNECTION CONCERNS · CLOSE VS. DROP", "Picking a backpressure policy 
   ["CLOSE (default): close the connection with 4290 SLOW_CONSUMER and stop sending the rest. Safer by default: an unbounded number of slow clients each holding outstanding sends is a resource-exhaustion path.",
    "DROP: skip the event that would exceed the threshold, log a warning, keep the connection open. Exists to demonstrate the trade-off, not because it fits this channel's semantics: a missed HandlingEvent is a correctness problem here, not a supersede-by-the-next-update one.",
    "The right default depends on what a missed message means: a live price tick tolerates DROP; a customs HandlingEvent does not."],
-  "Push on this distinction if there's time for one question: DROP is in this codebase as a documented trade-off, not a recommendation for this channel. A feed where only the latest value matters (the stateless-reconnect chapter's framing in section 03 makes the same distinction from the other direction) is exactly the shape where DROP is the right call; a feed where every event is a discrete fact never fits it.");
+  "Push on this distinction if there's time for one question: DROP is in this codebase as a documented trade-off, not a recommendation for this channel. A feed where only the latest value matters (the stateless reconnect framing in section 03 makes the same distinction from the other direction) is exactly the shape where DROP is the right call; a feed where every event is a discrete fact never fits it.");
 
 diagram("CONNECTION CONCERNS · ERRORS VS. 1006", "The deliberate envelope-then-close, next to the one failure mode no code can carry",
   "13-error-flow-vs-1006",
-  "Figure 13.2: the deliberate envelope-then-close sequence this chapter builds, next to the one failure mode no close code can ever carry: a peer that vanished before any handshake could complete.",
+  "Figure 13.2: the deliberate envelope-then-close sequence this example builds, next to the one failure mode no close code can ever carry: a peer that vanished before any handshake could complete.",
   "Left path: the channel defines no client-to-server message, so any client frame is a protocol error: the server sends an ErrorEnvelope first, while the connection is still open, then closes with 4400 BAD_REQUEST. Right path: a killed process or a pulled cable leaves no FIN and no close frame at all; the client's own runtime synthesizes 1006 locally. 1006 is a reserved RFC 6455 value a server must never put in an actual close frame; it only ever shows up as a local, client-side observation that nothing arrived.");
 
 code("CONNECTION CONCERNS · CLOSE CODES AND THE ERROR ENVELOPE", "A structured reason in-band, then the cheap close-code signal",
   ["public final class CloseCodes {",
-   "    public static final int AUTH_FAILURE = 1008;            // Ch17, at @OnOpen",
-   "    public static final int BAD_REQUEST = 4400;              // Ch13, app-range",
-   "    public static final int SLOW_CONSUMER = 4290;             // Ch12, app-range",
+   "    public static final int AUTH_FAILURE = 1008;            // at @OnOpen",
+   "    public static final int BAD_REQUEST = 4400;              // app-range",
+   "    public static final int SLOW_CONSUMER = 4290;             // app-range",
    "    public static final int UNEXPECTED_SERVER_ERROR = 1011;",
-   "    public static final int LIVENESS_TIMEOUT = 4408;          // Ch14, app-range",
+   "    public static final int LIVENESS_TIMEOUT = 4408;          // app-range",
    "}",
    "",
    "@JsonInclude(JsonInclude.Include.NON_NULL)",
@@ -262,7 +262,7 @@ code("CONNECTION CONCERNS · CLOSE CODES AND THE ERROR ENVELOPE", "A structured 
 diagram("CONNECTION CONCERNS · THE IDLE-TIMEOUT TRAP", "The server's own ping keeps resetting its own idle clock",
   "14-idle-timeout-trap",
   "Figure 14.1: the idle-timeout trap (the server's own ping keeps resetting its own idle clock) versus the pong-tracked sweep that actually detects a silent peer.",
-  "The detail worth dwelling on: Vert.x's HTTP idle-timeout resets on any read OR write activity, and the server's own outbound auto-ping is write activity on that same connection: a peer that never answers a single ping never trips idle-timeout, because the server keeps resetting its own clock every auto-ping-interval regardless of whether the peer responds. Confirmed live against this exact example (examples/part4-connection/verify.sh's liveness stage): idle-timeout alone cannot distinguish healthy from silently dead once auto-ping is on.");
+  "Vert.x's HTTP idle-timeout resets on any read OR write activity, and the server's own outbound auto-ping is write activity on that same connection: a peer that never answers a single ping never trips idle-timeout, because the server keeps resetting its own clock every auto-ping-interval regardless of whether the peer responds. Confirmed live against this exact example (examples/part4-connection/verify.sh's liveness stage): idle-timeout alone cannot distinguish healthy from silently dead once auto-ping is on.");
 
 code("CONNECTION CONCERNS · THE LIVENESS SWEEP", "A scheduled bean, not endpoint logic: it needs every connection at once",
   ["@ApplicationScoped",
@@ -384,7 +384,7 @@ code("RECONNECT & BACKPLANE · THE KAFKA BACKPLANE", "Every instance has its own
    "    emitter.send(message);",
    "}"],
   "examples/part4-backplane/quarkus/src/main/java/.../backplane/KafkaBackplane.java",
-  "mp.messaging.incoming.handling-events-in.group.id is derived from each instance's own INSTANCE_ID, so every instance gets its own consumer group and receives every record: the opposite of the usual shared-group load-balancing pattern, chosen because the scale-out chapter's proof needs instance A's client to see an event injected through instance B. auto.offset.reset=earliest means a freshly started instance replays the full topic into memory before any client connects, so replayFor always has the complete picture.");
+  "mp.messaging.incoming.handling-events-in.group.id is derived from each instance's own INSTANCE_ID, so every instance gets its own consumer group and receives every record: the opposite of the usual shared-group load-balancing pattern, chosen because the scale-out proof needs instance A's client to see an event injected through instance B. auto.offset.reset=earliest means a freshly started instance replays the full topic into memory before any client connects, so replayFor always has the complete picture.");
 
 diagram("RECONNECT & BACKPLANE · STICKY SESSIONS VS. A SHARED BACKPLANE", "A sticky session says nothing about where an event enters",
   "18-sticky-vs-backplane",
@@ -430,7 +430,7 @@ code("RECONNECT & BACKPLANE · THE INJECT SEAM", "One internal endpoint, routed 
    "    }",
    "}"],
   "examples/part4-backplane/quarkus/src/main/java/.../backplane/HandlingEventInjectResource.java",
-  "Not part of contracts/asyncapi.yaml: an internal/demo endpoint, documented in PROTOCOL.md's 'Inject endpoint' section, how tests and the scale-out chapter's proof itself get an event onto the active backplane. Always 202 Accepted: publishing is fire-and-forget from the caller's side, regardless of whether delivery ends up local-only (stateless), durable (Kafka), or live-only (Redis): BackplaneRouter is the one seam that routes to whichever mode application.properties selected.");
+  "Not part of contracts/asyncapi.yaml: an internal/demo endpoint, documented in PROTOCOL.md's 'Inject endpoint' section, how tests and the scale-out proof itself get an event onto the active backplane. Always 202 Accepted: publishing is fire-and-forget from the caller's side, regardless of whether delivery ends up local-only (stateless), durable (Kafka), or live-only (Redis): BackplaneRouter is the one seam that routes to whichever mode application.properties selected.");
 
 // ===== SECTION 04 — PERFORMANCE (Ch19/20) =======================================
 divider("04", "Performance", "A second wire encoding, negotiated, and the four levers that bound throughput.",
@@ -470,7 +470,7 @@ code("PERFORMANCE · THE PROTOBUF PATH", "Map to the generated type, then branch
 diagram("PERFORMANCE · FIELD NUMBERS ARE THE REAL CONTRACT", "A JSON key can be renamed freely; a Protobuf tag never can",
   "19-field-numbers-vs-key-names",
   "Figure 19.2: a JSON key can be renamed freely because the string itself is the identity; a Protobuf field number can never move or be reused, because the integer tag, not the field's name, is the wire identity.",
-  "scripts/check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn't also carry: the same additive-only discipline the versioning-and-evolution chapter's JSON contract already enforces, just enforced on a different identity (an integer tag rather than a string key). HandlingEventProtoMapper's own enum-prefix stripping is this same discipline showing up as runtime code: the proto enum's HANDLING_EVENT_TYPE_ prefix has to agree with the bare Java enum on both sides.");
+  "scripts/check-proto-parity.py fails the build the moment either side adds, removes, or reorders a field the other side doesn't also carry: the same additive-only discipline the JSON contract's versioning rules already enforce, just enforced on a different identity (an integer tag rather than a string key). HandlingEventProtoMapper's own enum-prefix stripping is this same discipline showing up as runtime code: the proto enum's HANDLING_EVENT_TYPE_ prefix has to agree with the bare Java enum on both sides.");
 
 diagram("PERFORMANCE · THE THROUGHPUT LEVERS", "Four levers, one shared ceiling underneath all of them",
   "20-levers",
@@ -478,9 +478,9 @@ diagram("PERFORMANCE · THE THROUGHPUT LEVERS", "Four levers, one shared ceiling
   "Encoding (Protobuf vs. JSON) is a fixed, load-independent per-frame discount. Batching trades latency for fewer, larger frames. permessage-deflate is a per-stack default difference, not a universal win: Python's websockets library enables compression=\"deflate\" by default; Quarkus WebSockets Next requires an explicit per-message-compression-supported=true to negotiate it at all. Size limits (max-message-size/max-frame-size) bound one frame independent of the backpressure queue's depth. None of the four changes whether backpressure trips; they only change how much useful work a connection gets through before it does.");
 
 code("PERFORMANCE · COMPRESSION AND SIZE LIMITS", "Illustrative config: neither property is set in this example",
-  ["# _docs/20-optimizing-throughput.md: Ch20's own config excerpt.",
+  ["# _docs/20-optimizing-throughput.md: the throughput write-up's own config excerpt.",
    "# NOT present in examples/part5-performance/quarkus/.../application.properties:",
-   "# that file never sets either property, which is itself this chapter's finding",
+   "# that file never sets either property, which is itself the finding",
    "# (Quarkus defaults per-message-compression-supported to OFF; Python's",
    "# websockets library defaults compression=\"deflate\" to ON).",
    "quarkus.websockets-next.server.per-message-compression-supported=true",
@@ -491,12 +491,12 @@ code("PERFORMANCE · COMPRESSION AND SIZE LIMITS", "Illustrative config: neither
    "quarkus.websockets-next.server.max-message-size=1048576",
    "quarkus.websockets-next.server.max-frame-size=65536"],
   "_docs/20-optimizing-throughput.md: illustrative; not set in examples/part5-performance/quarkus/src/main/resources/application.properties",
-  "A correction on this slide's own source: the actual application.properties for part5-performance sets neither property: that absence is what this chapter is illustrating, not an oversight in this deck. A production deployment accepting attacker-reachable messages would want an explicit max-message-size/max-frame-size rather than relying on the framework's own ceiling; the chapter's k6/benchmark.js measured the compression-negotiation gap live (0% on Quarkus vs. 100% on Python across three runs with the identical client request).");
+  "The listing is illustrative: the performance example's application.properties sets neither property, so no application-level cap applies there. A production deployment accepting attacker-reachable messages would want an explicit max-message-size/max-frame-size rather than relying on the framework's own ceiling; k6/benchmark.js measured the compression-negotiation gap live (0% on Quarkus vs. 100% on Python across three runs with the identical client request).");
 
 diagram("PERFORMANCE · BYTES PER FRAME, MEASURED", "Protobuf's size win is real; deflate's is a measurement blind spot",
   "20-bytes-per-frame",
   "Figure 20.1: the measured bytes/frame comparison and the real stack difference in whether permessage-deflate gets negotiated at all; the deflate row's bytes/frame is a blind spot, not evidence against compression.",
-  "json averages 259.7 bytes; protobuf averages 154.0 bytes, a 40.7% reduction, measured identically regardless of load. json_deflate reads identical to plain json on both stacks: not because compression failed, but because k6/ws (built on gorilla/websocket) transparently inflates a compressed frame before the script ever sees the bytes. What the script can observe without inference is whether the extension negotiated at all: Python 7908/7908 (100%), Quarkus 0 across 11806-18292 attempts (0%): the one deflate number this chapter treats as proven.");
+  "json averages 259.7 bytes; protobuf averages 154.0 bytes, a 40.7% reduction, measured identically regardless of load. json_deflate reads identical to plain json on both stacks: not because compression failed, but because k6/ws (built on gorilla/websocket) transparently inflates a compressed frame before the script ever sees the bytes. What the script can observe without inference is whether the extension negotiated at all: Python 7908/7908 (100%), Quarkus 0 across 11806-18292 attempts (0%): the one deflate number treated as proven.");
 
 // ===== SECTION 05 — TESTING, DEBUGGING, OBSERVABILITY (Ch21/22/23) ==============
 divider("05", "Testing, Debugging, Observability", "Proving a protocol you can't curl, then watching it run.",
@@ -527,7 +527,7 @@ code("TESTING · THE CONFORMANCE TEST, RE-RUN AGAINST PART 6", "Same shape, re-v
 diagram("DEBUGGING · SYMPTOM TO TOOL", "Reach for the cheapest tool that taps the right layer first",
   "22-symptom-to-tool",
   "Figure 22.2: five symptoms, five first tools: start at the cheapest tool that taps the layer the symptom points to.",
-  "Never upgrades at all → curl --include (a proxy likely stripped Connection: Upgrade). 101 then silence → DevTools Frames or websocat -t (check the auth gate from section 02, or a subprotocol mismatch). Wrong frame shape → the binary/text icon or websocat -b | xxd (an opcode mismatch, the binary-Protobuf chapter's negotiation gone wrong). Drops with no reason → the close_code itself: 4400/4290/4408/1008 each say why; 1006 means no code arrived at all. Dies under load → backpressure (4290) or the liveness sweep (4408) firing under pressure, both from section 02.");
+  "Never upgrades at all → curl --include (a proxy likely stripped Connection: Upgrade). 101 then silence → DevTools Frames or websocat -t (check the auth gate from section 02, or a subprotocol mismatch). Wrong frame shape → the binary/text icon or websocat -b | xxd (an opcode mismatch, the binary Protobuf negotiation gone wrong). Drops with no reason → the close_code itself: 4400/4290/4408/1008 each say why; 1006 means no code arrived at all. Dies under load → backpressure (4290) or the liveness sweep (4408) firing under pressure, both from section 02.");
 
 diagram("OBSERVABILITY · AUTO-TRACED UPGRADE, MANUAL PUSH SPAN", "Same span name, same trace-id log line, two different paths to get there",
   "23-auto-vs-manual",
@@ -561,7 +561,7 @@ divider("06", "Deploy", "Compose, minikube, OpenShift Local: one contract, three
 diagram("DEPLOY · THREE TIERS, ONE CONTRACT", "Compose now, minikube and CRC later: same services either way",
   "00-tier-progression",
   "Figure 0.2: Three tiers, one contract: Compose now, minikube and CRC later.",
-  "Docker Compose is the fastest inner loop and where every example in this deck has been shown running; minikube (docker driver + containerd runtime, the podman path is not supported, DRQ-007) is the Kubernetes-shaped version of the exact same two-instance backplane topology from section 03; OpenShift Local is a separate appendix, never folded into the minikube path. All three run the identical contract and the identical fixture: nothing about the application changes tier to tier, only the manifests around it.");
+  "Docker Compose is the fastest inner loop and where every example in this deck has been shown running; minikube (docker driver + containerd runtime, the podman path is not supported) is the Kubernetes-shaped version of the exact same two-instance backplane topology from section 03; OpenShift Local is a separate appendix, never folded into the minikube path. All three run the identical contract and the identical fixture: nothing about the application changes tier to tier, only the manifests around it.");
 
 content("201 · CLOSE", "One contract, one Quarkus build, from laptop to OpenShift",
   ["The endpoint, the four connection concerns, three backplane modes, two wire encodings, and the observability layer are all the same Quarkus WebSockets Next codebase this deck just walked: nothing here is a simplified teaching version of a 'real' implementation elsewhere.",
@@ -624,17 +624,17 @@ code("APPENDIX · THE OPENSHIFT ROUTE AND PINNED KAFKA OPERATOR", "Edge-TLS at t
 content("APPENDIX · COMPOSE PROFILES VS. BACKPLANE_MODE", "One env var selects the mode; a compose profile brings up the matching broker",
   ["compose.yaml's three profiles (default/kafka/redis) each bring up exactly the infrastructure the matching BACKPLANE_MODE needs: no profile brings up a broker the app isn't configured to use.",
    "BACKPLANE_MODE=STATELESS (default, no profile) boots with no broker at all; KAFKA and REDIS each need their own profile flag to start the matching container alongside the app.",
-   "The Docker Compose chapter keeps this pairing explicit rather than always starting every broker: a stateless-mode run with a Kafka container sitting idle nearby would be a confusing demo, not a safer one."],
+   "The Docker Compose setup keeps this pairing explicit rather than always starting every broker: a stateless-mode run with a Kafka container sitting idle nearby would be a confusing demo, not a safer one."],
   "The point to make here: BACKPLANE_MODE and the compose profile are two separate selectors that have to agree, not one flag doing double duty. Getting them out of sync, KAFKA mode with no kafka profile running, is exactly the scenario the next appendix slide's hard-fail receipt documents.");
 
 code("APPENDIX · THE NO-RESOLVABLE-BOOTSTRAP HARD-FAIL", "An unresolvable Kafka hostname crashes Quarkus at startup: a receipt, not a guess",
   ["# examples/part4-backplane/verify.sh",
    "#",
    "# compose.yaml's KAFKA_BOOTSTRAP_SERVERS/REDIS_URL default to",
-   "# localhost:9092 / redis://localhost:6379/0 -- resolvable-but-unreachable,",
+   "# localhost:9092 / redis://localhost:6379/0: resolvable-but-unreachable,",
    "# which both apps' READMEs document as safe even in stateless mode. Only",
    "# point them at the real broker hostname for the stage that actually",
-   "# brings that broker up -- confirmed live: handing Quarkus's always-wired",
+   "# brings that broker up (confirmed live): handing Quarkus's always-wired",
    "# Kafka consumer an UNRESOLVABLE hostname crashes the app at startup",
    "# with `ConfigException: No resolvable bootstrap urls`, a hard failure,",
    "# not the soft \"unreachable but resolvable\" case.",
@@ -679,14 +679,14 @@ code("APPENDIX · LIFECYCLE EDGE CASES", "SKIP overlapping sweeps; close every c
 statusTable("APPENDIX · VERSION MATRIX", "What every example in this deck is pinned against",
   [
     { code: "Quarkus", name: "3.40.0", purpose: "WebSockets Next ships with Quarkus: not a separately versioned artifact" },
-    { code: "JDK", name: "25.0.4 (Temurin)", purpose: "Ch0 pin, current LTS line patch" },
+    { code: "JDK", name: "25.0.4 (Temurin)", purpose: "Pinned JDK, current LTS line patch" },
     { code: "Kafka", name: "4.3.1", purpose: "compose + minikube (KRaft, apache/kafka image)" },
     { code: "Kafka (CRC)", name: "4.2.0", purpose: "AMQ Streams step-back: amqstreams.v3.2.1-14 supports 4.1/4.2 only; a weaker proof than minikube's own 4.3.1 run" },
     { code: "Redis", name: "8.10.2-alpine", purpose: "same pin across compose, minikube, and the CRC Helm chart" },
     { code: "minikube", name: "v1.39.0 (floor)", purpose: "docker driver + containerd runtime only: the podman path is not supported" },
     { code: "CRC", name: "2.64.0 / OCP 4.22.14", purpose: "verified live headless 2026-10-19" },
   ],
-  "Pulled directly from _plans/version-matrix.md, not restated from memory: check that file before citing a version from this deck. Repeat this hedge every time CRC's Kafka version comes up: 4.2.0 is a recorded step-back from 4.3.1 because the AMQ Streams operator doesn't yet support 4.3.x, and the CRC idle-hold proof is weaker than minikube's own run for that reason: the wire behavior the Kafka-backed-reconnect and scale-out chapters exercise is identical on both versions, but the version pin itself is not.",
+  "Every version here is pinned and was surveyed live. Repeat this hedge every time CRC's Kafka version comes up: 4.2.0 is a recorded step-back from 4.3.1 because the AMQ Streams operator doesn't yet support 4.3.x, and the CRC idle-hold proof is weaker than minikube's own run for that reason: the wire behavior the Kafka-backed reconnect and scale-out examples exercise is identical on both versions, but the version pin itself is not.",
   { colW: [2.5, 2.0, 7.59] });
 
 
@@ -699,7 +699,7 @@ statusTable("APPENDIX · VERSION MATRIX", "What every example in this deck is pi
   s.addImage({ path: `${ASSETS}/qr-websockets-site.png`, x: 2.30, y: 1.78, w: 3.10, h: 3.10 });
   s.addText("The site", { x: 1.55, y: 4.98, w: 4.60, h: 0.40,
     fontFace: FONT.title, fontSize: 18, bold: true, color: COLOR.ink, align: "center", valign: "middle" });
-  s.addText("Chapters, the AsyncAPI contracts, and both-stack runnable examples", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
+  s.addText("The tutorial, the AsyncAPI contracts, and both-stack runnable examples", { x: 1.45, y: 5.40, w: 4.80, h: 0.72,
     fontFace: FONT.body, fontSize: 13, italic: true, color: COLOR.caption, align: "center", valign: "top" });
   s.addText("patterncatalyst.github.io/api-patterns-and-practices-websockets", { x: 1.45, y: 6.12, w: 4.80, h: 0.32,
     fontFace: FONT.mono, fontSize: 10, color: COLOR.red, align: "center", valign: "middle" });
@@ -713,7 +713,7 @@ statusTable("APPENDIX · VERSION MATRIX", "What every example in this deck is pi
   s.addText("patterncatalyst.github.io/patterncatalyst-workshops-tutorials-list", { x: 7.08, y: 6.12, w: 4.80, h: 0.32,
     fontFace: FONT.mono, fontSize: 9, color: COLOR.red, align: "center", valign: "middle" });
 
-  addNotes(s, "This is the Quarkus implementation deck, so the left code takes you to the runnable Quarkus example and contract, the right to the whole series. On the left, the site: the chapters, the AsyncAPI contracts, and the runnable both-stack examples, all public. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Scan whichever is useful; both are on the Pattern Catalyst GitHub organization.");
+  addNotes(s, "This is the Quarkus implementation deck, so the left code takes you to the runnable Quarkus example and contract, the right to the whole series. On the left, the site: the tutorial text, the AsyncAPI contracts, and the runnable both-stack examples, all public. On the right, the Workshops and Tutorials hub: every workshop, tutorial, and deck in the series in one place. Scan whichever is useful; both are on the Pattern Catalyst GitHub organization.");
 }
 
 

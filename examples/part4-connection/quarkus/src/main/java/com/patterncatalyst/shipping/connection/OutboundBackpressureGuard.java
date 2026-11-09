@@ -121,7 +121,7 @@ public class OutboundBackpressureGuard {
         return connection.sendText(event)
                 .ifNoItem().after(sendTimeout).failWith(
                         () -> new TimeoutException("sendText exceeded " + sendTimeout
-                                + " — peer is not draining its receive buffer"))
+                                + ", peer is not draining its receive buffer"))
                 .onItemOrFailure().transformToUni((v, failure) -> {
                     pending.decrementAndGet();
                     if (failure == null) {

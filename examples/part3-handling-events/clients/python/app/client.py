@@ -86,7 +86,7 @@ class Config:
 
 def _backoff_delay(config: Config, attempt: int) -> float:
     """delay = min(max_delay, base_delay * 2**attempt), then +/- jitter_ratio
-    applied as a uniform random multiplier — same formula as the Quarkus
+    applied as a uniform random multiplier, same formula as the Quarkus
     sibling's ReconnectingClient, so both clients exhibit the same reconnect
     shape against either server."""
     exponential = config.reconnect_base_delay_s * (2 ** min(attempt, 20))
@@ -99,11 +99,11 @@ async def _enqueue(queue: "asyncio.Queue[str]", message: str, policy: str) -> No
     if policy == "drop_oldest":
         if queue.full():
             dropped = queue.get_nowait()
-            logger.warning("buffer full (capacity=%d) — dropped oldest frame: %s", queue.maxsize, dropped)
+            logger.warning("buffer full (capacity=%d): dropped oldest frame: %s", queue.maxsize, dropped)
         queue.put_nowait(message)
     else:
         # BLOCK (default): await room in the queue. This is the safe
-        # default — no frame is ever lost — at the cost of throttling how
+        # default (no frame is ever lost) at the cost of throttling how
         # fast we pull new frames off the socket when the consumer is slow.
         await queue.put(message)
 
@@ -151,12 +151,12 @@ async def _reconnect_loop(config: Config, queue: "asyncio.Queue[str]") -> None:
             raise
         except Exception as e:
             # Deliberately broad: a connection can fail in ways that are
-            # NOT websockets.exceptions.ConnectionClosed or OSError — e.g. a
+            # NOT websockets.exceptions.ConnectionClosed or OSError, e.g. a
             # server mid-restart can accept the TCP connection, then drop it
             # before finishing the HTTP upgrade response, which the
             # `websockets` library surfaces as InvalidMessage/InvalidHandshake
             # (neither a ConnectionClosed nor an OSError subclass). Any
-            # failure here — handshake, transport, timeout — should trigger
+            # failure here (handshake, transport, timeout) should trigger
             # the same backoff-and-retry, so we catch Exception broadly and
             # only exempt CancelledError (caught above) so a real shutdown
             # still propagates.

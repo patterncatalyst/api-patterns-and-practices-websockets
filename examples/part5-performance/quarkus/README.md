@@ -80,7 +80,7 @@ one stack's naming convenience.
 ## Measured frame sizes (confirmed live)
 
 Compact (no-pretty-print) JSON vs. serialized Protobuf, same three fixture
-events, same field values: protobuf runs **38–41% smaller**:
+events, same field values: protobuf runs **38 to 41% smaller**:
 
 | Event                          | JSON (bytes) | Protobuf (bytes) | Reduction |
 |---------------------------------|-------------:|------------------:|----------:|

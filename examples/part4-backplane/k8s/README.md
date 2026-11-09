@@ -17,16 +17,16 @@ base/                   Namespace, ConfigMap, the four app Deployments+Services,
 overlays/minikube/      retags images to :minikube, imagePullPolicy: Never,
                          rewrites the Ingress hosts
 overlays/minikube-redis/  ../minikube + the redis-mode component (BACKPLANE_MODE: redis)
-components/redis-mode/  Kustomize Component — flips the ConfigMap's
+components/redis-mode/  Kustomize Component: flips the ConfigMap's
                          BACKPLANE_MODE from kafka to redis; nothing else changes
 strimzi/                KafkaNodePool + Kafka CR (single-node KRaft, ephemeral)
-                         and the Redis Deployment+Service — cluster infra,
+                         and the Redis Deployment+Service, cluster infra,
                          applied separately from the app kustomization (see
                          scripts/install-strimzi.sh) because the Strimzi CRDs
                          have to exist first
 scripts/install-strimzi.sh   installs the Strimzi operator (Helm), waits for
-                         it, applies strimzi/*.yaml, waits for Kafka Ready —
-                         MUST complete before the apps roll out (see below)
+                         it, applies strimzi/*.yaml, waits for Kafka Ready.
+                         This must complete before the apps roll out (see below)
 verify-minikube.sh       the live, headless proof (see "Running it")
 evidence/                captured output from a real run, for the chapter to cite
 ```
@@ -53,7 +53,7 @@ Kustomize Component that patches just that one ConfigMap key to `redis`;
 
 ```sh
 kubectl --context part4-backplane apply -k overlays/minikube-redis
-# envFrom/configMapRef does NOT hot-reload into running Pods — force it:
+# envFrom/configMapRef does NOT hot-reload into running Pods; force it:
 kubectl --context part4-backplane rollout restart \
   deployment/quarkus-a deployment/quarkus-b deployment/python-a deployment/python-b \
   -n part4-backplane

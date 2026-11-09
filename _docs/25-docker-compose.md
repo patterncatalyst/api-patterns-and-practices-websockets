@@ -3,7 +3,7 @@ title: "Docker Compose"
 order: 25
 part: "Runtime Progression"
 description: "Running the full stack locally with Docker Compose."
-duration: "12 min read"
+duration: "9 min read"
 ---
 
 ## Learning objectives
@@ -18,97 +18,104 @@ By the end of this chapter you can:
 
 ## Why this matters
 
-Every example so far proved its own wire behavior with a single `docker compose up` against that example's own, disposable `compose.yaml`: a convenience for running one example in isolation, nothing more. `examples/part4-backplane` is the first example with enough moving parts (four app instances, two swappable brokers, three scenarios) that the compose file stops being incidental and becomes the thing this chapter has to account for in its own right.
+Each example runs with a single `docker compose up` against its own disposable `compose.yaml`. There is no unified compose file for the whole site. `examples/part4-backplane/compose.yaml` has enough moving parts (four app instances, two swappable brokers, three scenarios) that the topology itself has to hold up as a runtime: build context, healthcheck gating, and the profile and environment split that picks a backplane.
 
-Every example on this site up to this point ran as a single `docker compose up` against one example's own `compose.yaml`: `examples/part3-handling-events`, `examples/part4-connection`, `examples/part4-backplane`, each isolated under its own compose project name, each torn down by `verify.sh`'s own EXIT trap. There is no unified compose file for the whole site, and this chapter doesn't invent one. What changes here is the question: not "does `quarkus-a` answer a WebSocket upgrade" but "does the compose topology itself (build context, healthcheck gating, the profile/env split that picks a backplane) hold up as a runtime, not just a dev convenience." `examples/part4-backplane/compose.yaml` is the centerpiece, because it's the one example on this site that runs four application instances and two optional brokers from one file, and every mechanism this chapter describes is already live in it.
+## Build context at the repo root
 
-## Build context at the repo root, not the example directory
+Every service builds with `context: ../..` and a `dockerfile:` path back down to the stack directory (`examples/part4-backplane/quarkus/Containerfile` or the `python/` sibling). `part3-handling-events` and `part4-connection` do the same. Each Containerfile has to `COPY` `contracts/handling-event.proto` and `contracts/asyncapi.yaml` from the repo root, plus `examples/part3-handling-events/fixtures/handling-events.json`, the seed fixture both stacks replay in RECEIVE, LOAD, CUSTOMS order. A build context is a hard filesystem boundary: a context scoped to `quarkus/` or `python/` can't see any of them.
 
-Every service in `examples/part4-backplane/compose.yaml` builds with `context: ../..` and `dockerfile: examples/part4-backplane/quarkus/Containerfile` (or the `python/Containerfile` sibling) rather than `context: .` from inside `quarkus/` or `python/`. That's not an accident of how the directory happens to be laid out: `examples/part3-handling-events/compose.yaml` and `examples/part4-connection/compose.yaml` both do the identical thing, `context: ../..` paired with a `dockerfile:` path back down into the example, across every multi-stack example on this site. The reason is what each Containerfile needs to `COPY` into the build: `contracts/handling-event.proto` and `contracts/asyncapi.yaml` live at the repo root, and `examples/part3-handling-events/fixtures/handling-events.json` (the shared seed fixture both stacks in every example replay in the same RECEIVE/LOAD/CUSTOMS order) lives one directory above any single example. A build context scoped to `quarkus/` or `python/` can't see either one; Docker's build context is a hard filesystem boundary, not a suggestion, so a Containerfile can only `COPY` paths underneath whatever directory was handed to `docker build` as context. Scoping context to the repo root means every stack's Containerfile reaches the same contract files and the same fixture with the same relative path, which is exactly what keeps `verify.sh`'s claim (Quarkus and Python implement identical wire behavior against one shared contract) mechanically true rather than asserted. The cost is a slower build (Docker has to walk and checksum the whole repo tree to compute the context, not just one example's subdirectory), which is why `.dockerignore` at the repo root matters more here than it would in a narrower-context project; it's a considered tradeoff, not a default nobody examined.
+A root context gives both stacks the same contract files and fixture at the same relative path, which keeps "Quarkus and Python implement identical wire behavior against one contract" mechanically true. The cost is a slower build, since Docker walks and checksums the whole repo tree, so the root `.dockerignore` matters.
 
-## Healthcheck-gated startup, not sleep-and-hope
+## Healthcheck-gated startup
 
-Every service in `examples/part4-backplane/compose.yaml` defines a `healthcheck` block, and every app service's `depends_on` names a broker with `condition: service_healthy`, not the bare `depends_on: [kafka]` form that only waits for the container to start, not for anything inside it to answer. That distinction is the entire reason this pattern exists: a `kafka` container exists the instant its process is forked, but `apache/kafka:4.3.1` in single-node KRaft mode needs real seconds to run its own startup script, elect itself leader of a quorum with one voter, and open `9092` for business: long enough that a naive compose file racing an app's first connection attempt against the broker's boot sequence fails intermittently on a cold machine and passes reliably on a warm one, the worst kind of flaky to debug because it looks like an application bug. `kafka`'s healthcheck runs `kafka-broker-api-versions.sh --bootstrap-server localhost:9092` every 5 seconds, up to 30 retries, with a 20-second `start_period` before failures even count against the retry budget; `redis`'s healthcheck runs `redis-cli ping` every 3 seconds, 20 retries, 5-second `start_period`. Compose doesn't just poll these and move on: a `depends_on` entry with `condition: service_healthy` blocks that dependent service from starting at all until the healthcheck reports healthy, which is what turns "probably up by the time the app tries to connect" into "provably up before the app's first instruction runs."
+Every service defines a `healthcheck`, and every app service's `depends_on` names each broker with `condition: service_healthy`. A bare `depends_on: [kafka]` waits only for the container to start. A `kafka` container exists the instant its process forks, but `apache/kafka:4.3.1` in single-node KRaft mode needs several seconds to run its startup script, elect itself leader of a one-voter quorum and open `9092`. A compose file that races an app's first connection against that boot fails on a cold machine and passes on a warm one, which looks like an application bug.
 
-The four app services apply the identical pattern to their own healthchecks so the *example's own tests* can trust compose's readiness signal instead of polling ad hoc: `quarkus-a`/`quarkus-b` run `curl -s -o /dev/null http://127.0.0.1:8080/` (no `-f`, because a plain GET against a WebSocket-only endpoint gets a 404 or 426, and the point of the check is "the HTTP server answers," not "the root route exists," the same convention `part3-handling-events` and `part4-connection` use for their Quarkus services); `python-a`/`python-b` run `curl -f http://127.0.0.1:8082/healthz` against the dedicated FastAPI health port, failing on any non-2xx. `examples/_lib/lib.sh`'s `wait_for_ws` is a second, independent readiness layer on top of this (it polls the actual WebSocket upgrade path rather than trusting the container healthcheck alone), but the healthcheck is what keeps `docker compose up -d --build` from reporting "done" while a JVM is still 15 seconds into cold start.
+| Service | Check | Timing |
+|---|---|---|
+| `kafka` | `kafka-broker-api-versions.sh --bootstrap-server localhost:9092` | every 5 s, 30 retries, 20 s `start_period` |
+| `redis` | `redis-cli ping` | every 3 s, 20 retries, 5 s `start_period` |
+| `quarkus-a`, `quarkus-b` | `curl -s -o /dev/null http://127.0.0.1:8080/` | every 5 s, 30 retries, 20 s `start_period` |
+| `python-a`, `python-b` | `curl -f http://127.0.0.1:8082/healthz` | every 5 s, 30 retries, 10 s `start_period` |
 
-## The depends_on.required: false escape hatch
+The Quarkus check omits `-f` because a plain `GET` against a WebSocket-only endpoint returns 404 or 426, and the question is only whether the HTTP server answers. The Python check hits a dedicated FastAPI health port and fails on any non-2xx. A service with `condition: service_healthy` doesn't start until the dependency reports healthy, which turns "probably up by the time the app connects" into "up before the app's first instruction." The app healthchecks also stop `docker compose up -d --build` from reporting done while a JVM is still in cold start. `examples/_lib/lib.sh` adds a second layer that polls the actual WebSocket upgrade path.
 
-`examples/part4-backplane/compose.yaml`'s four app services all declare the same two optional dependencies:
+## Optional dependencies with required: false
+
+All four app services declare the same two optional dependencies:
 
 ```yaml
-depends_on:
-  kafka:
-    condition: service_healthy
-    required: false
-  redis:
-    condition: service_healthy
-    required: false
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+        required: false
 ```
 
-`required: false` is what lets one set of four app services serve all three scenarios this example proves (default/stateless, `--profile kafka`, `--profile redis`) without three separate compose files or three copies of each app service. Without it, naming `kafka:` under `depends_on` at all would be a hard reference: compose validates that every named dependency's service exists in the merged configuration, and in the default profile-less run, `kafka`'s `profiles: ["kafka"]` tag means it never gets defined at all: compose would refuse to start the stack, citing an undefined service, before a single container came up. `required: false` changes the contract to "wait for this dependency's health **if** it's part of this compose invocation; skip the wait without error if it isn't." That's what makes `docker compose up --build` (no profile), `docker compose --profile kafka up --build`, and `docker compose --profile redis up --build` all valid invocations of the exact same file.
+`required: false` lets one set of app services serve all three scenarios (default stateless, `--profile kafka`, `--profile redis`) without three compose files. Without it, naming `kafka:` under `depends_on` is a hard reference: in the profile-less run `kafka` is tagged `profiles: ["kafka"]` and isn't defined, so compose refuses to start, citing an undefined service. With it, compose waits for the dependency's health if it is part of this invocation and skips the wait if it isn't. That makes `docker compose up --build`, `docker compose --profile kafka up --build` and `docker compose --profile redis up --build` all valid against the same file.
 
-## Profile selects infrastructure; BACKPLANE_MODE selects behavior
+## Profiles select infrastructure; BACKPLANE_MODE selects behavior
 
-This is the distinction the compose file's own header comment calls out directly, because collapsing it is a common mistake: `--profile kafka`/`--profile redis`/`--profile observability` are compose's own mechanism for which **containers** come up (profile-tagged services are skipped entirely unless their profile is active), a Docker Compose primitive with no awareness of what's inside any container. `BACKPLANE_MODE` is a plain environment variable, read inside each application's own startup code, that selects which `Backplane` implementation (`StatelessBackplane`, `KafkaBackplane`, `RedisBackplane`) an instance wires up at runtime: compose has no idea this variable exists beyond passing it through. The two knobs are independent by construction: nothing in `compose.yaml` stops someone from running `docker compose --profile kafka up` while leaving `BACKPLANE_MODE` at its `stateless` default, which would bring up a perfectly healthy Kafka broker that every app instance ignores completely, still losing gap-era events exactly like the no-broker case: a believable, silent misconfiguration precisely because "I started Kafka" reads as "the app is using Kafka" if the two knobs aren't kept conceptually separate.
+| Knob | Controls | Aware of the other? |
+|---|---|---|
+| `--profile kafka`, `--profile redis`, `--profile observability` | Which containers come up (profile-tagged services are skipped unless active) | No, compose doesn't know what runs inside a container |
+| `BACKPLANE_MODE` | Which `Backplane` implementation (`StatelessBackplane`, `KafkaBackplane`, `RedisBackplane`) an instance wires up at runtime | No, compose only passes it through |
 
-`examples/part4-backplane/verify.sh`'s `start_stage` function is the enforcement mechanism that keeps the two knobs aligned rather than leaving it to chance: it sets `BACKPLANE_MODE` and brings up the matching `--profile` together, every time, in one `compose_up` call (`BACKPLANE_MODE="$mode" ... compose_up "$COMPOSE_FILE" "$PROJECT" "$profile"`), so Stage A runs profile-less with `stateless`, Stage B runs `--profile kafka` with `kafka`, Stage C runs `--profile redis` with `redis`. The env var itself is also host-shell-driven with safe defaults baked into `compose.yaml`, not hardcoded to the in-cluster service hostname: `KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}` and `REDIS_URL=${REDIS_URL:-redis://localhost:6379/0}` default to a host that's unreachable-but-resolvable whenever the matching broker container isn't running, which both apps' own READMEs document as the safe failure mode: a connection timeout and retry, not a crash. `verify.sh` only overrides those defaults to the real `kafka`/`redis` service hostnames for the stage that started that broker (`start_stage`'s own `kafka_servers`/`redis_url` local variables), which is the detail that makes the next section's failure mode specifically about *unresolvable*, not merely *unreachable*, hostnames.
+The two are independent. `docker compose --profile kafka up` with `BACKPLANE_MODE` left at `stateless` brings up a healthy Kafka broker that every app instance ignores, and the apps lose gap-era events exactly as in the no-broker case. "I started Kafka" reads as "the app uses Kafka," so this is a silent misconfiguration. Set both together: stateless with no profile, `kafka` with `--profile kafka`, `redis` with `--profile redis`.
 
-## The hard-failure receipt: an unresolvable bootstrap server crashes Quarkus at startup
+The broker addresses default to hosts that are unreachable but resolvable whenever the matching broker isn't running: `KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}` and `REDIS_URL=${REDIS_URL:-redis://localhost:6379/0}`. Only a run that starts a broker overrides them with the real `kafka` or `redis` service hostname.
 
-`compose.yaml`'s header comment documents a behavior that only showed up by running the configuration live, not by reading the Kafka client's documentation: Quarkus's `quarkus-messaging-kafka` channel is wired statically at build time regardless of `BACKPLANE_MODE` (the `@Incoming`/`@Outgoing` channel exists in the CDI container whether or not the app is in `kafka` mode), so its consumer gets constructed from `KAFKA_BOOTSTRAP_SERVERS` on every single startup. Handing that consumer a hostname that resolves fine (`localhost:9092`, nothing listening) produces the soft failure both apps' READMEs describe: a connection-refused warning, logged, retried in the background, the app otherwise serves traffic normally. Handing it a hostname that **doesn't resolve on the network at all** (`kafka`, when the `kafka` profile isn't active, so there's no such container and no such DNS entry in the compose network) is a different failure class entirely: `ConfigException: No resolvable bootstrap urls`, thrown synchronously during consumer construction, which aborts CDI startup before the application context finishes initializing. `examples/part4-backplane/k8s/README.md` documents hitting the identical exception on the Kubernetes path (`examples/part4-backplane/k8s/scripts/install-strimzi.sh` calls it out too), confirming this is not a compose-specific quirk. It is a property of how the Kafka client resolves its bootstrap list, reproduced independently on a second runtime.
+## An unresolvable bootstrap server crashes Quarkus at startup
 
-This is exactly why `verify.sh`'s `start_stage` only ever rewrites `KAFKA_BOOTSTRAP_SERVERS`/`REDIS_URL` to the real service hostname for the one stage that brought that broker up, and leaves the resolvable `localhost` default everywhere else. Getting that backwards (pointing `KAFKA_BOOTSTRAP_SERVERS` at `kafka:9092` in a run where the `kafka` profile isn't active) doesn't produce a slow retry loop to debug; it produces an app that never starts, with a stack trace that names the config value directly. The practical rule this receipt leaves behind: an env var naming a service hostname that only sometimes exists on the compose network needs a resolvable fallback value, not an empty string or the production hostname left in place "because it'll just retry."
+`quarkus-messaging-kafka` wires its channel at build time regardless of `BACKPLANE_MODE`, so the Kafka consumer is constructed from `KAFKA_BOOTSTRAP_SERVERS` on every startup. The two failure classes differ:
 
-## Four instances, two roles, one shared contract
+| Bootstrap value | Failure | Effect |
+|---|---|---|
+| Resolves, nothing listening (`localhost:9092`) | Connection-refused warning, retried in the background | App serves traffic normally |
+| Doesn't resolve (`kafka` when the `kafka` profile isn't active, so no such DNS entry exists) | `ConfigException: No resolvable bootstrap urls`, thrown during consumer construction | CDI startup aborts, app never starts |
 
-`examples/part4-backplane/compose.yaml` always starts all four app services: `quarkus-a` (8080), `quarkus-b` (8083), `python-a` (8081, health 8082), `python-b` (8084, health 8085), in every profile, including the profile-less default where no broker exists at all. Starting all four unconditionally keeps the topology uniform: the scale-out fan-out proof needs an event injected through one instance to be observed arriving at a *different* instance, so there has to be a B for every A regardless of which scenario is running, and the same compose file serves the stateless-gap proof, the Kafka-replay proof, and both fan-out proofs without a topology change between them. `quarkus-a` and `quarkus-b` are the same image, same Containerfile, differing only in `INSTANCE_ID` and the host port they're mapped to (8080 vs 8083, both onto container port 8080); `python-a` and `python-b` are the same relationship over two container ports each (8081/8082 host-side mapping to 8081/8082 container-side for `-a`, 8084/8085 for `-b`). `INSTANCE_ID` isn't cosmetic: `PROTOCOL.md` specifies that every instance logs it on connection accept and on every delivery (`delivered eventId=<id> bookingId=<id> instance=<INSTANCE_ID>`), which is what lets `verify.sh`'s `run_ch18_fanout` assert two independent things rather than one: that instance A's *client* received an event injected through instance B's inject endpoint, and separately, by grepping `docker logs part4-backplane-quarkus-a` (or `-python-a`) for that exact `instance=quarkus-a` string, that instance A's own server process is the one that did the delivering, not a fluke of two containers sharing a port, an actual cross-instance delivery over the backplane.
+`examples/part4-backplane/k8s/README.md` records the same exception on Kubernetes, so it comes from how the Kafka client resolves its bootstrap list, not from compose. An environment variable naming a service hostname that only sometimes exists on the network needs a resolvable fallback, not an empty string or the production hostname left in place on the assumption that it will just retry.
 
-## Single-node KRaft Kafka and Redis, pinned exactly
+## Four instances, one contract
 
-The two profile-gated brokers in `compose.yaml` are `apache/kafka:4.3.1`, configured for single-node KRaft mode (`KAFKA_PROCESS_ROLES=broker,controller` on one node, combining the broker and controller roles compose's minimal single-node setup calls for), and `redis:8.10.2-alpine`. Both are current-stable pins at time of writing (4.3.1 for Kafka, with 4.4.0 still RC-only; 8.10.2-alpine for Redis), and the same two version strings carry through unchanged onto this example's minikube and OpenShift/CRC paths: Strimzi's own default resolves to the identical `4.3.1`/`4.3-IV0` on minikube, and AMQ Streams on CRC is a deliberate step-back to `4.2.0` because the installed operator build doesn't support anything newer yet. KRaft mode needs no separate ZooKeeper container (`CLUSTER_ID` is a fixed, arbitrary base64 UUID the image's own `configure` script hard-requires at startup in KRaft mode, any valid value works, it just has to be present), which is what keeps this single-node broker to one container instead of two. `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092` is the line that makes the broker reachable at all from another container on the same compose network: it tells Kafka what address to hand back to a client during the initial metadata handshake, and that address has to be the compose service name (`kafka`), not `localhost`, because `localhost` inside the broker's own container is not the same `localhost` a client container would resolve.
+All four app services start in every profile, including the default with no broker: `quarkus-a` (8080), `quarkus-b` (8083), `python-a` (8081, health 8082) and `python-b` (8084, health 8085). Cross-instance fan-out needs a B for every A, so the topology stays uniform and one file serves the stateless-gap, Kafka-replay and both fan-out scenarios. The A and B instances share an image and differ only in `INSTANCE_ID` and host ports.
+
+`INSTANCE_ID` is not cosmetic. Every instance logs it on connection accept and on each delivery (`delivered eventId=<id> bookingId=<id> instance=<INSTANCE_ID>`). That lets a check assert two things: instance A's client received an event injected through instance B, and instance A's own process did the delivering over the backplane.
+
+{% include excalidraw.html file="25-compose-topology" alt="The four app services with their host ports sit behind a healthcheck-gated depends_on that treats a missing profile as skipped. Kafka and Redis start only under their own profiles, and the lgtm stack is opt-in." caption="Figure 25.1: the Compose topology: four app instances, two profile-gated brokers and an opt-in observability stack." %}
+
+## Pinned single-node brokers
+
+The profile-gated brokers are `apache/kafka:4.3.1` in single-node KRaft mode (`KAFKA_PROCESS_ROLES=broker,controller` on one node) and `redis:8.10.2-alpine`. The same versions carry onto the minikube path, where Strimzi's default resolves to Kafka 4.3.1 (`4.3-IV0`). AMQ Streams on OpenShift Local steps back to 4.2.0 because the installed operator build supports nothing newer.
+
+KRaft needs no ZooKeeper container, which keeps the broker to one container. `CLUSTER_ID` is a fixed arbitrary base64 UUID that the image's `configure` script requires at startup. `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092` tells Kafka what address to return during the metadata handshake, and it must be the service name `kafka`: `localhost` inside the broker's container isn't the `localhost` a client container resolves.
 
 ## Observability stays opt-in
 
-`compose.yaml` defines one more profile-gated service, `lgtm` (`grafana/otel-lgtm:0.36.0`, the version-matrix pin shared with every other example on this site that offers it), tagged `profiles: ["observability"]` and left out of every scenario `verify.sh` drives. The header comment is explicit about why: CI's examples job and a first local boot both need to stay fast, and the all-in-one Loki+Grafana+Tempo+Mimir+Collector image is the heaviest single container in this file by a wide margin, with its own `start_period: 30s` healthcheck grace to match. `examples/part3-handling-events/compose.yaml` and `examples/part4-connection/compose.yaml` both apply the identical opt-in pattern for the identical image at the identical version: `docker compose --profile observability up --build` layers it onto any of the three backplane scenarios without being required for any of them to pass.
+`lgtm` (`grafana/otel-lgtm:0.36.0`) carries `profiles: ["observability"]` and is left out of every scenario. It is the heaviest container in the file, with a 30 s `start_period`, and CI and a first local boot should stay fast. `docker compose --profile observability up --build` layers it onto any of the three scenarios. `part3-handling-events` and `part4-connection` use the same opt-in for the same image.
 
-## On the wire
+> **Decision**
+>
+> Compose is the first rung because its mechanisms carry forward: a healthcheck gates startup as a Kubernetes readiness probe will, a profile selects optional infrastructure as an opt-in overlay will, and the `BACKPLANE_MODE` and broker-hostname environment contract is reused unchanged on the cluster paths. Set the mode and the profile together, and give any broker hostname that only sometimes exists a resolvable fallback.
 
-`examples/part4-backplane/verify.sh` runs three sequential `docker compose up`/`down` cycles against this one file in a single invocation: Stage A (no profile, `BACKPLANE_MODE=stateless`), Stage B (`--profile kafka`, `BACKPLANE_MODE=kafka`), Stage C (`--profile redis`, `BACKPLANE_MODE=redis`), tearing each stage down with `compose_down` before the next starts, so no stage's broker state leaks into the next. The seed/idle-hold mechanics this chapter describes show up directly in Stage A's own assertions. `run_ch15_stateless_gap` opens a connection, reads exactly three frames with `ws_frames_n`, and checks the fixture's deterministic ordering before anything about the gap is tested:
-
-```bash
-frames="$(ws_frames_n "ws://${ws_target}${path}" 3 20)"
-last_frame="$(tail -n1 <<<"$frames")"
-last_event_id="$(json_field '.eventId' <<<"$last_frame")"
-assert_eq "$LAST_SEED_EVENT_ID" "$last_event_id" "$stack ch15: 3rd seed frame is the fixture's CUSTOMS event"
-```
-
-It then injects a gap event through the HTTP side (`inject_event`, asserting the `202 Accepted` response the inject endpoint always returns regardless of mode), reconnects with `?afterEventId=<last seed id>` via `ws_connect_bg` into a background log file, and spends a 3-second grace window confirming the injected event's `eventId` never appears in that log: the stateless mode's defining property, proven by absence rather than by a timeout alone. Stage B's `run_ch16_kafka_replay` runs the identical connect/inject/reconnect sequence but asserts the opposite: the gap event's `eventId` must appear in the log within 40 seconds, with a raw frame count of exactly 1 or 2 counted as pass: 2 is `PROTOCOL.md`'s documented benign replay-vs-live race, and the comment in `run_ch16_kafka_replay` spells out why a dedup-by-`eventId` client sees that as one logical delivery either way. The fan-out stages (B and C both call `run_ch18_fanout`) layer the server-side log assertion on top of the client-side one:
-
-```bash
-wait_for_log_pattern "$log" "\"eventId\":\"${event_id}\"" 30
-wait_for_docker_log_pattern "$container_a" \
-  "delivered eventId=${event_id} bookingId=${booking_id} instance=${instance_a}" 30
-```
-
-Run it directly:
+## Build, run, observe
 
 ```bash
 bash examples/part4-backplane/verify.sh
 ```
 
-A full run ends with one `PASS` line asserting all three scenarios held on both stacks, over both brokers, with the exact same compose file: docker compose's own output along the way names each stage's `up -d --build` and `down -v --remove-orphans` invocation, logged by `lib.sh`'s `compose_up`/`compose_down` before each docker compose call runs.
+The script runs three sequential `docker compose up` and `down` cycles against the one file, so no stage's broker state leaks into the next: no profile with `BACKPLANE_MODE=stateless`, `--profile kafka` with `kafka`, and `--profile redis` with `redis`. It sets the mode and profile together each time. It prints `PASS: ` when all three scenarios hold on both stacks. Ports: Quarkus on `8080` and `8083`, Python on `8081` and `8084` with health on `8082` and `8085`, Kafka on `9092`, Redis on `6379`.
 
-## Where this goes next
-
-Everything in this chapter proves a compose topology is correct on one machine, against one Docker daemon, under one operator's control. Kubernetes via minikube moves the identical application images (same Containerfiles, same `INSTANCE_ID`/`BACKPLANE_MODE`/`KAFKA_BOOTSTRAP_SERVERS`/`REDIS_URL` contract this chapter documented) there next, with a separate OpenShift Local (CRC) appendix alongside it, because a scheduler reintroduces the same timing and identity questions compose's `depends_on`/healthcheck/profile mechanics were built to answer for a single host: a Kafka StatefulSet's readiness probe stands in for `condition: service_healthy`, a Kubernetes Service's DNS name stands in for the compose network's `kafka`/`redis` hostnames, and `INSTANCE_ID` per pod replaces `INSTANCE_ID` per compose service as the signal `run_ch18_fanout`'s log assertion keys on. The minikube path reuses the identical `apache/kafka:4.3.1`/`redis:8.10.2-alpine` pins this chapter named, confirmed live via Strimzi's own default resolving to the same Kafka release: the same two-broker, four-instance shape, carried onto a platform that can restart a failed pod on its own, which is the capability a single compose file never had to begin with.
-
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Docker Compose is the first rung of this Part's runtime progression because every mechanism it proves here generalizes forward rather than getting thrown away: a healthcheck gates startup the same way a Kubernetes readiness probe will on the Kubernetes/minikube path, a profile selects optional infrastructure the same way an opt-in Helm value or kustomize overlay will on the cluster paths, and the <code>BACKPLANE_MODE</code>/broker-hostname env contract this chapter traced through <code>compose.yaml</code> and <code>verify.sh</code> is the exact same contract <code>k8s/README.md</code> and the OpenShift appendix both reuse without modification. The one receipt worth carrying forward above the rest is the <code>ConfigException: No resolvable bootstrap urls</code> failure: an env var naming a broker hostname that only sometimes exists needs a resolvable-but-unreachable fallback, never an unresolvable one, and that rule doesn't change when the thing supplying the hostname becomes a Kubernetes Service instead of a compose network alias. Everything this chapter verified came from running <code>examples/part4-backplane/verify.sh</code> against the real file, not from reading the YAML and assuming it behaves as written.</p></div>
+- Stateless stage: an event injected while a client is disconnected never appears after it reconnects with `?afterEventId=<last seen>`. The inject call returns `202 Accepted` regardless.
+- Kafka stage: the same sequence delivers the injected event within 40 seconds, as one or two raw frames (two is the documented benign replay-versus-live race, so clients dedupe by `eventId`).
+- Fan-out stages (Kafka and Redis): an event injected through instance B reaches a client on instance A, and A's own log shows `instance=<A>` on the delivery.
+- To see the startup crash, point `KAFKA_BOOTSTRAP_SERVERS` at `kafka:9092` in a run without the `kafka` profile: Quarkus never starts and the stack trace names the value.
 
 ## For deeper coverage
 
-- Liz Rice, *Container Security*, 2nd ed. (O'Reilly, 2025): the container-boundary assumptions (build context scope, image provenance, what a `COPY` can and can't reach) behind why this chapter's Containerfiles build from the repo root instead of each example's own directory.
-- *Cloud Native Design Patterns*, "Graceful Shutdown" chapter: the readiness-signal asymmetry on the shutdown side of a pod's life, the same asymmetry `condition: service_healthy` exists to close on the startup side.
-- *Cloud Native Design Patterns*, "Failure Modes" chapter: the taxonomy behind why an unresolvable `KAFKA_BOOTSTRAP_SERVERS` crashes Quarkus at startup instead of degrading, versus the soft retry a merely-unreachable host produces.
-- [Docker Compose documentation](https://docs.docker.com/compose/): `depends_on` conditions, `profiles`, and the `healthcheck` block this chapter's `compose.yaml` relies on.
-- [Compose Specification](https://compose-spec.io/): the schema `compose.yaml` itself conforms to, including the `required: false` dependency form.
+- Liz Rice, *Container Security*, 2nd ed. (O'Reilly, 2025): the container-boundary assumptions (build context scope, image provenance, what a `COPY` can reach) behind building from the repo root.
+- *Cloud Native Design Patterns*, "Graceful Shutdown" chapter: the readiness-signal asymmetry on the shutdown side of a pod's life, the one `condition: service_healthy` closes on the startup side.
+- *Cloud Native Design Patterns*, "Failure Modes" chapter: why an unresolvable `KAFKA_BOOTSTRAP_SERVERS` crashes Quarkus at startup while a merely unreachable host degrades to a retry.
+- [Docker Compose documentation](https://docs.docker.com/compose/): `depends_on` conditions, `profiles`, and the `healthcheck` block.
+- [Compose Specification](https://compose-spec.io/): the schema `compose.yaml` conforms to, including the `required: false` dependency form.

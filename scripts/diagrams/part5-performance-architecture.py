@@ -42,7 +42,7 @@ nodes = [
      "style": "sub"},
 
     {"x": 300, "y": 475, "w": 340, "h": 60,
-     "lines": ["decode both -> identical field values", "verify.sh asserts byte-for-byte equal after decode"],
+     "lines": ["decode both -> identical field values", "byte-for-byte equal after decode"],
      "style": "ghost"},
 ]
 
@@ -65,7 +65,7 @@ edges = [
 
 notes = [
     {"x": 470, "y": 545, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Same contract, same fixture, two wire encodings: verify.sh proves field equality and the Protobuf size win live on both stacks."},
+     "text": "Same contract, same fixture, two wire encodings: field equality and the Protobuf size win hold live on both stacks."},
 ]
 
 generate_diagram.emit("part5-performance-architecture", W, H, nodes=nodes, edges=edges, notes=notes)

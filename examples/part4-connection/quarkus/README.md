@@ -36,11 +36,11 @@ the full rationale, including the close-code-vs-error-envelope choice):
 
 | Code | Name                   | When                                                              |
 |-----:|------------------------|--------------------------------------------------------------------|
-| 1008 | Policy violation        | Ch17: missing/malformed/bad-signature/expired JWT, at `@OnOpen`, before any event is streamed. |
-| 4400 | Bad request (app range) | Ch13: a client text/binary frame (this channel accepts none); always preceded by the JSON error envelope. |
-| 4290 | Slow consumer (app range) | Ch12: outbound backpressure CLOSE policy. |
-| 4408 | Liveness timeout (app range) | Ch14: no pong received within the configured window (`HeartbeatLivenessSweep`). Not bit-identical to the Python sibling, which lets the `websockets` library's own keepalive failure close with its hardcoded 1011; see `CloseCodes.LIVENESS_TIMEOUT`'s Javadoc and the heartbeat/liveness section below. |
-| 1011 | Unexpected condition     | Ch13: an unmapped server-side exception (`@OnError` backstop). |
+| 1008 | Policy violation        | Chapter 17: missing/malformed/bad-signature/expired JWT, at `@OnOpen`, before any event is streamed. |
+| 4400 | Bad request (app range) | Chapter 13: a client text/binary frame (this channel accepts none); always preceded by the JSON error envelope. |
+| 4290 | Slow consumer (app range) | Chapter 12: outbound backpressure CLOSE policy. |
+| 4408 | Liveness timeout (app range) | Chapter 14: no pong received within the configured window (`HeartbeatLivenessSweep`). Not bit-identical to the Python sibling, which lets the `websockets` library's own keepalive failure close with its hardcoded 1011; see `CloseCodes.LIVENESS_TIMEOUT`'s Javadoc and the heartbeat/liveness section below. |
+| 1011 | Unexpected condition     | Chapter 13: an unmapped server-side exception (`@OnError` backstop). |
 | 1001 | Going away               | Graceful application shutdown (`ConnectionLifecycleShutdown`). |
 
 ## JWT auth

@@ -16,14 +16,14 @@ calling it done.
 ```
 openshift/
   infra/
-    amq-streams-subscription.yaml   # AMQ Streams operator (DATED DRAFT pin — see TODO below)
+    amq-streams-subscription.yaml   # AMQ Streams operator (DATED DRAFT pin, see TODO below)
     kafka.yaml                      # KafkaNodePool + Kafka CR (single-node KRaft)
   helm/part4-backplane/             # the four app instances + Redis + Routes
   lib.sh                            # shared helpers (require_crc, install_operator, ...)
   install-infra.sh                  # project + AMQ Streams operator + Kafka CR
   build-images.sh                   # Quarkus binary S2I + Python Docker-strategy build
   deploy.sh                         # helm upgrade --install + rollout wait
-  verify-crc.sh                     # live proof: seed + idle-hold + Ch18, both stacks/backplanes
+  verify-crc.sh                     # live proof: seed + idle-hold + Chapter 18, both stacks/backplanes
   capture-evidence.sh               # writes evidence/<date>/, runs verify-crc.sh, secret-scrubs
   teardown.sh                       # returns CRC to empty, then crc stop
   evidence/                         # capture-evidence.sh output, one dir per date
@@ -43,7 +43,7 @@ eval "$(crc oc-env)"
 ./openshift/install-infra.sh     # project + AMQ Streams (pinned) + Kafka CR
 ./openshift/build-images.sh      # part4-backplane-quarkus + part4-backplane-python, in-cluster
 ./openshift/deploy.sh            # helm upgrade --install, waits for rollout
-./openshift/verify-crc.sh        # live proof: seed + idle-hold + Ch18, kafka then redis
+./openshift/verify-crc.sh        # live proof: seed + idle-hold + Chapter 18, kafka then redis
 ./openshift/capture-evidence.sh  # evidence/<date>/, re-runs verify-crc.sh, secret-scrubs
 
 ./openshift/teardown.sh          # project + Kafka + AMQ Streams removed, then crc stop

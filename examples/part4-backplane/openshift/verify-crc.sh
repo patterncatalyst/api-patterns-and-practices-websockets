@@ -151,7 +151,7 @@ wait_for_oc_log_pattern() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "verify-crc.sh: FAIL — wait_for_oc_log_pattern: '$pattern' not found in deploy/$deploy ($container) logs within ${timeout}s" >&2
+  echo "verify-crc.sh: FAIL, wait_for_oc_log_pattern: '$pattern' not found in deploy/$deploy ($container) logs within ${timeout}s" >&2
   oc logs "deploy/$deploy" -n "$NAMESPACE" -c "$container" --tail=40 2>&1 >&2 || true
   return 1
 }
@@ -183,7 +183,7 @@ trap cleanup EXIT
 step "Step 0: tool checks + crc-admin context + regenerate the contract-derived JSON Schema"
 # ===========================================================================
 for tool in oc helm python3 curl; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "verify-crc.sh: FAIL — '$tool' not on PATH (run: eval \"\$(crc oc-env)\")" >&2; exit 1; }
+  command -v "$tool" >/dev/null 2>&1 || { echo "verify-crc.sh: FAIL, '$tool' not on PATH (run: eval \"\$(crc oc-env)\")" >&2; exit 1; }
 done
 if command -v minikube >/dev/null 2>&1; then
   running="$(minikube profile list -o json 2>/dev/null | python3 -I -c '
@@ -197,7 +197,7 @@ for p in (doc.get("valid") or []):
         print(p.get("Name", ""))
 ' 2>/dev/null)"
   if [[ -n "$running" ]]; then
-    echo "verify-crc.sh: FAIL — minikube profile(s) running: $running. Stop them first (minikube stop -p <profile>); run one cluster at a time" >&2
+    echo "verify-crc.sh: FAIL, minikube profile(s) running: $running. Stop them first (minikube stop -p <profile>); run one cluster at a time" >&2
     exit 1
   fi
 fi
@@ -205,10 +205,10 @@ fi
 # `config use-context`, which would mutate the kubeconfig's current-context)
 # — a plain read of the kubeconfig's context list.
 command oc config get-contexts "$OCP_CONTEXT" >/dev/null 2>&1 \
-  || { echo "verify-crc.sh: FAIL — kubeconfig context '$OCP_CONTEXT' not found (crc start writes it)" >&2; exit 1; }
+  || { echo "verify-crc.sh: FAIL, kubeconfig context '$OCP_CONTEXT' not found (crc start writes it)" >&2; exit 1; }
 API="$(oc whoami --show-server 2>/dev/null || true)"
 [[ "$API" == *api.crc.testing* ]] \
-  || { echo "verify-crc.sh: FAIL — context '$OCP_CONTEXT' points at '$API', not OpenShift Local (api.crc.testing)" >&2; exit 1; }
+  || { echo "verify-crc.sh: FAIL, context '$OCP_CONTEXT' points at '$API', not OpenShift Local (api.crc.testing)" >&2; exit 1; }
 ensure_websocat
 python3 -I "$EXTRACT_SCRIPT" "$SCHEMA_FILE"
 echo "verify-crc.sh: crc-admin context OK ($API); schema regenerated at $SCHEMA_FILE"
@@ -218,7 +218,7 @@ step "Step 1: preflight — the four Deployments must already be rolled out (run
 # ===========================================================================
 for d in quarkus-a quarkus-b python-a python-b; do
   oc rollout status "deployment/$d" -n "$NAMESPACE" --timeout=10s >/dev/null 2>&1 \
-    || { echo "verify-crc.sh: FAIL — deployment/$d is not rolled out in namespace $NAMESPACE. Run ./openshift/deploy.sh first." >&2; exit 1; }
+    || { echo "verify-crc.sh: FAIL, deployment/$d is not rolled out in namespace $NAMESPACE. Run ./openshift/deploy.sh first." >&2; exit 1; }
 done
 echo "verify-crc.sh: all four app Deployments are already rolled out"
 
@@ -226,8 +226,8 @@ step "Step 1b: extract the cluster's ingress CA for CA-verified wss:// (NEVER -k
 CA_FILE="$(mktemp -t part4-backplane-crc-ingress-ca.XXXXXX.crt)"
 oc get configmap default-ingress-cert -n openshift-config-managed \
   -o jsonpath='{.data.ca-bundle\.crt}' > "$CA_FILE" \
-  || { echo "verify-crc.sh: FAIL — could not read the ingress CA (configmap/default-ingress-cert -n openshift-config-managed)" >&2; exit 1; }
-[[ -s "$CA_FILE" ]] || { echo "verify-crc.sh: FAIL — ingress CA bundle at $CA_FILE is empty" >&2; exit 1; }
+  || { echo "verify-crc.sh: FAIL, could not read the ingress CA (configmap/default-ingress-cert -n openshift-config-managed)" >&2; exit 1; }
+[[ -s "$CA_FILE" ]] || { echo "verify-crc.sh: FAIL, ingress CA bundle at $CA_FILE is empty" >&2; exit 1; }
 # websocat's TLS stack (native-tls/openssl) reads SSL_CERT_FILE as the
 # trusted-CA bundle — this is how a `wss://` connection to the Route's
 # edge-TLS endpoint gets verified against the cluster's OWN CA without ever
@@ -251,7 +251,7 @@ step "Step 1c: resolve the Route hosts"
 QUARKUS_HOST="$(oc get route quarkus-a -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || true)"
 PYTHON_HOST="$(oc get route python-a -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || true)"
 [[ -n "$QUARKUS_HOST" && -n "$PYTHON_HOST" ]] \
-  || { echo "verify-crc.sh: FAIL — could not resolve Route hosts (routes/quarkus-a, routes/python-a). Run ./openshift/deploy.sh first." >&2; exit 1; }
+  || { echo "verify-crc.sh: FAIL, could not resolve Route hosts (routes/quarkus-a, routes/python-a). Run ./openshift/deploy.sh first." >&2; exit 1; }
 echo "verify-crc.sh: quarkus Route = https://$QUARKUS_HOST/"
 echo "verify-crc.sh: python  Route = https://$PYTHON_HOST/"
 
@@ -276,7 +276,7 @@ wait_route_serving() {
       echo "verify-crc.sh: Route https://$host/ is serving (HTTP $code) after ${waited}s"; return 0; }
     sleep 3; waited=$(( waited + 3 ))
   done
-  echo "verify-crc.sh: FAIL — Route https://$host/ still 503/unreachable after ${waited}s (router has no ready backend)" >&2
+  echo "verify-crc.sh: FAIL, Route https://$host/ still 503/unreachable after ${waited}s (router has no ready backend)" >&2
   return 1
 }
 
@@ -322,7 +322,7 @@ run_stack_checks() {
   last_event_id="$(json_field '.eventId' <<<"$last_frame")"
   assert_eq "$LAST_SEED_EVENT_ID" "$last_event_id" "$stack/$broker_label: 3rd seed frame is the fixture's CUSTOMS event"
   schema_validate "$last_frame" "$SCHEMA_FILE"
-  echo "verify-crc.sh: ok — $stack/$broker_label: seed frame received through the edge-TLS Route and is schema-valid" >&2
+  echo "verify-crc.sh: ok, $stack/$broker_label: seed frame received through the edge-TLS Route and is schema-valid" >&2
 
   echo
   echo "--- $stack/$broker_label: idle-hold, then a late frame must still arrive ---"
@@ -354,7 +354,7 @@ run_stack_checks() {
   late_event_id="$(gen_id evt_)"
   inject_event_crc "$exec_deploy_a" "$container" "$self_base" "$booking_id" "$late_event_id"
   wait_for_log_pattern "$idle_log" "\"eventId\":\"${late_event_id}\"" 30
-  echo "verify-crc.sh: ok — $stack/$broker_label: late frame arrived after a 65s idle hold over the edge-TLS Route (haproxy.router.openshift.io/timeout: 3600s present)" >&2
+  echo "verify-crc.sh: ok, $stack/$broker_label: late frame arrived after a 65s idle hold over the edge-TLS Route (haproxy.router.openshift.io/timeout: 3600s present)" >&2
   kill "$idle_pid" >/dev/null 2>&1 || true
   wait "$idle_pid" 2>/dev/null || true
   rm -f "$idle_log"
@@ -373,9 +373,9 @@ run_stack_checks() {
   fanout_event_id="$(gen_id evt_)"
   inject_event_crc "$exec_deploy_a" "$container" "$cross_base" "$booking_id" "$fanout_event_id"
   wait_for_log_pattern "$fanout_log" "\"eventId\":\"${fanout_event_id}\"" 30
-  echo "verify-crc.sh: ok — $stack/$broker_label: instance A's CLIENT (through the Route) received instance B's injected event $fanout_event_id" >&2
+  echo "verify-crc.sh: ok, $stack/$broker_label: instance A's CLIENT (through the Route) received instance B's injected event $fanout_event_id" >&2
   wait_for_oc_log_pattern "$deploy_a_log" "$container" "delivered eventId=${fanout_event_id} bookingId=${booking_id} instance=${stack}-a" 30
-  echo "verify-crc.sh: ok — $stack/$broker_label: instance A's own POD LOG shows it delivering" >&2
+  echo "verify-crc.sh: ok, $stack/$broker_label: instance A's own POD LOG shows it delivering" >&2
   kill "$fanout_pid" >/dev/null 2>&1 || true
   wait "$fanout_pid" 2>/dev/null || true
   rm -f "$fanout_log"
@@ -401,7 +401,7 @@ step "Step 3: switch to the REDIS backplane (helm upgrade --set backplane=redis)
 helm upgrade --install "$RELEASE" "$SCRIPT_DIR/helm/$PROJECT" \
   -n "$NAMESPACE" --reset-then-reuse-values \
   --set imageTag="$IMAGE_TAG" --set backplane=redis >/dev/null \
-  || { echo "verify-crc.sh: FAIL — helm upgrade --set backplane=redis failed" >&2; exit 1; }
+  || { echo "verify-crc.sh: FAIL, helm upgrade --set backplane=redis failed" >&2; exit 1; }
 # envFrom/configMapRef does NOT hot-reload into running Pods — force a
 # rollout so every instance picks up BACKPLANE_MODE=redis (same reason
 # ../../k8s/verify-minikube.sh's Step 7 does this).
@@ -430,7 +430,7 @@ echo "=== Step 3 complete: Ch18 Redis fan-out PROVEN LIVE on both stacks (the he
 
 # ===========================================================================
 echo
-echo "PASS — part4-backplane on OpenShift Local (CRC, crc-admin context):" \
+echo "PASS: part4-backplane on OpenShift Local (CRC, crc-admin context):" \
      "edge-TLS Routes (CA-verified against the cluster's own ingress CA," \
      "never -k/--insecure) deliver a schema-valid seed frame on both stacks;" \
      "a 65s idle hold still gets a late frame back with the" \

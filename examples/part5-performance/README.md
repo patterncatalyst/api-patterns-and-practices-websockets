@@ -229,7 +229,7 @@ predicts.
 run**: Python's `websockets` server negotiated the extension on every
 successful connect (`negotiated: 7908/7908` in the run above); Quarkus's
 WebSockets Next (Undertow) **never** negotiated it in any run of this
-benchmark (`negotiated: 0` out of 11806–18292 attempts across three
+benchmark (`negotiated: 0` out of 11806 to 18292 attempts across three
 separate runs): a real, reproducible difference between the two stacks'
 WebSocket server implementations, not a fluke of one run.
 

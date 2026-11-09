@@ -27,14 +27,14 @@ gd.emit(
         {"x": 60, "y": 150, "w": 320, "h": 36, "lines": ["GET /bookings/4471 → 200, status unchanged"], "style": "ghost"},
         {"x": 60, "y": 196, "w": 320, "h": 36, "lines": ["GET /bookings/4471 → 200, status unchanged"], "style": "ghost"},
         {"x": 60, "y": 242, "w": 320, "h": 36, "lines": ["GET /bookings/4471 → 200, status unchanged"], "style": "ghost"},
-        {"x": 60, "y": 288, "w": 320, "h": 36, "lines": ["GET /bookings/4471 → 200, CUSTOMS_HOLD"], "style": "accent"},
+        {"x": 60, "y": 288, "w": 320, "h": 36, "lines": ["GET /bookings/4471 → 200, HOLD"], "style": "accent"},
         {"x": 60, "y": 350, "w": 320, "h": 50, "lines": ["One real change", "found 0-30s after it happened"], "style": "ink"},
 
         {"x": 480, "y": 70, "w": 140, "h": 50, "lines": ["Client", "watching BKG-4471"], "style": "user"},
         {"x": 660, "y": 70, "w": 140, "h": 50, "lines": ["Handling-event feed", "one open socket"], "style": "box"},
         {"x": 480, "y": 150, "w": 320, "h": 36, "lines": ["connection open, no traffic"], "style": "ghost"},
-        {"x": 480, "y": 196, "w": 320, "h": 50, "lines": ["pushed: GATE_IN, USNYC", "the instant the event is recorded"], "style": "accent"},
-        {"x": 480, "y": 258, "w": 320, "h": 50, "lines": ["pushed: CUSTOMS_HOLD, USNYC", "the instant the event is recorded"], "style": "accent"},
+        {"x": 480, "y": 196, "w": 320, "h": 50, "lines": ["pushed: RECEIVE, USNYC", "the instant the event is recorded"], "style": "accent"},
+        {"x": 480, "y": 258, "w": 320, "h": 50, "lines": ["pushed: HOLD, USNYC", "the instant the event is recorded"], "style": "accent"},
         {"x": 480, "y": 320, "w": 320, "h": 50, "lines": ["Every change seen", "within one network hop, no gap"], "style": "ink"},
     ],
     edges=[

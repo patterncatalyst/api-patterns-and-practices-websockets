@@ -187,7 +187,7 @@ wait_for_docker_log_pattern() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "lib.sh: FAIL — wait_for_docker_log_pattern: '$pattern' not found in $container logs within ${timeout}s" >&2
+  echo "lib.sh: FAIL, wait_for_docker_log_pattern: '$pattern' not found in $container logs within ${timeout}s" >&2
   docker logs --tail 40 "$container" >&2 2>&1 || true
   return 1
 }
@@ -209,7 +209,7 @@ run_ch15_stateless_gap() {
   last_frame="$(tail -n1 <<<"$frames")"
   last_event_id="$(json_field '.eventId' <<<"$last_frame")"
   assert_eq "$LAST_SEED_EVENT_ID" "$last_event_id" "$stack ch15: 3rd seed frame is the fixture's CUSTOMS event"
-  echo "lib.sh: ok — $stack ch15: connected, received 3 seed frames, disconnected" >&2
+  echo "lib.sh: ok, $stack ch15: connected, received 3 seed frames, disconnected" >&2
 
   local gap_event_id
   gap_event_id="$(gen_id evt_)"
@@ -227,11 +227,11 @@ run_ch15_stateless_gap() {
   sleep 3
 
   if grep -qF "\"eventId\":\"${gap_event_id}\"" "$log"; then
-    echo "lib.sh: FAIL — $stack ch15: gap event $gap_event_id WAS delivered after reconnect (stateless must lose it)" >&2
+    echo "lib.sh: FAIL, $stack ch15: gap event $gap_event_id WAS delivered after reconnect (stateless must lose it)" >&2
     cat "$log" >&2
     return 1
   fi
-  echo "lib.sh: ok — $stack ch15: gap event $gap_event_id NOT delivered after reconnect (stateless loses gap-era events, as spec'd)" >&2
+  echo "lib.sh: ok, $stack ch15: gap event $gap_event_id NOT delivered after reconnect (stateless loses gap-era events, as spec'd)" >&2
 
   kill "$pid" >/dev/null 2>&1 || true
   wait "$pid" 2>/dev/null || true
@@ -259,7 +259,7 @@ run_ch16_kafka_replay() {
   last_frame="$(tail -n1 <<<"$frames")"
   last_event_id="$(json_field '.eventId' <<<"$last_frame")"
   assert_eq "$LAST_SEED_EVENT_ID" "$last_event_id" "$stack ch16: 3rd seed frame is the fixture's CUSTOMS event"
-  echo "lib.sh: ok — $stack ch16: connected, received 3 seed frames, disconnected" >&2
+  echo "lib.sh: ok, $stack ch16: connected, received 3 seed frames, disconnected" >&2
 
   local gap_event_id
   gap_event_id="$(gen_id evt_)"
@@ -279,16 +279,16 @@ run_ch16_kafka_replay() {
   local raw_count
   raw_count="$(grep -cF "\"eventId\":\"${gap_event_id}\"" "$log" || true)"
   if (( raw_count < 1 )); then
-    echo "lib.sh: FAIL — $stack ch16: gap event $gap_event_id was NOT delivered after reconnect" >&2
+    echo "lib.sh: FAIL, $stack ch16: gap event $gap_event_id was NOT delivered after reconnect" >&2
     cat "$log" >&2
     return 1
   fi
   if (( raw_count > 2 )); then
-    echo "lib.sh: FAIL — $stack ch16: gap event $gap_event_id delivered $raw_count times — beyond the documented at-most-2 replay/live race" >&2
+    echo "lib.sh: FAIL, $stack ch16: gap event $gap_event_id delivered $raw_count times — beyond the documented at-most-2 replay/live race" >&2
     cat "$log" >&2
     return 1
   fi
-  echo "lib.sh: ok — $stack ch16: gap event $gap_event_id delivered after reconnect (raw frame count=$raw_count;" \
+  echo "lib.sh: ok, $stack ch16: gap event $gap_event_id delivered after reconnect (raw frame count=$raw_count;" \
        "dedup-by-eventId => exactly one logical delivery; count=2 is PROTOCOL.md's documented benign replay-vs-live race)" >&2
 
   kill "$pid" >/dev/null 2>&1 || true
@@ -331,10 +331,10 @@ run_ch18_fanout() {
   inject_event "$http_target_b" "$booking_id" "$event_id"
 
   wait_for_log_pattern "$log" "\"eventId\":\"${event_id}\"" 30
-  echo "lib.sh: ok — $stack/$broker_label: instance A's CLIENT received instance B's injected event $event_id" >&2
+  echo "lib.sh: ok, $stack/$broker_label: instance A's CLIENT received instance B's injected event $event_id" >&2
 
   wait_for_docker_log_pattern "$container_a" "delivered eventId=${event_id} bookingId=${booking_id} instance=${instance_a}" 30
-  echo "lib.sh: ok — $stack/$broker_label: instance A's own SERVER LOG shows it delivering (instance=${instance_a})" >&2
+  echo "lib.sh: ok, $stack/$broker_label: instance A's own SERVER LOG shows it delivering (instance=${instance_a})" >&2
 
   kill "$pid" >/dev/null 2>&1 || true
   wait "$pid" 2>/dev/null || true
@@ -390,7 +390,7 @@ end_stage
 
 # ===========================================================================
 echo
-echo "PASS — Part 4 backplane: Quarkus and Python both implement the SAME" \
+echo "PASS: Part 4 backplane: Quarkus and Python both implement the SAME" \
      "reconnect + scale-out behavior (PROTOCOL.md) — Ch15 stateless mode" \
      "loses a gap-era event, Ch16 kafka mode replays it after reconnect" \
      "(dedup by eventId, no more than the documented benign duplicate)," \

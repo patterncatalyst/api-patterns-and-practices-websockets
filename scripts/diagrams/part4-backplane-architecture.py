@@ -21,7 +21,7 @@ nodes = [
      "style": "user"},
 
     {"x": 660, "y": 15, "w": 280, "h": 70,
-     "lines": ["verify.sh (test harness)", "POST inject -> instance B"],
+     "lines": ["Test harness", "POST inject -> instance B"],
      "style": "user"},
 
     {"x": 60, "y": 140, "w": 380, "h": 90,

@@ -41,7 +41,7 @@ class AuthError(Exception):
 def validate_token(token: str | None) -> dict:
     """Validate a bearer token and return its decoded claims, or raise
     `AuthError`. Checks (in PyJWT's own order): signature, then `exp`
-    (expiry) — PyJWT's `decode` performs both before returning.
+    (expiry); PyJWT's `decode` performs both before returning.
     """
     if not token:
         raise AuthError("missing token")
@@ -54,6 +54,6 @@ def validate_token(token: str | None) -> dict:
     except jwt.InvalidTokenError as exc:
         # Catch-all for every other PyJWT decode failure (malformed token,
         # wrong algorithm, not-yet-valid `nbf`, missing required claims if
-        # configured, ...) — InvalidTokenError is PyJWT's common base class
+        # configured, ...). InvalidTokenError is PyJWT's common base class
         # for all of these.
         raise AuthError(f"invalid token: {exc}") from exc

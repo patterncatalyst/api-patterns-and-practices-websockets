@@ -41,7 +41,7 @@ public class HandlingEventFeed {
         try (InputStream in = getClass().getResourceAsStream(FIXTURE_RESOURCE)) {
             if (in == null) {
                 throw new IllegalStateException(
-                        "Fixture resource not found on classpath: " + FIXTURE_RESOURCE + " — expected "
+                        "Fixture resource not found on classpath: " + FIXTURE_RESOURCE + ", expected "
                                 + "pom.xml's copy-handling-events-fixture execution to have copied "
                                 + "examples/part3-handling-events/fixtures/handling-events.json there "
                                 + "during the generate-resources phase.");

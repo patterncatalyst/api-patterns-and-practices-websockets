@@ -39,5 +39,5 @@
 <path d="M1030,140 L1030,190" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
 <text x="1036.0" y="159.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">~10s with no reply</text>
 <text x="1036.0" y="159.0" font-size="11" fill="#b8650a" text-anchor="middle">~10s with no reply</text>
-<text x="590" y="310" font-size="12" fill="#555555" text-anchor="middle">verify.sh&#x27;s Step 6 shrinks all three knobs for a fast test (~16s observed live, not ~55s): the sequence of events is identical, only the durations shrink.</text>
+<text x="590" y="310" font-size="12" fill="#555555" text-anchor="middle">A fast test shrinks all three knobs (~16s observed live, not ~55s): the sequence of events is identical, only the durations shrink.</text>
 </svg>

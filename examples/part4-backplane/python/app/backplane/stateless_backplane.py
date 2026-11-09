@@ -39,7 +39,7 @@ class StatelessBackplane(Backplane):
         queues = self._subscribers.get(booking_id)
         if not queues:
             logger.info(
-                "stateless backplane: no local subscribers for bookingId=%s eventId=%s — dropped",
+                "stateless backplane: no local subscribers for bookingId=%s eventId=%s: dropped",
                 booking_id,
                 event.eventId,
             )
@@ -48,7 +48,7 @@ class StatelessBackplane(Backplane):
             queue.put_nowait(event)
 
     async def subscribe(self, booking_id: str, after_event_id: str | None) -> AsyncIterator[HandlingEvent]:
-        del after_event_id  # unused — see class docstring: no history to replay
+        del after_event_id  # unused: no history to replay
         queue: asyncio.Queue[HandlingEvent] = asyncio.Queue()
         self._subscribers[booking_id].add(queue)
         try:

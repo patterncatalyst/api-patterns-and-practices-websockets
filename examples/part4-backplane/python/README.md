@@ -9,9 +9,9 @@ same stack's instance B.
 
 | Chapter | Concern | Where |
 | --- | --- | --- |
-| Ch15 | Reconnect (visible gap, stateless) | `app/ws_server.py`, `app/backplane/stateless_backplane.py` |
-| Ch16 | Reconnect (`?afterEventId=` replay via Kafka) | `app/backplane/kafka_backplane.py` |
-| Ch18 | Scale-out fan-out: stateless/kafka/redis | `app/backplane/` |
+| Chapter 15 | Reconnect (visible gap, stateless) | `app/ws_server.py`, `app/backplane/stateless_backplane.py` |
+| Chapter 16 | Reconnect (`?afterEventId=` replay via Kafka) | `app/backplane/kafka_backplane.py` |
+| Chapter 18 | Scale-out fan-out: stateless/kafka/redis | `app/backplane/` |
 
 The channel (`/ws/v1/bookings/{bookingId}/handling-events`) pushes the same
 three `HandlingEvent`s (RECEIVE, LOAD, CUSTOMS) as Part 3/Part 4-connection,
@@ -72,7 +72,7 @@ follows, and the Quarkus sibling should match it:
 Selected by `BACKPLANE_MODE` (default `stateless`):
 
 ```bash
-BACKPLANE_MODE=stateless   # default — no broker, no cross-instance fan-out
+BACKPLANE_MODE=stateless   # default, no broker, no cross-instance fan-out
 BACKPLANE_MODE=kafka       # KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC (default handling-events)
 BACKPLANE_MODE=redis       # REDIS_URL (default redis://localhost:6379/0)
 ```

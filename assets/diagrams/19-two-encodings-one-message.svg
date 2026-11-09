@@ -21,7 +21,7 @@
 <text x="675.0" y="355.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">08 76 65 74 5f 2e 2e 2e 20 01 2a ...</text>
 <text x="675.0" y="372.5" font-size="11.5" fill="#555555" text-anchor="middle">149 bytes on the wire: 39.7% smaller</text>
 <rect x="260" y="410" width="380" height="40" rx="9" fill="#ffffff" stroke="#8a8d91" stroke-width="1.5" stroke-dasharray="6 4"/>
-<text x="450.0" y="435.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">verify.sh decodes both -&gt; identical field values</text>
+<text x="450.0" y="435.5" font-size="13.5" font-weight="700" fill="#1a1a1a" text-anchor="middle">decoding both gives identical field values</text>
 <path d="M450,70 L450,100" fill="none" stroke="#555" stroke-width="2" marker-end="url(#a)"/>
 <path d="M370,160 L225,200" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
 <text x="303.5" y="174.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">+json offered</text>

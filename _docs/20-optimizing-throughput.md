@@ -2,7 +2,7 @@
 title: "Optimizing Throughput"
 order: 20
 part: "Performance & Optimization"
-description: "Tuning a socket server for throughput once it carries real load."
+description: "Four throughput levers on a socket server: encoding, batching, permessage-deflate and size limits, and how to measure them."
 duration: "18 min read"
 ---
 
@@ -10,130 +10,128 @@ duration: "18 min read"
 
 By the end of this chapter you can:
 
-- Measure Protobuf's fixed, load-independent frame-size discount against JSON using `k6/benchmark.js`'s `json`/`protobuf`/`json_deflate` scenarios.
-- Decide when to batch or coalesce events into fewer, larger frames, trading added latency for lower per-frame overhead.
-- Check a stack's permessage-deflate default before assuming it's active: Quarkus WebSockets Next requires `per-message-compression-supported=true`, while Python's `websockets` enables `compression="deflate"` unless told not to.
-- Bound a single frame with `max-message-size`/`max-frame-size` (Quarkus) or `max_size`/`max_queue` (Python), independent of the bounded outbound queue backpressure already uses.
-- Distinguish a reproducible ratio or negotiation outcome from a host-dependent absolute rate when citing a `k6` benchmark number.
+- Measure Protobuf's frame-size discount against JSON and explain why it holds at any load.
+- Decide when to batch events into fewer, larger frames, trading added latency for lower per-frame overhead.
+- Check a stack's permessage-deflate default before assuming it's active.
+- Bound a single frame or message with `max-message-size` and `max-frame-size` (Quarkus) or `max_size` (Python).
+- Tell a reproducible ratio or negotiation outcome from a host-dependent absolute rate when citing a benchmark.
 
 ## Why this matters
 
-The binary Protobuf encoding proved frames measure smaller than JSON frames for the same `HandlingEvent` and left one question open: does that size difference show up anywhere a server operator would notice it, and what else is sitting on the table once wire size stops being the only lever? `examples/part5-performance/k6/benchmark.js` answers the first half directly: it drives both encodings, plus a JSON-with-compression variant, against both stacks and prints bytes/frame, connects/sec, and success rate side by side. It also raises a question this chapter has to answer with precision: what can that benchmark prove, and where does its own tooling stop being able to see the thing it's measuring? Four levers bound a WebSocket server's throughput: encoding (the Protobuf-vs-JSON choice), batching, compression, and size limits, with backpressure as the ceiling all four sit under, and the k6 numbers ground every claim in real, captured output rather than an assumed percentage.
+Protobuf frames are smaller than JSON frames for the same `HandlingEvent`. Whether that matters to an operator, and what else limits throughput once wire size is settled, takes measurement. Four levers bound a WebSocket server's throughput: encoding, batching, compression and size limits. Backpressure is the ceiling all four sit under. A k6 benchmark drives both encodings, plus JSON with compression, against both stacks and prints bytes per frame, connects per second and success rate side by side.
 
-## Encoding: a fixed, load-independent cost
+| Lever | What it changes | Cost |
+|---|---|---|
+| Encoding | Bytes per frame, fixed | Schema and codegen |
+| Batching | Per-frame overhead | Added latency |
+| permessage-deflate | Bytes on the wire | CPU, per-connection memory, a compression side channel |
+| Size limits | Worst-case memory per frame | Legitimate large messages are rejected |
 
-The 40.7% Protobuf-vs-JSON size figure (154.0B Protobuf vs. 259.7B JSON, averaged across every frame `benchmark.js` captured) is the first lever, and it's the simplest one to reason about because it doesn't move: `examples/part5-performance/README.md`'s own measured-numbers table states directly that "the bytes/frame column was identical across every run of this benchmark regardless of load: it's the fixture frame size, not a function of throughput." A server pushing one event per second and a server pushing ten thousand pay the identical per-frame cost difference between the two encodings; Protobuf's saving is a flat discount on every frame, not something that compounds or degrades under pressure. That's worth separating out before the levers below, because every other one interacts with load in ways encoding doesn't: batching changes shape as the queue backs up, compression's CPU cost scales with frame count, and size limits only bite once a payload is large enough to hit them. Encoding is the one number in this chapter you can multiply by frame count and trust at any scale.
+## Encoding: a fixed, load-independent discount
+
+Protobuf frames measure 40.7% smaller than JSON (154.0 bytes against 259.7 on average). The bytes-per-frame column is identical across every benchmark run regardless of load, because it's the size of the fixture frame, not a function of throughput. A server pushing one event per second and one pushing ten thousand pay the same per-frame difference. Encoding is the one number here you can multiply by frame count and trust at any scale. Every other lever interacts with load: batching changes shape as the queue backs up, compression's CPU cost scales with frame count, and size limits only bite on large payloads.
 
 ## Batching and coalescing: fewer, larger frames
 
-Every WebSocket frame carries overhead independent of its payload: framing bytes, a TCP/IP header on the wire below it, a syscall on each end to write and read it. For a channel pushing many small events in quick succession, sending each one in its own frame means paying that fixed cost once per event; batching several events into one frame means paying it once per batch. `contracts/handling-event.proto`'s `HandlingEvent` message has no wrapper for "many of these in one frame" today; this channel's own replay-3-then-idle shape (used from here forward) sends the three fixture events as three separate frames, one `sendText`/`sendBinary` or `ws.send` call per event, the same granularity JSON used before it. A channel that pushed continuously, rather than three events and then idle, is where batching pays off: coalescing a window of events (by count, by a short time budget, or both) into one frame (a JSON array, or a repeated Protobuf field) amortizes the per-frame overhead across every event riding inside it.
+Every frame carries overhead independent of its payload: framing bytes, TCP and IP headers, and a syscall on each end. Sending each small event in its own frame pays that cost once per event. Coalescing a window of events, by count, by a short time budget or both, into one frame (a JSON array, or a repeated Protobuf field) pays it once per batch.
 
-That amortization isn't free, and the cost is latency, not bytes. A batch window of 50ms means the first event into a batch waits up to 50ms for its frame to go out, even if the channel has nothing else to send it with. For `HandlingEvent`s, where this site already frames the domain as "a human on the other end of this socket, watching a shipment move," a 50ms hold is invisible; a control-plane channel reporting actuator state at kilohertz rates would feel that same window as unacceptable staleness. The decision is the same shape every time: batch when the events are small and frequent enough that per-frame overhead dominates the actual payload, and when the consumer can tolerate the hold; send each event immediately when a human or a downstream system needs it the moment it happens, even at the cost of more, smaller frames. This channel's design (three events on connect, immediate per-event delivery, no batching) is itself a choice, made the same way: correctness and immediacy over frame-count efficiency, because the three fixture events in this example are rare enough that batching them would save bytes nobody is short on.
+The cost is latency, not bytes. A 50 ms batch window means the first event in a batch waits up to 50 ms for its frame to leave, even if nothing else is coming. For a human watching a shipment move, that hold is invisible. For a channel reporting actuator state at kilohertz rates, it's unacceptable staleness.
 
-## Compression: permessage-deflate, and the stack difference `benchmark.js` found live
+| Batch | Send immediately |
+|---|---|
+| Events are small and frequent enough that per-frame overhead dominates the payload | A person or downstream system needs each event the moment it happens |
+| The consumer tolerates the hold | Events are rare, so there is little overhead to amortize |
 
-This site introduced permessage-deflate (RFC 7692) as an extension negotiated via `Sec-WebSocket-Extensions`, compressing each frame's payload with DEFLATE before it's framed, and flagged two costs alongside the bandwidth win: CPU per frame and memory per connection for compression state; and, on a connection carrying anything sensitive, a CRIME-adjacent attack class where an attacker who can influence part of a compressed, encrypted payload can use the resulting compression-ratio changes as a side channel to recover secrets it shares the stream with. That discussion left the decision open, pending measurement against this site's own payload shapes. `k6/benchmark.js`'s `json_deflate` scenario is that measurement, and it surfaced something the chapter didn't expect going in: the two stacks don't even agree on whether compression gets negotiated at all.
+The server sends its three events on connect as three separate frames, one per event. They're rare enough that batching would save bytes nobody is short on.
 
-Python's `websockets` library enables `compression="deflate"` as its own **default**: `serve()`'s signature in `websockets/asyncio/server.py` spells it out: `compression: str | None = "deflate"`, and the library's own docstring says "the permessage-deflate extension is enabled by default." `examples/part5-performance/python/app/ws_server.py`'s `create_server` never passes a `compression` argument at all, so it inherits that default without any code change announcing it; every connection to Python's `:8091` negotiates permessage-deflate unless a caller explicitly disables it. Quarkus WebSockets Next takes the opposite default: `WebSocketsServerRuntimeConfig.perMessageCompressionSupported()` is a server-level switch, off unless an application turns it on, and `examples/part5-performance/quarkus/src/main/resources/application.properties` never sets it. The result, confirmed across three separate `benchmark.js` runs against both stacks (the README's "permessage-deflate negotiation differed by stack" finding): Python negotiated the extension on `7908/7908` successful connects (100%), while Quarkus negotiated it on `0` out of `11806`–`18292` connect attempts across the same three runs. Same client, same `compression: "deflate"` request on every scenario, two servers that disagree about whether to say yes, purely because one library ships the feature on and the other ships it off.
+## Compression: permessage-deflate and the stack difference
+
+permessage-deflate (RFC 7692) is negotiated through `Sec-WebSocket-Extensions` and compresses each frame's payload with DEFLATE. It costs CPU per frame and memory per connection for compression state. On a connection that carries secrets, it also opens a CRIME-style side channel: an attacker who can influence part of a compressed, encrypted payload can read compression-ratio changes to recover secrets sharing the stream.
+
+The two stacks disagree on the default. Python's `websockets` enables `compression="deflate"` unless told otherwise, and `create_server` never passes the argument, so every connection to the Python server negotiates it. Quarkus WebSockets Next ships it off: `per-message-compression-supported` is a server-level switch, and the server here never sets it. With the same client requesting deflate in every scenario, Python negotiated the extension on 7,908 of 7,908 successful connects across a run, and Quarkus on none of 11,806 to 18,292 attempts across three runs.
 
 {% include codetabs.html langs="Quarkus|Python" %}
 
 ```properties
-# examples/part5-performance/quarkus/src/main/resources/application.properties
-# NOT set in this example — permessage-deflate is opt-in on WebSockets Next.
-# To negotiate it, add:
+# Add to application.properties to negotiate permessage-deflate
 quarkus.websockets-next.server.per-message-compression-supported=true
 quarkus.websockets-next.server.compression-level=6
 ```
 ```python
-# examples/part5-performance/python/app/ws_server.py's create_server() never
-# passes `compression` — it inherits the websockets library's own default,
-# "deflate", so every connection negotiates it unless told not to:
-return serve(
-    handler,
-    host,
-    port,
-    subprotocols=SUPPORTED_SUBPROTOCOLS,
-    select_subprotocol=_select_subprotocol,
-    # compression="deflate" is the library default here — pass
-    # compression=None explicitly to opt OUT instead.
-)
+def create_server(host: str, port: int):
+    """Returns the `websockets.asyncio.server.serve(...)` context manager;
+    callers `async with` it (see app/main.py) to start/stop the listener.
+    `subprotocols` advertises the three supported values; `select_subprotocol`
+    overrides the library's default negotiation to also accept a client that
+    offers none at all; see `_select_subprotocol`.
+    """
+    return serve(
+        handler,
+        host,
+        port,
+        subprotocols=SUPPORTED_SUBPROTOCOLS,
+        select_subprotocol=_select_subprotocol,
+    )
 ```
 
-{% include excalidraw.html file="20-bytes-per-frame" alt="A benchmark box runs three scenarios against the same channel and fixture: json measuring 259.7 bytes average, protobuf measuring 154.0 bytes average and 40.7 percent smaller, and json plus deflate measuring 259.7 bytes average, identical to plain json, with a ghost box noting k6/ws inflates compressed frames before the script sees the bytes so this row cannot show the win. Below, two sub boxes report the real permessage-deflate negotiation counts: Python on port 8091 negotiated it on 7908 of 7908 connects, 100 percent; Quarkus WebSockets Next on port 8090 negotiated it on 0 of 11806 to 18292 attempts across three runs, 0 percent. A ghost caption states this is the same stack difference reproduced across every run, not proof deflate does not help, proof k6/ws cannot see it." caption="Figure 20.1: the measured bytes/frame comparison and the real stack difference in whether permessage-deflate gets negotiated at all; the deflate row's bytes/frame is a blind spot, not evidence against compression." %}
+On the Python side, pass `compression=None` to `serve` to opt out. A team deploying the same feature on both stacks without reading each default compresses on one and not the other without ever deciding to. A feed of small, repetitive JSON frames, where `HandlingEvent` field names repeat on every push, is a reasonable candidate on bandwidth grounds. A connection where an attacker-influenced value and a secret share one compressed stream needs an explicit decision, not an inherited default.
 
-This difference matters: it isn't that deflate doesn't work on Quarkus, or that Python's default is wrong. Permessage-deflate support is a server-side opt-in on one framework and an opt-out on the other, and a team deploying the same logical feature on both stacks without reading each framework's defaults ends up compressing on one and not the other without ever deciding to. Whether to enable it at all still comes back to permessage-deflate's two costs: a feed of small, repetitive JSON frames (`HandlingEvent`'s field names repeat on every push) is a reasonable compression candidate on bandwidth grounds alone, but a connection carrying anything where an attacker-influenced value and a secret share the same compressed stream is exactly the CRIME-adjacent shape already flagged as a risk, and compression on that connection needs an explicit decision, not an inherited library default discovered after the fact.
+{% include excalidraw.html file="20-bytes-per-frame" alt="A benchmark runs three scenarios against one channel: JSON at 259.7 bytes per frame, Protobuf at 154.0 bytes (40.7 percent smaller), and JSON with deflate also at 259.7 bytes because k6 inflates frames before the script sees them. Below, the negotiation counts: Python negotiated deflate on 7908 of 7908 connects, Quarkus on none of 11806 to 18292 attempts." caption="Figure 20.1: measured bytes per frame and the permessage-deflate negotiation difference between the stacks; the deflate row's size is a measurement blind spot, not evidence against compression." %}
 
-## What `benchmark.js` can't see: the deflate-size blind spot
+### What the benchmark can't see
 
-The `json_deflate` scenario's bytes-per-frame numbers in the table above read **identical** to the plain `json` row: 259.7B average, 267.0B p90, on both stacks. That is not evidence that compression had no effect on the wire. `k6/ws` is built on `gorilla/websocket`, and gorilla **transparently inflates** a compressed frame before handing its bytes to the calling script; there is no `k6/ws` API that exposes the compressed, on-the-wire length. `benchmark.js`'s own header comment states this directly: the `json_deflate` scenario's `bytesTrend` "measures the same POST-INFLATION payload size as the plain json scenario by construction; it proves nothing about deflate's wire savings." What the script *can* observe with no inference required is whether the extension got negotiated at all, read from the echoed `Sec-WebSocket-Extensions` response header: exactly the 100%-vs-0% finding above, and the only deflate-related number this chapter treats as proven rather than inferred.
+The `json_deflate` row reads 259.7 bytes on average and 267.0 at p90, identical to plain JSON on both stacks. That says nothing about compression's wire savings. `k6/ws` is built on `gorilla/websocket`, which transparently inflates a compressed frame before handing it to the script, and no `k6/ws` API exposes the on-the-wire length. What the script can observe is whether the extension was negotiated, read from the echoed `Sec-WebSocket-Extensions` response header. That is the only deflate number here to treat as proven.
 
-The lesson generalizes past this one script: before citing a measurement as proof an optimization works (or doesn't), check what the measuring tool is capable of observing at the layer being tested. A client library that handles a protocol feature transparently (decompression, redirect-following, automatic retry) is doing a client a favor in production and taking away exactly the visibility a benchmark needs to measure that feature's effect. `k6/experimental/websockets` or a packet capture below the TLS/TCP stack would see the compressed bytes directly; this project didn't reach for either, because the negotiation finding above was the more important result and didn't need them. A team that needs deflate's actual wire-size win measured, beyond its negotiation confirmed, needs a tool that doesn't inflate the frame before the measurement point.
+Before citing a measurement as proof that an optimization works, check what the tool can observe at the layer under test. A client library that handles a feature transparently (decompression, redirects, retries) helps in production and hides exactly what a benchmark needs. To measure deflate's actual wire savings, use a tool that doesn't inflate before the measurement point, such as `k6/experimental/websockets` or a packet capture below TLS.
 
-## Size limits: bounding a single frame or message
+## Size limits: bounding a single frame
 
-The backpressure guard built a bounded *outbound queue*: how many not-yet-acknowledged sends a connection is allowed to carry before backpressure kicks in. A size limit is a different bound on the same kind of risk: how large a single frame or message is allowed to be, regardless of queue depth. Both stacks expose this, and both default to a real limit rather than "unbounded":
+A bounded outbound queue limits how many sends a connection can carry. A size limit bounds something different: how large one frame or message may be, regardless of queue depth. Without one, a single oversized frame, from a malicious client or a buggy upstream, consumes memory proportional to its size before any application code can reject it. A limit at the protocol layer rejects the frame and closes the connection with 1009 (Message Too Big), which is cheaper than discovering a `HandlingEvent` a hundred megabytes deep.
 
-{% include codetabs.html langs="Quarkus|Python" %}
+| | Quarkus | Python (`websockets`) |
+|---|---|---|
+| Message limit | `max-message-size` | `max_size`, default 1 MiB |
+| Frame limit | `max-frame-size` | Second element of a `max_size` tuple, `(message, fragment)`; unset by default |
+| Inbound buffer | `max-pending-messages` | `max_queue`, default 16 messages |
+| Default | Unset, so whatever the Vert.x and Netty layers beneath permit | A real 1 MiB message ceiling |
+
+Neither server sets these. To bound them, add the Quarkus properties, or pass `max_size` (an integer, or a `(message, fragment)` tuple) to Python's `serve`:
 
 ```properties
-# quarkus.websockets-next.server.max-message-size and
-# quarkus.websockets-next.server.max-frame-size (both OptionalInt —
-# unset means no application-level cap beyond Vert.x/Netty's own defaults).
-# Neither is set in this example; a production deployment accepting
-# attacker-reachable messages would want an explicit value here rather
-# than relying on the framework's own default ceiling.
 quarkus.websockets-next.server.max-message-size=1048576
 quarkus.websockets-next.server.max-frame-size=65536
 ```
-```python
-# websockets.asyncio.server.serve()'s own signature:
-#   max_size: int | None | tuple[int|None, int|None] = 2**20   # 1 MiB
-#   max_queue: int | None | tuple[int|None, int|None] = 16
-# ws_server.py's create_server() doesn't override either — every
-# connection inherits the library's 1 MiB max_size and depth-16
-# max_queue, a real default, not "no limit", even though this example
-# never names it explicitly.
-return serve(
-    handler,
-    host,
-    port,
-    max_size=2**20,   # explicit here for clarity; same as the default
-    subprotocols=SUPPORTED_SUBPROTOCOLS,
-    select_subprotocol=_select_subprotocol,
-)
-```
 
-`examples/part5-performance` never exercises either limit (the fixture's largest frame is 267 bytes, nowhere near either stack's default ceiling), but the limits exist in both frameworks for the same reason the backpressure queue bound exists: without one, a single oversized frame (malicious or merely buggy, a client or a misbehaving upstream service sending something enormous into one WebSocket message) consumes memory proportional to its own size before any application code gets a chance to reject it. A bound at the protocol layer, rejecting the frame and closing the connection with 1009 (Message Too Big, RFC 6455's reserved code for exactly this), is cheaper than discovering the same problem after the fact as a `HandlingEvent` a hundred megabytes deep into a feed that should never have payloads over a few hundred bytes. Python's `websockets` library picks 1 MiB as a sane global default; Quarkus WebSockets Next leaves both knobs unset by default, meaning the effective ceiling is whatever Vert.x/Netty's own configuration permits beneath it: a gap worth closing explicitly on any channel accepting payload sizes it hasn't bounded by contract.
+Neither limit is exercised: the largest fixture frame is 267 bytes. Any channel that accepts payloads not bounded by contract should set the Quarkus values explicitly.
 
-## Backpressure bounds every lever above it
+## Backpressure bounds every lever
 
-The backpressure guard already built the mechanism this section leans on without repeating it: `OutboundBackpressureGuard` (Quarkus) and the bounded `asyncio.Queue` (Python) cap how many outstanding sends a single slow connection is allowed to accumulate before the server closes it (policy `CLOSE`) or starts dropping (policy `DROP`). Every lever this chapter has covered so far (a smaller Protobuf frame, a larger batched frame, a compressed frame, a size-capped frame) produces *something* that still has to go out over one connection's send path, and that bound governs the send path regardless of which encoding, batch size, or compression state produced the bytes. A Protobuf-encoded, deflate-compressed, tightly batched frame that a slow client's TCP receive window can't drain still blocks on the same `sendText`/`send()` call the backpressure timeout watches, and still trips the same `maxPendingSends`/`QUEUE_MAXSIZE` bound if enough of them queue up behind it.
+Every lever produces bytes that still leave through one connection's send path, and the backpressure bound governs that path whatever produced them. A Protobuf-encoded, compressed, batched frame that a slow client's TCP window can't drain still blocks the same send call and still trips the same queue bound when enough of them stack up.
 
-That interplay runs in both directions. A smaller frame (Protobuf) or a compressed one (deflate) reduces the bytes a slow consumer's TCP window has to drain per message, which means more messages fit before backpressure trips: the same queue depth buys more actual throughput once each queued item costs less. Batching cuts the other way: fewer, larger frames reduce per-frame overhead, but each individual item in the bounded queue now represents more accumulated work, so a queue that trips at the same depth trips after less total *event* throughput than it would with unbatched, smaller sends. None of the four levers in this chapter changes whether backpressure exists or what triggers it; they only change how much useful work a connection gets through before hitting the ceiling already built for it. A deployment reaching for Protobuf or compression purely to raise sustained throughput, without checking whether the outbound queue bound (`maxPendingSends`/`QUEUE_MAXSIZE`, both defaulting to 32) is still appropriately sized for the new, smaller per-item cost, is leaving part of that gain unclaimed.
+The levers pull in different directions on that bound:
 
-{% include excalidraw.html file="20-levers" alt="A band labeled one HandlingEvent pushed over one connection contains four lever boxes. Lever one, encoding from Chapter 19, an accent box reading JSON versus Protobuf fixed per frame cost 40.7 percent smaller deterministic. Lever two, batching and coalescing, amortize per frame overhead, fewer larger frames adds latency. Lever three, permessage deflate RFC 7692, per connection DEFLATE state CPU per frame, Python on by default Quarkus opt in zero percent here. Lever four, size limits, max message size and max frame size on Quarkus, max size and max queue on Python. Below all four, a wide ink emphasis box labeled backpressure from Chapter 12 bounds all of the above under a slow consumer, a full queue or a stalled sendText caps effective throughput regardless of encoding or compression. A ghost caption below states k6 measures connection churn here not a sustained push rate." caption="Figure 20.2: four throughput levers, one shared ceiling: backpressure's bounded outbound queue governs every byte every lever above it produces." %}
+- A smaller frame (Protobuf) or a compressed one means each queued item costs a slow consumer's window fewer bytes, so more messages fit before the bound trips.
+- A batched frame means each queue slot holds more events, so the same queue depth trips after less total event throughput than unbatched sends.
 
-## Measuring with discipline: ratios over host-dependent absolutes
+None of the four levers changes whether backpressure exists or what triggers it. They change how much work a connection completes before reaching it. If you adopt Protobuf or compression to raise sustained throughput, recheck that the outbound queue bound (`example.backpressure.max-pending-sends` on Quarkus, `OUTBOUND_QUEUE_MAXSIZE` on Python, both 32 by default in `examples/part4-connection`) still suits the smaller per-item cost.
 
-`examples/part5-performance/README.md` draws a line this chapter has followed throughout: `smoke.js` is gated CI, fast and deterministic; `benchmark.js` is comparative and local-only, explicitly excluded from any CI threshold because "absolute throughput is host-dependent, which would make a flaky CI threshold." The numbers cited in this chapter back that line up directly. The connects/sec figures (2114.2/s and 2123.4/s for Quarkus's json and protobuf scenarios, 1703.9/s and 1701.9/s for Python's) moved across different runs on the same project's own dev box: the README documents a Quarkus run measuring 100%/100%/100% connect success on a freshly booted container, and a separate run measuring as low as 2/6108 after back-to-back heavy runs exhausted the host's ephemeral TCP port range (`TIME_WAIT` sockets from roughly 55,000 prior connections left no ports free to accept new ones). Citing "2114 connects/sec" as a property of Quarkus WebSockets Next would be citing a number that depends more on how recently the container restarted than on anything the framework does.
+{% include excalidraw.html file="20-levers" alt="One HandlingEvent pushed over one connection passes through four lever boxes: encoding (Protobuf 40.7 percent smaller, deterministic), batching (fewer, larger frames, adds latency), permessage-deflate (CPU per frame, on by default in Python, opt-in on Quarkus) and size limits. A wide box beneath them labeled backpressure caps effective throughput regardless of the levers above." caption="Figure 20.2: four throughput levers share one ceiling, the bounded outbound queue." %}
 
-What *is* stable, and worth citing without hedging, are the relative claims: Protobuf's 40.7% size reduction over JSON, measured identically across every run regardless of load. Python negotiating permessage-deflate on every connect against Quarkus negotiating it on none, reproduced across three separate runs. Within a single run, json/protobuf/json_deflate's connect-success rates track each other closely: encoding choice doesn't change the local host's accept-queue ceiling, even while the absolute ceiling itself drifts from run to run. That's the discipline this chapter asks of any throughput measurement: a ratio or a negotiation outcome, captured consistently across repeated runs, is a claim about the system; a raw rate captured once, on one host, in one state, is a claim about that host at that moment. `k6/benchmark.js` stays out of the CI gate for exactly that reason; its printed comparison is what a chapter cites, never what a pipeline asserts a pass/fail threshold against.
+## Measuring with discipline: ratios over absolute rates
 
-## On the wire
+The k6 `smoke.js` script is a gated CI check: fast, deterministic, every check wired into a threshold that fails the run. The `benchmark.js` script is comparative and local only, excluded from any CI threshold because absolute throughput depends on the host. Quote its output in prose; never assert a pass or fail threshold against it.
 
-Two scripts under `examples/part5-performance/k6/`, both pinned to k6 2.3.0 (the same pin as every k6 script this site has used since Part 4): `smoke.js` is the gated CI check, `benchmark.js` is the local-only comparison this chapter has cited throughout. Run the benchmark from the repo root:
+The connects-per-second figures moved between runs on the same machine. One Quarkus run on a freshly booted container measured 100% connect success on every scenario. A later run after back-to-back heavy runs measured as low as 2 of 6,108, because roughly 55,000 prior connections left the ephemeral port range full of `TIME_WAIT` sockets. Citing "2,114 connects per second" as a property of a framework would report how recently the container restarted.
 
-```bash
-cd examples/part5-performance
-docker compose up --build -d quarkus python
+What is stable and safe to cite:
 
-K6_WS_URL="ws://localhost:8090/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
-PART5_BENCH_VUS=2 PART5_BENCH_DURATION=8s \
-  k6 run k6/benchmark.js
-```
+- Protobuf's 40.7% size reduction, identical across every run.
+- Python negotiating permessage-deflate on every connect and Quarkus on none, reproduced across three runs.
+- Within one run, JSON, Protobuf and JSON+deflate success rates track each other, so encoding doesn't change the local accept ceiling even as that ceiling drifts between runs.
 
-`PART5_BENCH_VUS` and `PART5_BENCH_DURATION` (not `K6_VUS`/`K6_DURATION`, which are k6-reserved env vars that discard this script's `options.scenarios` outright in favor of a single default scenario) control the per-scenario sustained-load window; the three scenarios (`json`, `protobuf`, `json_deflate`) run concurrently against whichever `K6_WS_URL` is pointed at. The captured table below is the one this chapter's levers section cites directly: Quarkus `:8090` and Python `:8091`, `PART5_BENCH_VUS=2`, `PART5_BENCH_DURATION=8s`, each stack freshly restarted and given time for the OS's ephemeral TCP range to drain `TIME_WAIT` before measuring:
+A ratio or a negotiation outcome reproduced across runs is a claim about the system. A raw rate captured once is a claim about that host at that moment.
+
+The benchmark's "frames per second" is connection-churn throughput. The channel replays three fixture events on connect and then stays idle, so each virtual user opens a connection, reads three frames, closes and repeats. It is not a sustained push rate. A captured run with two virtual users for eight seconds:
 
 | Stack | Encoding | bytes/frame (avg / p90) | connects (success %) | frames/sec |
 |---|---|---:|---:|---:|
@@ -144,44 +142,54 @@ PART5_BENCH_VUS=2 PART5_BENCH_DURATION=8s \
 | Python `:8091` | protobuf | 154.0B / 157.0B | 7943/7943 (100.0%) | 1701.9/s |
 | Python `:8091` | json+deflate | 259.7B / 267.0B | 7908/7908 (100.0%) | 1694.4/s |
 
-Three things this table does and doesn't say, stated the way `benchmark.js`'s own `handleSummary` prints them: first, bytes/frame is the fixture's size, not a function of throughput: Protobuf's 40.7% reduction (154.0B vs. 259.7B avg) holds regardless of VU count or duration. Second, `json+deflate`'s bytes/frame reads identical to plain `json` on both stacks: that's the k6/ws inflate-before-measurement behavior described above, not evidence deflate failed; the separate `permessage-deflate negotiated` counter (7908/7908 on Python, 0 across 11806–18292 attempts on Quarkus) is the number this chapter treats as proven. Third, "frames/sec" is connection-churn throughput: this channel replays its 3 fixture events on connect and then stays idle, so each VU's loop is open-connection, read-3-frames, close, repeat, as fast as it can. It is not a sustained per-connection push rate, and the 82.5%-ish connect-success rate on Quarkus in this capture (versus 100% on Python, and versus 100%/100%/100% the README also records on a freshly booted Quarkus container before any other run had touched it) is this run's share of a local-host ephemeral-port ceiling, not a property either framework guarantees.
+> **Decision**
+>
+> Treat throughput as four levers under one ceiling. Encoding is a fixed per-frame discount, 40.7% here. Batch only when per-frame overhead dominates small, frequent events and the consumer tolerates the hold. Check each stack's permessage-deflate default (on in Python, opt-in in Quarkus) and decide explicitly on any connection that carries secrets. Set `max-message-size` and `max-frame-size` on Quarkus; Python's `max_size` already defaults to 1 MiB. Report ratios and negotiation outcomes reproduced across runs, never a bare rate from one host.
 
-Push these metrics into the project's LGTM stack with k6's built-in OpenTelemetry output, no script change required:
+> **🤖 Explore with your agent**
+>
+> "In `examples/part5-performance`, make the Quarkus server negotiate permessage-deflate with `quarkus.websockets-next.server.per-message-compression-supported=true`, rebuild, and run `k6/benchmark.js` against `ws://localhost:8090/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events` with `PART5_BENCH_VUS=2 PART5_BENCH_DURATION=8s`. Then report whether the `json_deflate` scenario's negotiated count changed and whether its bytes per frame changed, and say which of those two numbers can be trusted given that `k6/ws` inflates frames before the script sees them."
+>
+> Check: the `permessage-deflate negotiated` counter rises above 0 on `:8090` while the `json_deflate` bytes per frame still equals the plain `json` row.
+
+## Build, run, observe
+
+```bash
+cd examples/part5-performance
+./verify.sh
+```
+
+`verify.sh` brings up both stacks, replays the fixture over the JSON and Protobuf encodings negotiated through `Sec-WebSocket-Protocol`, and prints `PASS` once the decoded fields match across encodings and the Protobuf frame is smaller on both stacks (Quarkus on `:8090`, Python on `:8091`, Python HTTP health on `:8092`).
+
+Run the gated smoke check and the local benchmark with k6 2.3.0:
+
+```bash
+docker compose up --build -d quarkus python
+
+K6_WS_URL="ws://localhost:8090/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+  k6 run k6/smoke.js
+
+K6_WS_URL="ws://localhost:8090/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
+PART5_BENCH_VUS=2 PART5_BENCH_DURATION=8s \
+  k6 run k6/benchmark.js
+```
+
+Point `K6_WS_URL` at `:8091` for the Python stack. Use `PART5_BENCH_VUS` and `PART5_BENCH_DURATION`, not `K6_VUS` or `K6_DURATION`: k6 reserves the latter, and setting them discards the script's scenarios. Let the container settle after startup and leave idle time between back-to-back runs so `TIME_WAIT` sockets drain. To send the metrics to the LGTM stack, add k6's OpenTelemetry output:
 
 ```bash
 K6_OTEL_GRPC_EXPORTER_INSECURE=true K6_OTEL_GRPC_EXPORTER_ENDPOINT=localhost:4317 \
   k6 run -o opentelemetry k6/benchmark.js
 ```
 
-`smoke.js`, by contrast, is the fast, deterministic, gated half of this split: 3 VUs, 1 iteration each, every check wired into a `rate==1.0` threshold that fails the whole run (and the PR) the moment one assertion fails:
+Experiments:
 
-```bash
-K6_WS_URL="ws://localhost:8090/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events" \
-  k6 run k6/smoke.js
-```
-
-A passing `smoke.js` run was confirmed live against both stacks on this project's own CI runner (2026-10-19): 54/54 checks on Quarkus `:8090`, 54/54 on Python `:8091`, both JSON-as-TEXT and Protobuf-as-BINARY, on both stacks, every PR.
-
-## Where this goes next
-
-This chapter closes Part 5. The binary Protobuf chapter moved the wire format and measured the frame-size win; this chapter covered the remaining levers that shape throughput around that encoding choice: batching's latency-for-overhead trade, permessage-deflate's real stack-by-stack difference in whether it's even negotiated, size limits as the protocol-layer bound a connection needs regardless of payload shape, and backpressure as the ceiling every one of those levers operates underneath. The measurement discipline running through all of it matters as much as any single number: a ratio or a negotiation outcome, reproduced across runs, is a claim about the system; a raw connects/sec figure captured once on one host is a claim about that host's ephemeral-port state at that moment, which is exactly why `k6/benchmark.js` stays local-only and `k6/smoke.js` is the one that gates a PR.
-
-Part 6, Testing, Debugging & Observability, picks up from here with a different question: not how fast a channel can go, but how a team proves it still behaves correctly, finds out why it doesn't, and watches it in production once it's live. The k6 scripts this chapter leaned on are themselves half of that answer: a gated smoke test and a local comparative benchmark are both testing infrastructure, aimed at different questions. The remaining chapters in that part widen that lens to the rest of the toolbox: structured test suites across both stacks, the debugging workflow for a connection that's misbehaving in ways a log line alone doesn't explain, and the OpenTelemetry instrumentation this site has wired through every example's `OTEL_EXPORTER_OTLP_ENDPOINT` since Part 3 without yet asking what it's for.
-
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>Treat throughput as four independent levers sitting on top of one shared ceiling, not one knob. Encoding (the Protobuf-vs-JSON choice) is a fixed, load-independent per-frame discount: 40.7% smaller, measured identically at any connection rate. Batching trades latency for fewer, larger frames, and only pays off once per-frame overhead dominates a small, frequent payload. Compression is a per-stack opt-in, not a universal default: Python's <code>websockets</code> library negotiates permessage-deflate unless told not to, Quarkus WebSockets Next requires <code>quarkus.websockets-next.server.per-message-compression-supported=true</code> to negotiate it at all; this example's own benchmark measured 100% negotiation on Python against 0% on Quarkus with the identical client request, a real framework-default difference to check before assuming a feature is active on both stacks. Size limits (<code>max-message-size</code>/<code>max-frame-size</code> on Quarkus, <code>max_size</code>/<code>max_queue</code> on Python, the latter defaulting to a real 1&nbsp;MiB ceiling even when unset explicitly) bound a single frame the same way the backpressure queue bounds accumulated sends. Backpressure governs all four: a smaller or compressed frame buys more throughput for the same queue depth, a batched one buys less, but none of them changes whether or when the bound trips. Measure every claim as a ratio or a negotiation outcome reproduced across repeated runs, never as a bare connects/sec number from one host in one ephemeral-port state, which is exactly why <code>k6/benchmark.js</code> stays local-only and cited in prose, while <code>k6/smoke.js</code>'s deterministic checks are the ones that gate a PR.</p></div>
-
-## Build, run, observe
-
-```bash
-cd examples/part5-performance && ./verify.sh
-```
-
-Brings up both stacks and replays the same fixture over the JSON and the Protobuf wire encodings negotiated via `Sec-WebSocket-Protocol`, asserting the decoded fields match across encodings and that the Protobuf frame is strictly smaller. It prints PASS once every assertion holds on both stacks; see `examples/part5-performance/README.md` for full output.
+- Run `benchmark.js` twice back to back with no pause: the connect success rate drops as `TIME_WAIT` sockets exhaust the port range, while bytes per frame stay the same.
+- Set `K6_VUS` in the environment: k6 logs that env-level configuration overrode the scenarios and runs a single default scenario instead of `json`, `protobuf` and `json_deflate`.
 
 ## For deeper coverage
 
-- Pekka Enberg, *Latency: Reduce delay in software systems* (Manning, 2025): the systems-level latency-versus-throughput tradeoffs behind this chapter's batching-adds-latency argument.
-- Martin Kleppmann & Chris Riccomini, *Designing Data-Intensive Applications, Second Edition* (O'Reilly, 2026): bounded queues and backpressure as a throughput ceiling, the same shape the outbound queue bounds every lever in this chapter.
+- Pekka Enberg, *Latency: Reduce delay in software systems* (Manning, 2025): the systems-level latency-versus-throughput tradeoffs behind the batching-adds-latency trade.
+- Martin Kleppmann & Chris Riccomini, *Designing Data-Intensive Applications, Second Edition* (O'Reilly, 2026): bounded queues and backpressure as a throughput ceiling, the same shape as the outbound queue that bounds every lever.
 - *Cloud Native Design Patterns*, "Stream Processing" chapter: batching and coalescing tradeoffs for a continuously-pushed feed.
-- *Cloud Native Design Patterns*, "Caching Patterns" chapter: the same amortize-a-fixed-cost-across-more-work reasoning this chapter applies to frame batching.
-- RFC 7692: permessage-deflate, the compression extension this chapter measures stack-by-stack for negotiation, not for wire-size savings.
+- *Cloud Native Design Patterns*, "Caching Patterns" chapter: the same amortize-a-fixed-cost-across-more-work reasoning that applies to frame batching.
+- RFC 7692: permessage-deflate, the compression extension.

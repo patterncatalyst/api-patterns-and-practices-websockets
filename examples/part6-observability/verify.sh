@@ -57,7 +57,7 @@ wait_for_grafana_health() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "verify.sh: FAIL — lgtm did not become healthy within ${timeout}s" >&2
+  echo "verify.sh: FAIL, lgtm did not become healthy within ${timeout}s" >&2
   return 1
 }
 
@@ -103,14 +103,14 @@ print(total if found else "NOTFOUND")
 ' "$metrics_text" "$metric_name")"
 
   if [[ "$total" == "NOTFOUND" ]]; then
-    echo "verify.sh: FAIL — ${context}: metric '$metric_name' not found" >&2
+    echo "verify.sh: FAIL, ${context}: metric '$metric_name' not found" >&2
     return 1
   fi
   if ! python3 -I -c "import sys; sys.exit(0 if float(sys.argv[1]) > 0 else 1)" "$total"; then
-    echo "verify.sh: FAIL — ${context}: metric '$metric_name' total is $total, expected > 0" >&2
+    echo "verify.sh: FAIL, ${context}: metric '$metric_name' total is $total, expected > 0" >&2
     return 1
   fi
-  echo "verify.sh: ok — ${context}: metric '$metric_name' total=$total" >&2
+  echo "verify.sh: ok, ${context}: metric '$metric_name' total=$total" >&2
 }
 
 # wait_for_trace_id_log <service> <instance-name> — HARD assertion. Polls
@@ -136,14 +136,14 @@ wait_for_trace_id_log() {
       trace_id="$(grep -F -- "$pattern" <<<"$logs" | tail -1 \
         | sed -n 's/.*otel\.trace_id=\([0-9a-f]\{32\}\).*/\1/p')"
       if [[ -n "$trace_id" ]]; then
-        echo "verify.sh: ok — $service: found trace-id log line, otel.trace_id=$trace_id" >&2
+        echo "verify.sh: ok, $service: found trace-id log line, otel.trace_id=$trace_id" >&2
         echo "$trace_id"
         return 0
       fi
     fi
     sleep "$delay"
   done
-  echo "verify.sh: FAIL — $service: no trace-id log line matching '$pattern' found within $(( attempts * delay ))s" >&2
+  echo "verify.sh: FAIL, $service: no trace-id log line matching '$pattern' found within $(( attempts * delay ))s" >&2
   echo "--- $service logs ---" >&2
   docker compose -p "$PROJECT" -f "$COMPOSE_FILE" logs "$service" >&2 2>&1 || true
   return 1
@@ -199,7 +199,7 @@ run_stack_tests() {
   local trace_id
   trace_id="$(wait_for_trace_id_log "$log_service" "$instance")"
   if [[ ! "$trace_id" =~ ^[0-9a-f]{32}$ ]]; then
-    echo "verify.sh: FAIL — $stack: captured trace id '$trace_id' is not a 32-hex-digit id" >&2
+    echo "verify.sh: FAIL, $stack: captured trace id '$trace_id' is not a 32-hex-digit id" >&2
     exit 1
   fi
 
@@ -237,7 +237,7 @@ PYTHON_TRACE_ID="$(run_stack_tests "python" "localhost:8081" "http://localhost:8
   "python" "part6-observability-python")"
 
 echo
-echo "PASS — Part 6 observability anchor: on BOTH the Quarkus and the Python" \
+echo "PASS: Part 6 observability anchor: on BOTH the Quarkus and the Python" \
      "stack, the handlingEvents channel streams a schema-valid RECEIVE" \
      "event AND the connection's trace id appears in the app's own" \
      "structured log line (quarkus trace_id=$QUARKUS_TRACE_ID," \

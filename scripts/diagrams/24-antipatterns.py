@@ -64,7 +64,7 @@ for y in (95, 225, 315, 435, 565, 655):
 
 notes_1 = [
     {"x": 590, "y": 735, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "Every left box is a real failure this site's own verify.sh or build caught; every right box is the fix already shipped in the example it names."},
+     "text": "Every left box is a real failure caught live; every right box is the fix already shipped in the example it names."},
 ]
 
 generate_diagram.emit("24-pattern-remedy-map", W1, H1, bands=bands_1, nodes=nodes_1, edges=edges_1, notes=notes_1)
@@ -109,7 +109,7 @@ nodes_2 = [
      "style": "accent"},
     {"x": 600, "y": 370, "w": 540, "h": 55,
      "lines": ["only once HeartbeatLivenessSweep is added: 4408 close within one",
-               "configured liveness window: proven live in verify.sh's Step 6"],
+               "configured liveness window: proven live"],
      "style": "user"},
 ]
 

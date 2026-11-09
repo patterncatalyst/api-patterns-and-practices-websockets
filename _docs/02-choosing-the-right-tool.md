@@ -2,58 +2,54 @@
 title: "Choosing the Right Tool"
 order: 2
 part: "Foundations"
-description: "WebSockets vs Server-Sent Events vs long-polling vs webhooks, a decision table, and when each one wins."
-duration: "21 min read"
+description: "WebSockets, Server-Sent Events, long-polling, webhooks and gRPC streaming compared on seven dimensions, with an ordered decision rule."
+duration: "15 min read"
 ---
 
 ## Learning objectives
 
 By the end of this chapter you can:
 
-- Compare WebSockets, Server-Sent Events, long-polling, webhooks, and gRPC server-streaming across direction, duplex, ordering, backpressure, proxy/firewall behavior, browser support, and reconnection.
-- Apply the decision framework's ordered questions (does it need live updates, who has to send, who's receiving) to pick a transport for a given interaction.
-- Diagnose when a WebSocket is the wrong answer, even on a site built around WebSockets.
-- Trace the handling-event feed's worked decision end to end, from "does it need live updates" to the final transport choice.
+- Compare WebSockets, Server-Sent Events, long-polling, webhooks and gRPC server-streaming on direction, duplex, ordering, backpressure, proxy behavior, browser support and reconnection.
+- Pick a transport by asking whether the interaction needs live updates, who has to send and who is receiving.
+- Recognize when a WebSocket is the wrong answer.
+- Trace the handling-event feed from "does it need live updates" to its transport.
 
 ## Why this matters
 
-Push already made its case over pull in general; it said nothing about which push mechanism to reach for. This chapter builds the decision: five transports solve some version of the same problem, they disagree on direction, duplex, ordering, backpressure, and reconnection, and the one new idea is that "needs push" doesn't resolve to "open a WebSocket" by default, even on a site about WebSockets.
+Needing push does not mean opening a WebSocket. Five transports solve some version of the problem, and they disagree on who may send, how long a connection lives, whether order holds and who retries.
 
-The booking confirmation page opens a WebSocket the moment it loads and keeps the connection open for the life of the tab, even though the booking it watches changes status twice a day at most. A customs broker's integration wants to know the instant a container clears, but the broker's system exposes no public endpoint and can't hold a connection open from its side either: polling a REST endpoint every thirty seconds is the only option it has, and it burns a request on a status that hasn't moved in hours. A warehouse dashboard needs a feed of handling events for every active shipment on the yard floor: dozens of updates a minute, one direction only, nothing the dashboard ever needs to send back. Three interactions, three different shapes, and a site about WebSockets has a built-in bias toward answering all three the same way.
+Three interactions show the spread:
 
-That bias is the wrong starting point. Request/response already fell short once a client is watching something change rather than asking a question once; this chapter argues that "falls short" doesn't resolve to "open a WebSocket" by default. Five transports solve some version of the push problem (WebSockets, Server-Sent Events (SSE), HTTP long-polling, webhooks, and gRPC server-streaming) and they disagree on direction, connection lifetime, ordering, and who is allowed to initiate a message. Naming those disagreements here means every later chapter that reaches for a socket can say why the other four lost, instead of treating the choice as already settled by the table of contents. The protocol itself comes next, once this chapter rules it in.
+- A booking confirmation page opens a socket on load and holds it for the life of the tab, though the booking changes status twice a day at most.
+- A customs broker wants to know the moment a container clears, but its system exposes no public endpoint and can't hold a connection open. It polls a REST endpoint every thirty seconds.
+- A warehouse dashboard shows dozens of handling events a minute for every active shipment on the yard floor. It only reads.
+
+A site about WebSockets is biased toward answering all three the same way. Each one needs a different answer.
 
 ## The contenders
 
-A **WebSocket** is a single TCP connection that starts as an HTTP request, upgrades in place, and from that point carries framed messages in both directions for as long as the connection stays open. Neither side waits for the other to finish speaking: the booking confirmation page can send a message asking to watch a different booking while a handling-event frame from the previous one is still arriving. That's the capability this site is built around, and it's expensive exactly where the other four transports are cheap.
+A **WebSocket** is one TCP connection that starts as an HTTP request, upgrades in place, and then carries framed messages in both directions until it closes. The booking page can ask to watch a different booking while a handling-event frame for the previous one is still arriving.
 
-**Server-Sent Events** push data one way, server to client, over a plain HTTP response whose body never ends. The browser's built-in `EventSource` opens the connection, parses a simple text framing out of the response as it streams, and reconnects on its own if the connection drops. There's no client-to-server channel beyond the original request: a dashboard that only displays handling events never needs one.
+**Server-Sent Events** (SSE) push data one way over an HTTP response whose body never ends. The browser's `EventSource` parses the text framing, reconnects on its own and sends `Last-Event-ID` so the server can resume. The client has no channel back beyond the original request.
 
-**Long-polling** fakes a push by holding a request open: the client sends a normal HTTP request, the server waits to respond until it has something to say or a timeout expires, and the client immediately sends the next request the moment the response arrives. Every update costs a full request/response cycle and a fresh connection setup, but the wire format is nothing more exotic than HTTP, which is why it survives paths that reject anything stranger.
+**Long-polling** holds a request open until the server has something to say or a timeout expires, and the client sends the next request the moment a response arrives. Every update costs a full request cycle, often on a fresh connection. The wire format is plain HTTP, so it survives paths that reject anything stranger.
 
-A **webhook** inverts who initiates. The event source calls the receiver's own HTTP endpoint the moment something happens, and the call is done: no connection held between deliveries. A partner's booking system that exposes a public HTTPS endpoint and wants to know the moment a shipment clears customs is the webhook case exactly, the opposite posture from the broker in the opening paragraph, who can neither host an endpoint nor hold a connection open and is left polling as the fallback of last resort.
+A **webhook** inverts who initiates: the event source calls the receiver's HTTPS endpoint when something happens, and no connection is held between deliveries. It fits a partner system with a public endpoint. It does not fit the customs broker.
 
-**gRPC server-streaming** is a stream over HTTP/2 between two services, typically two your own organization runs, each generated from the same Protobuf contract. The internal analytics service aggregating handling events across the fleet talks to the event source this way, not over a WebSocket, because neither end is a browser, both already speak Protobuf, and the call gets typed messages and HTTP/2 flow control without anyone writing either by hand. The gRPC sibling site covers this shape from the other direction; this site only needs to know it exists and when it beats a raw socket for service-to-service traffic.
+**gRPC server-streaming** is a typed stream over HTTP/2 between two services generated from the same Protobuf contract. An internal analytics service consuming handling events fits it: neither end is a browser, and HTTP/2 flow control comes with it.
 
 ## Dimensions that matter
 
-**Direction** asks who is allowed to originate a message. A WebSocket allows either side, at any time, for the life of the connection. SSE allows the server only: the client's one and only "send" is the initial GET. Long-polling always has the client ask first. A webhook flips the usual client/server relationship entirely: the party that would normally be called a "server" is the one dialing out. gRPC server-streaming follows whatever the `.proto` contract declares for that RPC: one direction for server-streaming, both for bidirectional streaming.
+- **Direction.** A WebSocket lets either side send at any time. SSE allows the server only. Long-polling always has the client ask first. A webhook reverses the roles. gRPC follows the RPC declared in the `.proto`.
+- **Duplex.** Only a WebSocket (and bidirectional gRPC) carries both directions at once. Long-polling and webhooks are request/response pairs. SSE has no client half to interleave.
+- **Ordering.** A WebSocket and SSE are one ordered stream, so delivery is FIFO. Long-polling preserves order if the client waits for each response. Webhooks don't: a sender that retries one delivery and not another can reorder them, so a receiver that cares carries a sequence number or `occurred_at` and reorders itself.
+- **Backpressure.** A WebSocket has only TCP flow control, so the server watches its own send queue (or the browser its `bufferedAmount`) and decides whether to drop, buffer or disconnect a slow client. SSE has the same gap with less visibility, since `EventSource` exposes no queue state. gRPC is the one transport with backpressure in the protocol, through HTTP/2 flow-control windows. Long-polling and webhooks are bounded per call.
+- **Proxies and firewalls.** The `Upgrade` handshake is what breaks: proxies and older load balancers built for request/response HTTP strip `Connection: Upgrade` or refuse the 101. SSE is an ordinary long HTTP response that most proxies relay. Long-polling and webhooks are plain HTTP. gRPC needs HTTP/2 end to end, which is easy inside a cluster you run and a constraint beyond it.
+- **Browsers.** `WebSocket` and `EventSource` are native. Long-polling is a hand-written `fetch` loop. A browser can't speak gRPC streaming directly and needs grpc-web or a proxy. A webhook receiver is a server.
+- **Reconnection.** SSE reconnects and resumes by specification. A WebSocket has no equivalent: every reconnect, resume cursor and backoff policy is application code. Long-polling heals by construction. A webhook sender owns retries with backoff, and the receiver needs idempotency.
 
-**Duplex** is a sharper version of the same question: can both directions carry traffic *at once*, or does one have to finish before the other starts? A WebSocket is full-duplex: nothing in the protocol makes one side wait for the other. Long-polling and webhooks are strictly half-duplex by construction: a request/response pair, then nothing, then another pair. SSE sits at one extreme of half-duplex, since the server-to-client half never stops but there's no client-to-server half to interleave with it at all.
-
-**Ordering** matters once more than one update is in flight. A WebSocket guarantees FIFO delivery within a connection, because it's one ordered TCP stream wearing a framing layer. SSE gets the same guarantee for the same reason: one HTTP response, read in order. Long-polling preserves order as long as the client waits for each response before issuing the next request, which it normally does. Webhooks are the outlier: two deliveries for the same booking can arrive out of order if the sender retries one and not the other, so a receiver that cares has to carry its own sequence number or `occurred_at` timestamp and reorder on its own side: a correctness cost none of the other four impose by default.
-
-**Backpressure** is what happens when a receiver can't keep up. Raw WebSockets give the application nothing here beyond TCP's own flow control; a server has to watch its own send queue (or the browser's `bufferedAmount`) and decide whether to drop, buffer, or disconnect a slow client: the gap closed for both stacks later, under backpressure and flow control. SSE has the same gap and less visibility into it, since `EventSource` exposes no send-queue state to application code. gRPC server-streaming is the one transport here with backpressure built into the wire protocol: HTTP/2's flow-control windows throttle the sender automatically when the receiver stops reading, one more reason a high-volume service-to-service feed reaches for gRPC streaming over a hand-rolled WebSocket. Long-polling and webhooks never hit this problem, because neither holds a channel open that the server has to keep pushing into: each delivery is its own bounded request.
-
-**Proxy and firewall behavior** decides whether a transport survives a network path neither party controls. A WebSocket's opening `Upgrade` handshake is what breaks: corporate proxies, older load balancers, and anything built strictly for request/response HTTP will strip the `Connection: Upgrade` header or refuse the 101 response outright. SSE rides on an ordinary HTTP response, chunked or left open, which nearly every proxy already knows how to relay, making it the safer default behind network paths nobody has audited. Long-polling and webhooks are plain HTTP request/response, the most proxy-compatible shape there is. gRPC server-streaming needs HTTP/2 end to end: a non-issue inside a cluster you run, a real constraint the moment the path crosses infrastructure you don't.
-
-**Browser support** separates what ships natively from what has to be built. `new WebSocket(url)` and `new EventSource(url)` are both plain browser APIs, no library required. A long-polling client is hand-written `fetch` code in a loop. gRPC streaming has no native browser transport: a browser can't speak HTTP/2 trailers-based gRPC directly, so anything browser-facing needs grpc-web or a proxy, itself an argument against putting gRPC streaming in front of a browser client. Webhooks aren't a browser concept at all; the "client" receiving one is a server.
-
-**Reconnection** is the difference between a transport that heals itself and one that makes the application write the healing logic. `EventSource` reconnects automatically and sends a `Last-Event-ID` header the server can use to resume from where it left off: that behavior is in the spec, not something either stack has to implement. A WebSocket has no equivalent: every reconnect, every resume-from-a-cursor, every backoff policy is something the application writes, which is exactly what gets built for both stacks on the client side, later in the book. Long-polling heals itself by construction, since every cycle is a brand new request regardless of what happened to the last one. Webhooks push the reconnection problem onto the sender: a failed delivery has to be retried with its own backoff and an idempotency story on the receiving end, which is why webhook providers document a delivery and retry policy as carefully as they document the payload shape.
-
-{% include excalidraw.html file="02-duplex-comparison" alt="Five horizontal bands, one per transport, showing who may send and when: WebSocket is bidirectional between browser and server; SSE is server-to-client only; long-polling alternates a held request and a response; webhook reverses the roles, event source calling your endpoint; gRPC server-streaming opens a stream and pushes repeatedly." caption="Figure 2.1: the same push problem, five different rules about who may send and when." %}
-
-The dimensions above collapse into a single table worth keeping next to the decision framework that follows.
+{% include excalidraw.html file="02-duplex-comparison" alt="Five horizontal bands, one per transport, showing who may send and when: WebSocket is bidirectional, SSE is server to client only, long-polling alternates a held request and a response, a webhook reverses the roles, and gRPC server-streaming opens a stream and pushes repeatedly." caption="Figure 2.1: The same push problem under five rules about who may send and when." %}
 
 | Dimension | WebSocket | SSE | Long-polling | Webhook | gRPC streaming |
 |---|---|---|---|---|---|
@@ -67,31 +63,32 @@ The dimensions above collapse into a single table worth keeping next to the deci
 
 ## A decision framework
 
-Running an interaction through the dimensions above, in order, resolves to one of the five transports, or to the sixth answer: nothing here is needed and plain request/response on demand is the right tool. Start with whether the interaction needs live updates at all. A page that reloads when the user clicks refresh, or a report generated once a day, never gets further than this question; forcing it onto any of the five transports below adds connection state for an update pattern that was never going to use it.
+Ask in order:
 
-If live updates are needed, the next question is who has to send: one side only, or both. A booking page that only displays handling events as they arrive doesn't need to send anything after the initial subscribe: most of its lifetime is read-only from the client's point of view. But the moment the interaction needs the client to send something mid-stream, whether that's switching which booking it's watching, acknowledging a message, or sending a heartbeat the application controls itself rather than relying on protocol-level pings, duplex stops being optional and a WebSocket is the only one of the five that provides it natively.
+1. **Does the interaction need live updates?** A page that reloads on a click, or a report generated daily, needs none of the five. Plain request/response avoids the connection state.
+2. **Who sends?** If the client must send mid-stream, to switch which booking it watches, acknowledge a message or run its own heartbeat, a WebSocket is the only native duplex option.
+3. **If only the server sends, who receives?** For a browser tab on a path that keeps streaming responses open, SSE gives native reconnection and proxy compatibility for less work than a socket. If the path buffers or truncates long-lived responses, as some corporate egress proxies do, long-polling degrades to plain request cycles.
+4. **If another service receives, can it expose an endpoint?** If yes, use a webhook, which puts delivery on the sender's retry policy. If not, polling on a schedule is what's left, and it's a valid answer. If both ends are services you operate under one contract, use gRPC server-streaming.
 
-When the server is the only side that ever sends, the branch depends on who's receiving. A browser tab you control is the straightforward case: check whether the network path between the two of you reliably keeps a streaming HTTP response open, and if it does, SSE gives you native reconnection and broad proxy compatibility for less implementation effort than a socket. If that same network path is known to buffer or truncate long-lived responses (some corporate egress proxies do exactly this), long-polling is the fallback that degrades to plain request/response cycles rather than failing outright.
-
-When the receiver isn't a browser tab at all but another service, the question becomes whether that receiver can expose a reachable endpoint of its own. If it can, a webhook moves the delivery problem onto the sender's retry policy and keeps the receiver from holding anything open. If it can't, as with the customs broker case from the opening paragraph (no public endpoint and no held connection), polling on a schedule is what's left, a real answer rather than a failure state. And when both ends are services you operate, sharing a contract, gRPC server-streaming gets typed messages and real backpressure that a raw WebSocket or an SSE feed would otherwise approximate by hand.
-
-{% include excalidraw.html file="02-transport-decision" alt="A decision tree: need live updates at all leads to plain request/response if not; who needs to send routes to WebSocket if both sides push; server-only push routes through browser-tab and streaming-friendly-path checks to SSE or long-polling; another-service receivers route through an endpoint-reachability check to webhook or gRPC server-streaming." caption="Figure 2.2: the same five questions, as a tree, resolving to one of five transports or to no transport at all." %}
+{% include excalidraw.html file="02-transport-decision" alt="A decision tree. Live updates not needed leads to plain request/response. Both sides sending leads to WebSocket. Server-only push to a browser leads to SSE or long-polling. Service receivers lead to a webhook or gRPC server-streaming." caption="Figure 2.2: The decision questions as a tree, ending in one of five transports or none." %}
 
 ## When a socket is the wrong answer
 
-A WebSocket held open for a connection that sends one update a month costs a file descriptor and server-side connection state for the entire time that tab is open, whether or not anything ever arrives on it. Multiply that by every idle tab a customer leaves open overnight and the cost stops being theoretical: it's memory and connection-table pressure paid for subscriptions that rarely fire, the exact problem that surfaces later when fan-out reaches real scale. Reaching for a socket because "we want push" when the underlying data changes a handful of times a day is paying full duplex, continuously-open, application-managed-reconnection costs for an interaction that never needed any of the three.
+A socket costs a file descriptor and server-side state for as long as the tab is open, whether or not anything arrives. Multiplied by every idle tab left open overnight, that is memory and connection-table pressure paid for subscriptions that rarely fire. It also brings an `Upgrade` handshake, no authentication beyond what the application puts in that handshake or the first message, and a load balancer that must keep a client on one backend for the connection's life.
 
-A socket also carries its own attack surface: the `Upgrade` handshake, no built-in authentication beyond whatever the application puts into that handshake or the first message after it, and a load balancer that has to pin a client to one backend for the connection's life rather than routing each request independently: real costs covered in depth later, under security, none of them worth paying for an interaction that doesn't need low-latency duplex messaging held open continuously. This question comes back directly near the end of the book, with the fuller case built once later chapters have shown what a WebSocket costs to implement correctly; the short version belongs here too: if the client only consumes, and a latency of a few seconds is acceptable, a WebSocket is the expensive option on this list, not the obvious one.
+If the client only consumes and a latency of a few seconds is acceptable, a WebSocket is the expensive option on this list.
 
 ## A worked decision: the handling-event feed
 
-The booking confirmation page's handling-event feed is the example this site returns to, so running it through the framework by name grounds the abstract questions above before moving on. Does it need live updates at all? Yes: a customer staring at a stale "in transit" status while a container has already cleared customs is the exact failure the real-time problem opened with. Who needs to send: here the answer is both, not the server alone, because the page has to tell the backend which booking to watch the moment it connects, and because switching to a different booking without reopening a connection means sending a new subscribe message mid-stream. That single requirement is enough to rule out SSE regardless of how one-sided the rest of the traffic looks, since an `EventSource` has no channel back to the server at all.
+- **Live updates?** Yes. A customer watching a stale "in transit" status after the container cleared customs is the failure the feed exists to prevent.
+- **Who sends?** Both. The page tells the server which booking to watch on connect, and sends a new subscribe to switch bookings without reopening. That alone rules out SSE, whose `EventSource` has no channel back.
+- **Who receives?** A browser tab the team controls, so a webhook is out, and the sub-second latency rules out long-polling's per-update cost. gRPC streaming is out because one end is a browser.
 
-Contrast that with the warehouse dashboard from the opening paragraph: a browser tab, server-pushed updates only, no per-booking subscription to renegotiate because it watches everything on the yard floor at once, and a known network path inside the company's own data center that keeps streaming responses open without interference. That interaction answers "server only" and "streaming-friendly path" and lands on SSE, with none of the connection-pinning or reconnection code a WebSocket would require for a client that never needed to send anything back. The customs broker's integration answers "another service" and "no reachable endpoint," which is why it polls rather than failing outright: not every real interaction gets a satisfying answer, and polling on a schedule is still the correct tool when the alternative isn't available on the other end.
+The warehouse dashboard answers differently: a browser tab, server push only, no per-booking subscription to renegotiate, and a data-center path that keeps streaming responses open. That is SSE. The customs broker answers "another service" and "no reachable endpoint", so it polls.
 
 ## On the wire
 
-The dimensions above are not abstract once you look at the bytes. An SSE response is still being written by the server when the browser starts reading it: a `200 OK` whose body never closes, carrying a simple text framing:
+An SSE response is a `200 OK` whose body the server keeps writing:
 
 ```http
 HTTP/1.1 200 OK
@@ -101,17 +98,17 @@ Connection: keep-alive
 
 event: handling_event
 id: 48219
-data: {"booking_id":"BKG-88213","type":"CUSTOMS_HOLD","location":"USLAX","occurred_at":"2026-10-18T14:02:11Z"}
+data: {"booking_id":"BKG-88213","type":"HOLD","location":"USLAX","occurred_at":"2026-10-18T14:02:11Z"}
 
 event: handling_event
 id: 48220
-data: {"booking_id":"BKG-88213","type":"CONTAINER_LOADED","location":"USLAX","occurred_at":"2026-10-18T14:05:47Z"}
+data: {"booking_id":"BKG-88213","type":"LOAD","location":"USLAX","occurred_at":"2026-10-18T14:05:47Z"}
 
 ```
 
-Every event is three lines of plain text ending in a blank line, the `id` field is what the browser echoes back as `Last-Event-ID` on reconnect, and the client never writes anything on this connection beyond the original GET. One HTTP response, one direction, no framing beyond what a text editor can read.
+Each event is plain text ending in a blank line. The `id` is what the browser echoes as `Last-Event-ID` on reconnect, and the client writes nothing after the original GET.
 
-A WebSocket starts the same way every HTTP request does, then stops being HTTP entirely:
+A WebSocket starts as HTTP and then stops being HTTP:
 
 ```http
 GET /ws/bookings/BKG-88213/handling-events HTTP/1.1
@@ -129,32 +126,47 @@ Connection: Upgrade
 Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
 ```
 
-After the `101`, there is no more request/response: both sides exchange framed messages whenever they have one to send, and the frame's own header (a minimum of two bytes) is the only overhead HTTP's own headers used to carry. The booking page's first move after the upgrade is a client-to-server frame SSE has no channel for at all:
+After the `101`, both sides exchange frames and the frame header (two bytes at minimum) replaces HTTP headers. The page's first frame is one SSE has no channel for:
 
 ```json
 {"action":"subscribe","booking_id":"BKG-88213"}
 ```
 
-and the server answers, on the same connection, with the same event an SSE feed would have sent as plain text:
+The server answers on the same connection with the event SSE would have sent as text:
 
 ```json
-{"type":"handling_event","booking_id":"BKG-88213","event":"CUSTOMS_HOLD","location":"USLAX","occurred_at":"2026-10-18T14:02:11Z"}
+{"type":"handling_event","booking_id":"BKG-88213","event":"HOLD","location":"USLAX","occurred_at":"2026-10-18T14:02:11Z"}
 ```
 
-Same payload, same domain event, two different wires. One of them has a direction the other one never carries at all.
+> **Decision**
+>
+> The handling-event feed is a WebSocket. It needs live updates, so plain request/response is out. The client must send a subscribe and a resubscribe, so SSE's one-way channel is out. The receiver is a browser tab, so a webhook and gRPC streaming are out, and the sub-second latency rules out long-polling. If the client only consumed, SSE would win.
 
-## Where this goes next
+> **🤖 Explore with your agent**
+>
+> "Open `ws://localhost:8080/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events` from `examples/part3-handling-events` and decide from `contracts/asyncapi.yaml` whether this channel needs a WebSocket. The operation is `action: receive` and the client sends nothing. Apply the rule: if the client only consumes and a few seconds of latency is acceptable, a WebSocket is the expensive option. Say what you would pick for the browser dashboard and what would change if the page had to send a subscribe message."
+>
+> Check: the reply should note that the channel is server-to-client only, and name the exact requirement (a client-to-server message) that would justify a socket over SSE.
 
-This chapter assumed a WebSocket's shape without explaining where it comes from: what the `Upgrade` handshake negotiates, how a frame's header encodes its length and type, what a close frame looks like, and why a proxy that doesn't understand any of that drops the connection instead of relaying it. The protocol itself opens next: the handshake in full, the frame format, text versus binary frames, control frames, and the parts of RFC 6455 every later chapter leans on without re-deriving. The shared domain comes back after that with the full handling-event shape this chapter only sketched, and the AsyncAPI contract puts that shape into a schema both stacks generate from.
+## Build, run, observe
 
-Running the booking page's handling-event feed through the same questions gives the shape every later chapter's own version of this decision will take:
+Start both stacks and read the first pushed frame (Docker Engine, from the repo root):
 
-<div class="callout callout--safe"><p class="callout__title">Decision</p><p>The booking page's handling-event feed is a WebSocket, not SSE, a long-poll, a webhook, or a gRPC stream. It needs live updates, ruling out plain request/response. It needs the client to send as well as receive (an initial subscribe naming the booking, and a resubscribe if the customer switches bookings without reloading the page), which rules out SSE's one-way channel regardless of how server-heavy the traffic looks. The receiver is a browser tab the team controls, which rules out a webhook, since nothing here can expose a public endpoint for someone else to call. And the volume and latency the customer expects (a status change reflected in under a second, not polled for) rule out both long-polling's per-update request cost and gRPC streaming's requirement that neither end be a browser. Every other interaction in this chapter's opening paragraph lands somewhere else on this same table, which is the point: the socket is correct here because the dimensions say so, not because this is a WebSockets site.</p></div>
+```bash
+cd examples/part3-handling-events
+docker compose up --build -d
+source ../_lib/lib.sh
+ws_first_frame "ws://localhost:8080/ws/v1/bookings/bkg_01HZY3KX7QZJ8N6VWT2E4R9F0A/handling-events"
+```
+
+Quarkus listens on 8080 and Python on 8081. The first frame is the `RECEIVE` event, pushed without the client sending anything. The handling-events channel names the booking in its path and declares only a server-to-client operation, so on its own it is the one-way shape that makes SSE a candidate; a subscribe or resubscribe message from the page is what tips it to a socket. Run `./verify.sh` for the full check, which prints `PASS:` when both stacks agree. Tear down with `docker compose down -v`.
+
+- Point `ws_first_frame` at port 8081: the same event arrives from the Python stack.
 
 ## For deeper coverage
 
-- Dynowski, L. & Dulak, M., *Learning API Styles* (O'Reilly, 2025): comparing interaction styles on the dimensions this chapter's decision framework formalizes.
-- Gough, J. & Bryant, D. & Auburn, M., *Mastering API Architecture* (O'Reilly, 2022): architectural trade-offs behind choosing a style for a given interaction rather than defaulting to one.
-- *Cloud Native Design Patterns*, "Communications" and "Protocols in Depth" chapters: the full comparison this chapter's transport table specializes for a push interaction.
-- [RFC 6455](https://datatracker.ietf.org/doc/html/rfc6455): the WebSocket side of this chapter's comparison.
-- [WHATWG: Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html): the `EventSource` behavior, including automatic reconnection and `Last-Event-ID`, this chapter compares against a socket.
+- Dynowski, L. & Dulak, M., *Learning API Styles* (O'Reilly, 2025): comparing interaction styles on the dimensions used here.
+- Gough, J., Bryant, D. & Auburn, M., *Mastering API Architecture* (O'Reilly, 2022): architectural trade-offs behind choosing a style per interaction.
+- *Cloud Native Design Patterns*, "Communications" and "Protocols in Depth" chapters: the broader transport comparison.
+- [RFC 6455](https://datatracker.ietf.org/doc/html/rfc6455): the WebSocket protocol.
+- [WHATWG: Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html): `EventSource`, automatic reconnection and `Last-Event-ID`.

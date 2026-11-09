@@ -116,7 +116,7 @@ edges_2 = [
 
 notes_2 = [
     {"x": 590, "y": 310, "size": 12, "color": "#555555", "anchor": "middle",
-     "text": "verify.sh's Step 6 shrinks all three knobs for a fast test (~16s observed live, not ~55s): the sequence of events is identical, only the durations shrink."},
+     "text": "A fast test shrinks all three knobs (~16s observed live, not ~55s): the sequence of events is identical, only the durations shrink."},
 ]
 
 generate_diagram.emit("14-pong-sweep-timeline", W2, H2, bands=bands_2, nodes=nodes_2, edges=edges_2, notes=notes_2)

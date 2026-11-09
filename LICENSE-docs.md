@@ -2,9 +2,9 @@
 
 Copyright 2026 PatternCatalyst (Robert Sedor)
 
-The written and visual content of this repository — the tutorial and book
+The written and visual content of this repository, namely the tutorial and book
 prose (for example the chapters under `_docs/`), the diagrams and images under
-`assets/`, and the slide decks under `presentation/` — is licensed under the
+`assets/`, and the slide decks under `presentation/`, is licensed under the
 **Creative Commons Attribution 4.0 International License (CC BY 4.0)**.
 
 You are free to share and adapt this material for any purpose, even

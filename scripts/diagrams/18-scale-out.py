@@ -118,7 +118,7 @@ edges_2 = [
 
 notes_2 = [
     {"x": 490, "y": 425, "size": 12, "color": "#b8650a", "anchor": "middle", "bold": True,
-     "text": "verify.sh proves the SAME cross-instance delivery on both brokers, for both stacks: the trade-off is durability/replay vs. operational surface, not correctness."},
+     "text": "The SAME cross-instance delivery works on both brokers, for both stacks: the trade-off is durability/replay vs. operational surface, not correctness."},
 ]
 
 generate_diagram.emit("18-kafka-vs-redis", W2, H2, bands=bands_2, nodes=nodes_2, edges=edges_2, notes=notes_2)

@@ -136,7 +136,7 @@ wait_for_k8s_log_pattern() {
     sleep "$interval"
     waited=$(( waited + interval ))
   done
-  echo "verify-minikube.sh: FAIL — wait_for_k8s_log_pattern: '$pattern' not found in deploy/$deploy logs within ${timeout}s" >&2
+  echo "verify-minikube.sh: FAIL, wait_for_k8s_log_pattern: '$pattern' not found in deploy/$deploy logs within ${timeout}s" >&2
   kubectl logs "deploy/$deploy" -n "$NAMESPACE" --tail=40 2>&1 >&2 || true
   return 1
 }
@@ -167,11 +167,11 @@ trap cleanup EXIT
 step "Step 0: tool checks + regenerate the contract-derived JSON Schema"
 # ===========================================================================
 for tool in minikube kubectl helm docker python3; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "verify-minikube.sh: FAIL — '$tool' not on PATH" >&2; exit 1; }
+  command -v "$tool" >/dev/null 2>&1 || { echo "verify-minikube.sh: FAIL, '$tool' not on PATH" >&2; exit 1; }
 done
 mk_ver="$(minikube version --short 2>/dev/null || echo v0.0.0)"
 [[ "$(printf '%s\n%s\n' "$MINIKUBE_MIN" "$mk_ver" | sort -V | head -1)" == "$MINIKUBE_MIN" ]] \
-  || { echo "verify-minikube.sh: FAIL — minikube $mk_ver is older than required $MINIKUBE_MIN" >&2; exit 1; }
+  || { echo "verify-minikube.sh: FAIL, minikube $mk_ver is older than required $MINIKUBE_MIN" >&2; exit 1; }
 ensure_websocat
 python3 -I "$EXTRACT_SCRIPT" "$SCHEMA_FILE"
 echo "verify-minikube.sh: minikube $mk_ver OK (>= $MINIKUBE_MIN); schema regenerated at $SCHEMA_FILE"
@@ -279,7 +279,7 @@ EOF
       waited=$(( waited + 2 ))
     done
     if [[ "$ok" -ne 1 ]]; then
-      echo "verify-minikube.sh: FAIL — ingress never routed Host: $h to our rule (no affinity cookie seen) within 60s" >&2
+      echo "verify-minikube.sh: FAIL, ingress never routed Host: $h to our rule (no affinity cookie seen) within 60s" >&2
       exit 1
     fi
     echo "verify-minikube.sh: ingress routing confirmed for Host: $h after ${waited}s"
@@ -324,7 +324,7 @@ run_stack_checks() {
   last_event_id="$(json_field '.eventId' <<<"$last_frame")"
   assert_eq "$LAST_SEED_EVENT_ID" "$last_event_id" "$stack/$broker_label: 3rd seed frame is the fixture's CUSTOMS event"
   schema_validate "$last_frame" "$SCHEMA_FILE"
-  echo "verify-minikube.sh: ok — $stack/$broker_label: seed frame received through the ingress and is schema-valid" >&2
+  echo "verify-minikube.sh: ok, $stack/$broker_label: seed frame received through the ingress and is schema-valid" >&2
 
   echo
   echo "--- $stack/$broker_label: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---"
@@ -341,7 +341,7 @@ run_stack_checks() {
   late_event_id="$(gen_id evt_)"
   inject_event_k8s "$exec_deploy_a" "$container" "$self_base" "$booking_id" "$late_event_id"
   wait_for_log_pattern "$idle_log" "\"eventId\":\"${late_event_id}\"" 30
-  echo "verify-minikube.sh: ok — $stack/$broker_label: late frame arrived after a 65s idle hold — the raised proxy-read-timeout/proxy-send-timeout annotations are working" >&2
+  echo "verify-minikube.sh: ok, $stack/$broker_label: late frame arrived after a 65s idle hold — the raised proxy-read-timeout/proxy-send-timeout annotations are working" >&2
   kill "$idle_pid" >/dev/null 2>&1 || true
   wait "$idle_pid" 2>/dev/null || true
   rm -f "$idle_log"
@@ -360,9 +360,9 @@ run_stack_checks() {
   fanout_event_id="$(gen_id evt_)"
   inject_event_k8s "$exec_deploy_a" "$container" "$cross_base" "$booking_id" "$fanout_event_id"
   wait_for_log_pattern "$fanout_log" "\"eventId\":\"${fanout_event_id}\"" 30
-  echo "verify-minikube.sh: ok — $stack/$broker_label: instance A's CLIENT (through the ingress) received instance B's injected event $fanout_event_id" >&2
+  echo "verify-minikube.sh: ok, $stack/$broker_label: instance A's CLIENT (through the ingress) received instance B's injected event $fanout_event_id" >&2
   wait_for_k8s_log_pattern "$deploy_a_log" "delivered eventId=${fanout_event_id} bookingId=${booking_id} instance=${stack}-a" 30
-  echo "verify-minikube.sh: ok — $stack/$broker_label: instance A's own POD LOG shows it delivering" >&2
+  echo "verify-minikube.sh: ok, $stack/$broker_label: instance A's own POD LOG shows it delivering" >&2
   kill "$fanout_pid" >/dev/null 2>&1 || true
   wait "$fanout_pid" 2>/dev/null || true
   rm -f "$fanout_log"
@@ -412,7 +412,7 @@ echo "=== Step 7 complete: Ch18 Redis fan-out PROVEN LIVE on both stacks (toggle
 
 # ===========================================================================
 echo
-echo "PASS — part4-backplane on minikube (docker+containerd, Kubernetes $KUBERNETES_VERSION):" \
+echo "PASS: part4-backplane on minikube (docker+containerd, Kubernetes $KUBERNETES_VERSION):" \
      "ingress-nginx delivers a schema-valid seed frame on both stacks, the raised" \
      "proxy-read-timeout/proxy-send-timeout annotations keep an idle WS open past" \
      "nginx's 60s default, and the Ch18 cross-pod fan-out proof holds over BOTH" \

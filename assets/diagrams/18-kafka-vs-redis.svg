@@ -27,5 +27,5 @@
 <path d="M450,92 L530,92" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
 <text x="496.0" y="86.0" font-size="11" fill="#ffffff" stroke="#ffffff" stroke-width="3" paint-order="stroke" text-anchor="middle">contrasted, not ranked</text>
 <text x="496.0" y="86.0" font-size="11" fill="#b8650a" text-anchor="middle">contrasted, not ranked</text>
-<text x="490" y="425" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">verify.sh proves the SAME cross-instance delivery on both brokers, for both stacks: the trade-off is durability/replay vs. operational surface, not correctness.</text>
+<text x="490" y="425" font-size="12" fill="#b8650a" text-anchor="middle" font-weight="700">The SAME cross-instance delivery works on both brokers, for both stacks: the trade-off is durability/replay vs. operational surface, not correctness.</text>
 </svg>

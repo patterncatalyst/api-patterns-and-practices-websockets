@@ -1,7 +1,7 @@
 
 === Step 0: tool checks + regenerate the contract-derived JSON Schema ===
-Wrote ~/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
-verify-minikube.sh: minikube v1.39.0 OK (>= v1.39.0); schema regenerated at ~/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+Wrote <repo>/build/handling-event.schema.json
+verify-minikube.sh: minikube v1.39.0 OK (>= v1.39.0); schema regenerated at <repo>/build/handling-event.schema.json
 
 === Step 1: minikube profile 'part4-backplane' (docker driver, containerd, Kubernetes v1.37.1) ===
 * [part4-backplane] minikube v1.39.0 on Fedora 44
@@ -268,7 +268,7 @@ verify-minikube.sh: ingress routing confirmed for Host: python.192.168.49.2.nip.
 
 --- quarkus/kafka: seed frame + schema validation ---
 lib.sh: ok — quarkus/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: ~/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-minikube.sh: ok — quarkus/kafka: seed frame received through the ingress and is schema-valid
 
 --- quarkus/kafka: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---
@@ -285,7 +285,7 @@ verify-minikube.sh: ok — quarkus/kafka: instance A's own POD LOG shows it deli
 
 --- python/kafka: seed frame + schema validation ---
 lib.sh: ok — python/kafka: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: ~/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-minikube.sh: ok — python/kafka: seed frame received through the ingress and is schema-valid
 
 --- python/kafka: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---
@@ -330,7 +330,7 @@ verify-minikube.sh: ingress routing confirmed for Host: python.192.168.49.2.nip.
 
 --- quarkus/redis: seed frame + schema validation ---
 lib.sh: ok — quarkus/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: ~/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-minikube.sh: ok — quarkus/redis: seed frame received through the ingress and is schema-valid
 
 --- quarkus/redis: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---
@@ -347,7 +347,7 @@ verify-minikube.sh: ok — quarkus/redis: instance A's own POD LOG shows it deli
 
 --- python/redis: seed frame + schema validation ---
 lib.sh: ok — python/redis: 3rd seed frame is the fixture's CUSTOMS event: 'evt_01HZY3M3X0Z6F9S8D4Q1E2V7G0'
-lib.sh: ok — schema_validate: ~/Dev/api-patterns-and-practices-websockets/build/handling-event.schema.json
+lib.sh: ok — schema_validate: <repo>/build/handling-event.schema.json
 verify-minikube.sh: ok — python/redis: seed frame received through the ingress and is schema-valid
 
 --- python/redis: idle-hold past 60s, then a late frame must still arrive (proves the raised proxy timeouts) ---

@@ -21,7 +21,7 @@ bands_1 = [
 nodes_1 = [
     {"x": 50, "y": 100, "w": 230, "h": 90, "style": "accent",
      "lines": ["@OnOpen", "onOpen(@PathParam bookingId)",
-               "this chapter's example", "returns Multi<HandlingEvent>"]},
+               "the example", "returns Multi<HandlingEvent>"]},
     {"x": 315, "y": 100, "w": 230, "h": 90, "style": "ghost",
      "lines": ["@OnTextMessage", "not declared here",
                "channel is receive-only", "(contracts/asyncapi.yaml)"]},

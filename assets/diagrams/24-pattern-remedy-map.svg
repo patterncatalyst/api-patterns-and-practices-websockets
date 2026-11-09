@@ -50,5 +50,5 @@
 <path d="M570,435 L620,435" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
 <path d="M570,565 L620,565" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
 <path d="M570,655 L620,655" fill="none" stroke="#b8650a" stroke-width="2" marker-end="url(#am)"/>
-<text x="590" y="735" font-size="12" fill="#555555" text-anchor="middle">Every left box is a real failure this site&#x27;s own verify.sh or build caught; every right box is the fix already shipped in the example it names.</text>
+<text x="590" y="735" font-size="12" fill="#555555" text-anchor="middle">Every left box is a real failure caught live; every right box is the fix already shipped in the example it names.</text>
 </svg>

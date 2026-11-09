@@ -81,7 +81,7 @@ def _split_path_and_token(raw_path: str) -> tuple[str, str | None]:
 
 
 def _error_envelope(message: str) -> dict:
-    """The in-band JSON error shape sent before a 4400 close — see the
+    """The in-band JSON error shape sent before a 4400 close; see the
     "Close-code-vs-envelope" note in this module's docstring. `BAD_REQUEST`
     is the only code this channel emits today (every client-sent frame is
     invalid, since the contract defines no client-to-server operation on
@@ -97,10 +97,10 @@ async def _reject_malformed(websocket: ServerConnection, reason: str) -> None:
 
 
 async def _receive_loop(websocket: ServerConnection) -> None:
-    """Ch13 example — this channel is server-push-only (the contract defines
+    """This channel is server-push-only (the contract defines
     no client-to-server operation on `handlingEvents`), so ANY frame a
     client sends here is, by definition, a protocol error: there is no
-    valid shape to accept. The first inbound frame — whatever it is — gets
+    valid shape to accept. The first inbound frame, whatever it is, gets
     the error envelope + 4400 treatment. Binary frames are rejected the same
     way (no binary framing is defined on this channel either).
     """
